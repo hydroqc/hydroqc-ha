@@ -1,0 +1,532 @@
+# Hydro-Québec Home Assistant Integration - AI Coding Agent Guide
+
+## Project Overview
+
+This is a **Home Assistant custom component** for monitoring Hydro-Québec electricity accounts. It provides real-time consumption data, billing info, peak period alerts, winter credits tracking, and hourly consumption history import. The integration supports two connection modes:
+
+- **Portal Mode** (`AUTH_MODE_PORTAL`): Full authentication with Hydro-Québec account - provides complete billing, consumption, winter credit data, and hourly consumption history
+- **OpenData Mode** (`AUTH_MODE_OPENDATA`): No credentials required - fetches publicly available peak event data from HQ's open data API
+
+**Tech Stack**: Python 3.13, Home Assistant 2024.1+, async/await, hydroqc API wrapper library, **uv** package manager
+
+## Architecture
+
+### Core Components
+
+1. **`coordinator.py`** - `HydroQcDataCoordinator`: Central data fetcher using HA's `DataUpdateCoordinator`
+   - Manages both Portal mode (`WebUser`/`Customer`/`Account`/`Contract` hierarchy) and OpenData mode (`PublicClient`) 
+   - Updates every 60 seconds (configurable via `CONF_UPDATE_INTERVAL`)
+   - Uses dot-notation paths (`get_sensor_value()`) to extract nested data: e.g., `"contract.cp_current_bill"` → `coordinator.data["contract"].cp_current_bill`
+   - `is_sensor_seasonal()`: Portal mode sensors with `peak_handler` are seasonal (Dec 1 - Mar 31), OpenData sensors are always available
+   - **Task management**: Separate `_csv_import_task` and `_regular_sync_task` per coordinator instance (per contract)
+   - `is_consumption_history_syncing`: Only checks `_csv_import_task` status (not regular sync)
+   - **Logging prefixes**: Portal mode logs use `[Portal]` prefix, public API logs use `[OpenData]` prefix
+
+2. **`config_flow.py`** - Multi-step config flow:
+   - Step 1: Choose `AUTH_MODE_PORTAL` or `AUTH_MODE_OPENDATA`
+   - Step 2a (Portal mode): Login → fetch customers → select account → select contract → import history (0-800 days) → create entry
+   - Step 2b (OpenData mode): Select sector (Residentiel/Affaires) → select rate and option (with preheat field) → create entry
+   - **History import** (Portal mode only): `NumberSelector` for 0-800 days of consumption history
+     - 0-30 days: Regular sync only (efficient for recent data)
+     - >30 days: CSV import triggered automatically on integration setup
+   - **Preheat configuration**: Only shown for rates with peak events (DPC, DCPC in Portal mode; all peak rates in OpenData mode)
+   - Uses `NumberSelector` for preheat duration input (0-240 minutes, default 120)
+
+3. **`sensor.py` / `binary_sensor.py`** - Entity implementations
+   - Auto-generated from `SENSORS` and `BINARY_SENSORS` dicts in `const.py`
+   - Filtered by rate: sensors specify `rates` list (`["ALL"]`, `["DPC"]`, `["DCPC"]`, etc.)
+   - Rate-specific: Use `coordinator.rate_with_option` (e.g., `"DCPC"` = D+CPC, `"DPC"` = Flex-D)
+
+4. **`const.py`** - Single source of truth for sensor definitions
+   - Each sensor: `data_source`, `device_class`, `state_class`, `icon`, `unit`, `rates`, optional `attributes`
+   - Data sources use dot notation: `"contract.peak_handler.cumulated_credit"`, `"public_client.peak_handler.current_state"`
+
+5. **`public_data_client.py`** - Public API peak data handler
+   - **API endpoint**: `https://donnees.hydroquebec.com/api/explore/v2.1`
+   - **Dataset**: `evenements-pointe` (production dataset for peak events)
+   - **Query syntax**: Uses `refine` parameter (e.g., `refine=offre:"TPC-DPC"`), not `where` clauses
+   - **Time window**: Fetches 7 days ahead (not 60)
+   - `PeakEvent`: Parses API dates (handles both simple `"YYYY-MM-DD HH:MM"` and ISO formats)
+   - **Critical timezone requirement**: All datetimes MUST be `America/Toronto` timezone-aware
+   - API returns lowercase field names: `datedebut`, `datefin`, `plagehoraire`, `secteurclient`
+   - Preheat duration: Configurable per integration (0-240 minutes, default 120)
+   - **Logging prefix**: All logs use `[OpenData]` prefix for easy troubleshooting
+
+### Rate Plans & Sensors
+
+- **D**: Standard residential → balance, consumption, billing period sensors
+- **D+CPC (DCPC)**: D with Winter Credits → adds `wc_*` sensors (cumulated credits, yesterday's peak performance, critical peak alerts)
+- **DT**: Dual tariff → adds higher/lower price consumption, net savings vs Rate D
+- **DPC**: Flex-D dynamic pricing → adds `dpc_*` sensors (peak states, pre-heat alerts, critical hours count)
+- **M/M-GDP**: Commercial rates → standard consumption tracking
+
+**Key Pattern**: Sensor availability is controlled by `rates` list in `const.py`. Winter credit sensors (`wc_*`) only appear for rate `"DCPC"`, FlexD sensors (`dpc_*`) only for rate `"DPC"`.
+### Setup (use devcontainer for consistency)
+
+**This project uses `uv` for all Python package management** - do NOT use pip, poetry, or other tools.
+
+```bash
+# Install dependencies with uv
+uv sync
+
+# Add a new dependency
+uv add package-name
+
+# Add a dev dependency
+uv add --dev package-name
+```
+
+### Testing & Quality
+
+**All commands run through `uv`** to ensure consistent environments:
+
+```bash
+just dev    # Full workflow: uv sync, qa checks, validate, test
+just qa     # Linting (uv run ruff check), formatting, type checking
+
+# Individual checks (all use 'uv run')
+just check      # uv run ruff check
+just fix        # uv run ruff check --fix && uv run ruff format
+just typecheck  # uv run mypy --strict
+just test       # uv run pytest
+
+# Direct uv commands
+uv run ruff check custom_components/
+uv run mypy custom_components/hydroqc/
+uv run pytest -v
+```
+
+### Logs & Debugging
+```bash
+just logs   # All HA logs (follow mode)
+just ilogs  # Filter for hydroqc integration logs only
+just status # Check container status
+
+# After code changes
+just restart  # Restart HA container to reload integration
+```
+
+### Key Files to Check First
+- **README.md**: User-facing features, supported rates, installation
+- **CONTRIBUTING.md**: Commit conventions, PR requirements, rate-specific feature guidelines
+- **justfile**: All dev commands (start, stop, restart, logs, qa, test)
+- **custom_components/hydroqc/const.py**: Sensor definitions, rate mappings
+- **pyproject.toml**: Python 3.13, uv config, ruff rules (line-length 100, select E/W/F/I/UP/B/C4/SIM/RET/ARG/PTH/PL/RUF)
+- **uv.lock**: Lock file for reproducible builds (commit this file)
+- **justfile**: All dev commands (start, stop, restart, logs, qa, test)
+- **custom_components/hydroqc/const.py**: Sensor definitions, rate mappings
+- **pyproject.toml**: Python 3.13, ruff rules (line-length 100, select E/W/F/I/UP/B/C4/SIM/RET/ARG/PTH/PL/RUF)
+
+## Code Conventions
+
+### Type Hints & Style
+- **Strict mypy**: All functions need type hints (`-> None`, `-> bool`, etc.)
+- **Imports**: Auto-organized by ruff (stdlib → third-party → HA → local)
+- **Line length**: 100 chars max
+- **Logging**: Use `_LOGGER.debug/info/warning/error` with context (avoid print statements)
+
+### Home Assistant Patterns
+- **Async first**: Use `async def` for I/O operations (API calls, coordinator updates)
+- **Coordinator pattern**: Entities read from `self.coordinator.data`, don't fetch directly
+- **Entity naming**: `{device_name}_{sensor_name}` → e.g., `home_balance`, `cottage_wc_cumulated_credit`
+- **Device registry**: One device per contract (all sensors grouped under it)
+
+### Sensor Availability & Attributes
+
+**Sensors are always available** - they never become "unavailable" in Home Assistant, instead showing the last known value. This ensures historical data is preserved even during temporary outages.
+
+**All sensors include these attributes:**
+- `last_update`: ISO 8601 timestamp of last successful data fetch
+- `data_source`: One of `"portal"` (authenticated), `"open_data"` (public API), or `"unknown"`
+
+**Sensor-specific attributes** are defined in the `attributes` dict in `const.py` and extracted via dot notation paths.
+
+### Adding New Sensors
+1. Add entry to `SENSORS` or `BINARY_SENSORS` in `const.py`:
+   ```python
+   "new_sensor_key": {
+       "name": "Human Readable Name",
+       "data_source": "contract.some_attribute.nested_value",  # Dot notation path
+       "device_class": "energy",  # Or None
+       "state_class": "total",    # Optional
+       "icon": "mdi:flash",
+       "unit": "kWh",
+       "rates": ["DPC", "DCPC"],  # Or ["ALL"]
+       "attributes": {  # Optional extra attributes
+           "max": "contract.max_value",
+       },
+   }
+   ```
+2. Add translations to `strings.json`, `translations/en.json`, `translations/fr.json`
+3. Test with appropriate rate configuration (use peak-only mode or authenticated mode)
+
+### Rate-Specific Code Patterns
+```python
+# Check rate in coordinator
+if coordinator.rate == "DPC":
+    # Flex-D specific logic
+elif coordinator.rate_with_option == "DCPC":  # D+CPC
+    # Winter credits specific logic
+
+# Rate filtering in sensor creation (auto-handled by sensor.py)
+if "ALL" in sensor_config["rates"] or coordinator.rate_with_option in sensor_config["rates"]:
+    # Create sensor
+```
+
+## Testing Strategy
+
+### Test Suite Requirements
+
+**Use `freezegun` for timezone/DST testing**:
+```python
+from freezegun import freeze_time
+
+@freeze_time("2025-03-09 01:30:00", tz_offset=-5)  # Before DST
+def test_consumption_before_dst():
+    # Test consumption sync behavior before spring DST transition
+    pass
+
+@freeze_time("2025-03-09 03:30:00", tz_offset=-4)  # After DST
+def test_consumption_after_dst():
+    # Test consumption sync behavior after spring DST transition
+    pass
+
+@freeze_time("2025-11-02 01:30:00", tz_offset=-4)  # Before fall DST
+def test_consumption_fall_dst():
+    # Test consumption sync during fall DST transition (repeated hour)
+    pass
+```
+
+**Critical DST test cases**:
+- Hourly consumption statistics during spring forward (2 AM → 3 AM skip)
+- Hourly consumption statistics during fall back (2 AM hour repeated)
+- Peak period calculations across DST boundaries
+- Winter credit anchor/peak times during DST transitions
+- Timezone-aware datetime handling in recorder statistics
+
+### Integration Testing
+
+**CI runs tests against HA stable, beta, and specific versions** (see `.github/workflows/ci.yml`). Tests:
+1. Validate JSON files (manifest, strings, translations)
+2. Lint & format check (ruff)
+3. Type check (mypy strict)
+4. Start HA in docker, mount integration, check for errors in logs
+5. pytest suite (unit + integration tests)
+6. HACS validation
+7. Hassfest (official HA integration validator)
+
+**Manual testing checklist**:
+- Test both auth modes (account login + peak-only)
+- Verify sensors appear for selected rate
+- Check state updates (wait 60s for coordinator refresh)
+- Validate attributes on sensors with nested data
+- Test services: `hydroqc.refresh_data`, `hydroqc.fetch_hourly_consumption`
+- Test during DST transition periods (March/November)
+
+## Consumption History Import (Energy Dashboard Integration)
+
+### User-Facing Feature
+
+During Portal mode setup, users can choose how many days of consumption history to import (0-800 days). This provides immediate historical data in the Energy dashboard:
+
+- **0-30 days**: Regular sync only - efficient for recent contracts or users who don't need history
+- **31-800 days**: CSV import triggered - for users wanting complete historical data
+
+**Implementation location**: `__init__.py` checks `entry.data.get("history_days", 0)` after integration setup and triggers appropriate sync method.
+
+### Technical Implementation
+
+**Pattern**: Use Home Assistant's native `recorder` Python API for importing external statistics.
+
+### Statistics Metadata Requirements (HA 2025.11+)
+
+**CRITICAL**: Home Assistant 2025.11.2+ requires `mean_type` field in statistics metadata:
+
+```python
+from homeassistant.components.recorder import get_instance, statistics
+from homeassistant.components.recorder.models import StatisticMeanType
+
+metadata = {
+    "source": "hydroqc",
+    "statistic_id": "hydroqc:home_total_hourly_consumption",
+    "unit_of_measurement": "kWh",
+    "has_mean": False,  # Deprecated but kept for backward compatibility
+    "has_sum": True,
+    "mean_type": StatisticMeanType.NONE,  # REQUIRED - use enum, not string
+    "name": "Total Hourly Consumption",
+    "unit_class": "energy",
+}
+```
+
+**Important**:
+- `mean_type` uses `StatisticMeanType` enum from `homeassistant.components.recorder.models`
+- Values: `NONE` (for sum-only), `ARITHMETIC`, `CIRCULAR`
+- NOT specifying `mean_type` is deprecated and will fail in HA 2026.11
+- `has_mean` is deprecated (removed in HA 2026.4) but keep for backward compatibility
+
+### Consumption Import Flow
+
+```python
+from homeassistant.components.recorder import statistics
+
+# Fetch hourly data from hydroqc library
+hourly_data = await contract.get_hourly_consumption(date)
+
+# Build statistics in HA format
+stats = []
+for hour in hourly_data["results"]["listeDonneesConsoEnergieHoraire"]:
+    stats.append({
+        "start": datetime_obj,  # Timezone-aware datetime (America/Toronto)
+        "state": consumption_kwh,  # kWh for this hour
+        "sum": cumulative_sum,  # Running total since first import
+    })
+
+# Import using recorder API
+await get_instance(hass).async_add_executor_job(
+    statistics.async_add_external_statistics,
+    hass,
+    metadata,  # See metadata structure above
+    stats,
+)
+## Integration Setup & Initialization
+
+### Setup Flow (`__init__.py`)
+
+1. **Coordinator creation**: One `HydroQcDataCoordinator` per config entry (per contract)
+2. **Platform setup**: Forward to sensor, binary_sensor platforms
+3. **Service registration**: Register integration services (once, on first entry)
+4. **History import** (Portal mode only):
+   ```python
+   history_days = entry.data.get("history_days", 0)
+   if history_days > 30:
+       # CSV import for bulk historical data
+       coordinator.async_sync_consumption_history(days_back=history_days)
+   else:
+       # Regular sync for recent data (0-30 days)
+       hass.async_create_task(coordinator._async_regular_consumption_sync())
+   ```
+
+**Key points**:
+- History import runs after HA setup completes (doesn't block startup)
+- Tasks are per-coordinator (per contract)
+- No WebSocket connection needed (direct Python API call)
+- Runs within HA's event loop (more reliable)
+- Automatic integration with HA's energy dashboard
+- Handle rate-specific consumption types (total/reg/haut for DT/DPC rates)
+
+## External Dependencies
+
+- **Hydro-Quebec-API-Wrapper 4.2.2**: From private GitLab PyPI index (configured in `pyproject.toml`)
+  ```toml
+  [tool.uv.sources]
+  Hydro-Quebec-API-Wrapper = { index = "hydroqc-gitlab" }
+  
+  [[tool.uv.index]]
+  name = "hydroqc-gitlab"
+  url = "https://gitlab.com/api/v4/projects/32908244/packages/pypi/simple"
+  ```
+  - Main classes: `WebUser`, `Customer`, `Account`, `Contract`, `PublicClient`
+  - Contract types: `ContractDCPC`, `ContractDPC`, `ContractDT` (subclasses of `Contract`)
+- **Home Assistant 2024.1.0+**: Uses `DataUpdateCoordinator`, `ConfigFlow`, `CoordinatorEntity`
+
+**Important**: Always use `uv` for dependency management - it handles the custom GitLab index automatically.
+
+### Timestamp Handling in Statistics
+
+**Home Assistant returns timestamps as Unix epoch seconds** (not milliseconds):
+
+```python
+# CORRECT - timestamps are in seconds
+last_date = datetime.datetime.fromtimestamp(
+    last_stat_time, tz=datetime.timezone.utc
+).date()
+
+# WRONG - do NOT divide by 1000 (that's for JavaScript milliseconds)
+last_date = datetime.datetime.fromtimestamp(
+    last_stat_time / 1000, tz=datetime.timezone.utc
+).date()  # Results in dates around 1970!
+```
+
+**Detecting corrupted data**: Add sanity checks to reject obviously invalid dates:
+
+```python
+if last_date.year < 2020:
+    _LOGGER.warning("Found corrupted statistics with date %s", last_date)
+    return None  # Trigger fresh import instead
+```
+
+### CSV Import vs Hourly Fetch
+
+Two methods for importing consumption history:
+
+1. **CSV Import** (`async_sync_consumption_history`): Bulk historical data (731 days)
+   - Used when no statistics found or significant gaps
+   - Downloads CSV from HQ API, parses all hourly data
+   - Handles DST transitions by skipping ambiguous times
+   
+### CSV Import vs Hourly Fetch
+
+Two methods for importing consumption history:
+
+1. **CSV Import** (`async_sync_consumption_history`): Bulk historical data (up to 731 days)
+   - Used when no statistics found or significant gaps (>30 days)
+   - Downloads CSV from HQ API, parses all hourly data
+   - Handles DST transitions by skipping ambiguous times
+   - Triggered automatically during setup if user requests >30 days
+   - Runs in background task (`_csv_import_task`)
+   
+2. **Hourly Fetch** (`async_fetch_hourly_consumption`): Recent data (last few days)
+   - Used for daily updates and filling small gaps (≤30 days)
+   - Fetches JSON data day-by-day from HQ API
+## Common Gotchas
+
+- **Seasonal sensors**: Portal mode winter credit sensors only show in-season (Dec 1 - Mar 31). OpenData mode sensors are ALWAYS available (not seasonal).
+- **Timezone handling**: ALL datetime comparisons MUST use `America/Toronto` timezone (not UTC). Peak event dates from API are timezone-aware.
+  - PeakEvent dates: Always ensure timezone-aware when parsing (handle both ISO and simple formats)
+  - Datetime comparisons: Use `datetime.datetime.now(zoneinfo.ZoneInfo("America/Toronto"))` 
+  - Never mix timezone-naive and timezone-aware datetimes - causes `TypeError` in comparisons
+- **Off-season handling**: 
+  - OpenData binary sensors return `False` (not `None`/unknown) when no peak data available
+  - `current_state` shows "Off Season (Dec 1 - Mar 31)" when no events
+  - Peak events announced 24h in advance, so sensors may show no data until announcement
+- **Dot notation paths**: Must match actual object attributes from `hydroqc` library (inspect library source if unsure)
+  - `get_sensor_value()` safely handles `None` in path traversal, returning `None` if any part is missing
+- **Rate vs rate_option**: Rate is base (D/DT/DPC/M), rate_option is modifier (CPC for winter credits). Combined: `rate_with_option`
+- **Session expiration**: `coordinator._webuser.session_expired` triggers re-login automatically
+- **Public client**: Always fetches peak data from HQ public API for critical peak alerts (used in both Portal and OpenData modes)
+- **Statistics timestamps**: Must use aware datetime objects (with timezone), preferably `America/Toronto` (EST)
+- **Cumulative sum**: Statistics require running total from first import, not just hourly state
+- **Timestamp format**: HA returns Unix epoch **seconds** not milliseconds - don't divide by 1000!
+- **Database corruption**: Old statistics with dates before 2020 indicate corrupted data - add sanity checks
+- **Task separation**: CSV import uses `_csv_import_task`, regular sync uses `_regular_sync_task` - never confuse them
+- **History import threshold**: Only trigger CSV import for >30 days (regular sync covers ≤30 days efficiently)
+- **Statistics naming**: Display names include contract name prefix (e.g., "Home Total Hourly Consumption")
+  - Main classes: `WebUser`, `Customer`, `Account`, `Contract`, `PublicClient`
+  - Contract types: `ContractDCPC`, `ContractDPC`, `ContractDT` (subclasses of `Contract`)
+- **Home Assistant 2024.1.0+**: Uses `DataUpdateCoordinator`, `ConfigFlow`, `CoordinatorEntity`
+
+## Commit & PR Guidelines
+
+**Commit format**: `<type>(<scope>): <subject>` (see CONTRIBUTING.md)
+- Types: `feat`, `fix`, `docs`, `style`, `refactor`, `test`, `chore`
+- Examples: `feat(sensor): add peak demand tracking`, `fix(coordinator): handle missing contract data`
+
+**PR requirements**:
+- All CI checks pass (lint, type, test, validate, hacs, hassfest)
+- Update CHANGELOG.md for user-facing changes
+- Add tests for new features
+- Bilingual translations (en + fr)
+- Update `.github/copilot-instructions.md` if introducing new patterns, workflows, or architectural changes
+
+**Note for AI agents**: When implementing features that introduce new conventions, patterns, or workflows not covered in these instructions, update this file to document them for future reference.
+
+## Test Suite
+
+**Location**: `tests/` directory with comprehensive unit and integration tests.
+
+### Test Structure
+```
+tests/
+├── conftest.py              # Pytest fixtures (mock objects, sample data)
+├── README.md                # Detailed testing documentation
+├── unit/                    # Unit tests (isolated component testing)
+│   ├── test_coordinator.py          # Coordinator logic tests
+│   ├── test_sensor.py                # Sensor entity tests
+│   └── test_consumption_history.py  # Consumption sync & DST tests
+├── integration/             # Integration tests (component interaction)
+│   ├── test_config_flow.py          # Configuration flow tests
+│   └── test_services.py              # Service tests
+└── fixtures/                # Test data
+    ├── sample_csv.py                 # Sample CSV data
+    └── sample_api_data.py            # Sample API responses
+```
+
+### Running Tests
+
+**Quick commands**:
+```bash
+# Run all tests
+just test
+
+# Run with coverage
+just test-cov
+
+# Run complete test suite (lint + format + type check + tests)
+just ci
+
+# Specific test categories
+uv run pytest tests/unit/           # Unit tests only
+uv run pytest tests/integration/    # Integration tests only
+
+# Specific test file or function
+uv run pytest tests/unit/test_coordinator.py
+uv run pytest tests/unit/test_coordinator.py::TestHydroQcDataCoordinator::test_coordinator_initialization -vv
+```
+
+### Test Dependencies
+
+All test dependencies are in `pyproject.toml` under `[dependency-groups] dev`:
+- `pytest>=8.3.0` - Testing framework
+- `pytest-asyncio>=0.24.0` - Async test support
+- `pytest-homeassistant-custom-component>=0.13.0` - HA mocking
+- `pytest-cov>=6.0.0` - Coverage reporting
+- `freezegun>=1.5.0` - Time mocking for DST tests
+
+**Important**: The project uses `[dependency-groups]` (new uv format), not `[tool.uv.dev-dependencies]` (deprecated).
+
+### Key Test Fixtures (in `conftest.py`)
+
+- `mock_config_entry`: MockConfigEntry for testing
+- `mock_webuser`: Mock WebUser with customers/accounts/contracts
+- `mock_contract`: Mock Rate D contract
+- `mock_contract_dpc`: Mock Flex-D contract with peak handler
+- `mock_contract_dcpc`: Mock D+CPC contract with winter credits
+- `sample_statistics`: Sample consumption statistics
+- `sample_hourly_json`: Sample API response
+- `mock_recorder_instance`: Mock HA recorder
+- `mock_statistics_api`: Mock statistics API
+
+### Test Coverage Focus
+
+Tests cover critical bugs that were fixed:
+1. **DST transitions**: Spring forward, fall back, repeated hour handling (`freezegun` for time mocking)
+2. **Timezone comparisons**: All datetimes must be `America/Toronto` aware (fixes `TypeError: can't compare offset-naive and offset-aware datetimes`)
+3. **French decimals**: CSV parsing with comma decimal separators
+4. **Statistics metadata**: HA 2025.11+ requires `mean_type` field
+5. **Timestamp handling**: HA returns Unix seconds, not milliseconds
+6. **Corrupted data**: Sanity checks for dates before 2020
+
+### CI/CD Integration
+
+Tests run automatically in `.github/workflows/ci.yml`:
+- Linting (ruff)
+- Type checking (mypy strict)
+- Tests against multiple HA versions (2024.1.0, stable, beta)
+- Coverage reporting (codecov)
+- HACS validation
+- Hassfest validation
+
+### System Requirements for Testing
+
+If you encounter build errors with `lru-dict` or other compiled dependencies:
+```bash
+sudo apt-get update && sudo apt-get install -y gcc python3-dev
+```
+
+Then run:
+```bash
+uv sync
+```
+
+### Testing Best Practices
+
+1. **Use existing fixtures** from `conftest.py` - don't recreate mock objects
+2. **Follow AAA pattern**: Arrange, Act, Assert
+3. **Mock external dependencies**: Use `@patch` decorator
+4. **Test edge cases**: DST, missing data, errors, timezone issues
+5. **Use freezegun for time-based tests**: `@freeze_time("2024-12-15 10:00:00")`
+6. **Always make datetimes timezone-aware**: `datetime(..., tzinfo=ZoneInfo("America/Toronto"))`
+
+**Note for AI agents**: When switching to devcontainer or new environment, this context is preserved. The most critical issues to watch for:
+1. **Timezone-aware datetime comparisons**: Any comparison with peak event dates MUST use `datetime.now(EST_TIMEZONE)`, not `datetime.now()`
+2. **Task separation**: CSV import (`_csv_import_task`) and regular sync (`_regular_sync_task`) are tracked separately per coordinator instance

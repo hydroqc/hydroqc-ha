@@ -1,0 +1,12 @@
+{
+  "domain": "hydroqc",
+  "name": "Hydro-Québec",
+  "codeowners": ["@hydroqc"],
+  "config_flow": true,
+  "dependencies": [],
+  "documentation": "https://github.com/hydroqc/hydroqc-ha",
+  "iot_class": "cloud_polling",
+  "issue_tracker": "https://github.com/hydroqc/hydroqc-ha/issues",
+  "requirements": ["Hydro-Quebec-API-Wrapper==4.2.2"],
+  "version": "0.1.0"
+}

@@ -1,0 +1,7 @@
+{
+  "name": "Hydro-Québec",
+  "content_in_root": false,
+  "filename": "hydroqc.zip",
+  "render_readme": true,
+  "homeassistant": "2024.1.0"
+}

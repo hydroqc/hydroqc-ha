@@ -1,0 +1,988 @@
+"""DataUpdateCoordinator for Hydro-Québec integration."""
+
+from __future__ import annotations
+
+import asyncio
+import contextlib
+import datetime
+import logging
+from typing import Any
+
+from homeassistant.components.recorder.models import StatisticMeanType
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
+import hydroqc
+from hydroqc.account import Account
+from hydroqc.contract import ContractDCPC, ContractDPC, ContractDT
+from hydroqc.contract.common import Contract
+from hydroqc.customer import Customer
+from hydroqc.webuser import WebUser
+
+from .const import (
+    AUTH_MODE_OPENDATA,
+    AUTH_MODE_PORTAL,
+    CONF_ACCOUNT_ID,
+    CONF_AUTH_MODE,
+    CONF_CONTRACT_ID,
+    CONF_CONTRACT_NAME,
+    CONF_CUSTOMER_ID,
+    CONF_PREHEAT_DURATION,
+    CONF_RATE,
+    CONF_RATE_OPTION,
+    CONF_UPDATE_INTERVAL,
+    DEFAULT_UPDATE_INTERVAL,
+    DOMAIN,
+)
+from .public_data_client import PublicDataClient
+
+_LOGGER = logging.getLogger(__name__)
+
+
+class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
+    """Class to manage fetching Hydro-Québec data."""
+
+    def __init__(self, hass: HomeAssistant, entry: ConfigEntry) -> None:
+        """Initialize the coordinator."""
+        self.entry = entry
+        self._auth_mode = entry.data[CONF_AUTH_MODE]
+        self._rate = entry.data[CONF_RATE]
+        self._rate_option = entry.data.get(CONF_RATE_OPTION, "")
+        self._preheat_duration = entry.data.get(CONF_PREHEAT_DURATION, 120)
+
+        # Portal mode attributes (requires login)
+        self._webuser: WebUser | None = None
+        self._customer: Customer | None = None
+        self._account: Account | None = None
+        self._contract: Contract | None = None
+        # Public data client for peak data (always used)
+        # Combine rate and option for the client (e.g., "DCPC" for D+CPC)
+        rate_for_client = f"{self._rate}{self._rate_option}"
+        self.public_client = PublicDataClient(
+            rate_code=rate_for_client, preheat_duration=self._preheat_duration
+        )
+
+        # Track last successful update time
+        self.last_update_success_time: datetime.datetime | None = None
+
+        # Track if initial sync has completed (for hydroqc2mqtt-style sync logic)
+        self._initial_sync_done = False
+        self._consumption_sync_task: asyncio.Task[None] | None = None
+
+        # Initialize webuser if in portal mode
+        if self._auth_mode == AUTH_MODE_PORTAL:
+            self._webuser = WebUser(
+                entry.data[CONF_USERNAME],
+                entry.data[CONF_PASSWORD],
+                verify_ssl=True,
+                log_level="INFO",
+                http_log_level="WARNING",
+            )
+            self._customer_id = entry.data[CONF_CUSTOMER_ID]
+            self._account_id = entry.data[CONF_ACCOUNT_ID]
+            self._contract_id = entry.data[CONF_CONTRACT_ID]
+
+        # Get update interval from options or use default
+        update_interval_seconds = entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
+
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=DOMAIN,
+            update_interval=datetime.timedelta(seconds=update_interval_seconds),
+            config_entry=entry,
+        )
+
+    @property
+    def is_portal_mode(self) -> bool:
+        """Return True if in portal mode (with login)."""
+        return self._auth_mode == AUTH_MODE_PORTAL
+
+    @property
+    def is_opendata_mode(self) -> bool:
+        """Return True if in opendata mode (without login)."""
+        return self._auth_mode == AUTH_MODE_OPENDATA
+
+    @property
+    def rate(self) -> str:
+        """Return the rate."""
+        return self._rate
+
+    @property
+    def rate_option(self) -> str:
+        """Return the rate option."""
+        return self._rate_option
+
+    @property
+    def rate_with_option(self) -> str:
+        """Return rate + rate_option concatenated (e.g., 'DCPC', 'DT', 'DPC')."""
+        return f"{self._rate}{self._rate_option}"
+
+    async def _async_update_data(self) -> dict[str, Any]:
+        """Fetch data from Hydro-Québec API."""
+        data: dict[str, Any] = {
+            "contract": None,
+            "account": None,
+            "customer": None,
+            "public_client": self.public_client,
+        }
+
+        # Always fetch public peak data
+        try:
+            await self.public_client.fetch_peak_data()
+            _LOGGER.debug("Public peak data fetched successfully")
+        except Exception as err:
+            _LOGGER.warning("Failed to fetch public peak data: %s", err)
+
+        # If in peak-only mode, we're done
+        if self.is_opendata_mode:
+            _LOGGER.debug("OpenData mode: skipping portal data fetch")
+            return {}
+
+        # Portal mode: fetch contract data
+
+        try:
+            # Login if session expired
+            if self._webuser and self._webuser.session_expired:
+                _LOGGER.debug("Session expired, re-authenticating")
+                await self._webuser.login()
+
+            # Fetch contract hierarchy
+            if self._webuser:
+                await self._webuser.get_info()
+                await self._webuser.fetch_customers_info()
+
+                self._customer = self._webuser.get_customer(self._customer_id)
+                await self._customer.get_info()
+
+                self._account = self._customer.get_account(self._account_id)
+                self._contract = self._account.get_contract(self._contract_id)
+
+                # Fetch period data
+                await self._contract.get_periods_info()
+
+                # Fetch outages
+                await self._contract.refresh_outages()
+
+                # Rate-specific data fetching
+                if self.rate == "D" and self.rate_option == "CPC":
+                    # Winter Credits
+                    contract_dcpc = self._contract
+                    if isinstance(contract_dcpc, ContractDCPC):
+                        contract_dcpc.set_preheat_duration(self._preheat_duration)
+                        await contract_dcpc.peak_handler.refresh_data()
+                    _LOGGER.debug("Fetched DCPC winter credit data")
+
+                elif self.rate == "DPC":
+                    # Flex-D
+                    contract_dpc = self._contract
+                    if isinstance(contract_dpc, ContractDPC):
+                        contract_dpc.set_preheat_duration(self._preheat_duration)
+                        await contract_dpc.get_dpc_data()
+                        await contract_dpc.peak_handler.refresh_data()
+                    _LOGGER.debug("Fetched DPC data")
+
+                elif self.rate == "DT":
+                    # Dual Tariff
+                    contract_dt = self._contract
+                    if isinstance(contract_dt, ContractDT):
+                        await contract_dt.get_annual_consumption()
+                    _LOGGER.debug("Fetched DT annual consumption")
+
+                data["contract"] = self._contract
+                data["account"] = self._account
+                data["customer"] = self._customer
+
+                _LOGGER.debug("Successfully fetched authenticated contract data")
+
+        except hydroqc.error.HydroQcHTTPError as err:
+            raise UpdateFailed(f"Error fetching Hydro-Québec data: {err}") from err
+        except Exception as err:
+            _LOGGER.exception("Unexpected error fetching data")
+            raise UpdateFailed(f"Unexpected error: {err}") from err
+
+        # Update timestamp on successful update
+        self.last_update_success_time = datetime.datetime.now(datetime.UTC)
+
+        # Trigger consumption sync (matches hydroqc2mqtt pattern)
+        if self.is_portal_mode and self._contract:
+            asyncio.create_task(self._async_regular_consumption_sync())
+
+        return data
+
+    async def async_shutdown(self) -> None:
+        """Shutdown coordinator and close sessions."""
+        _LOGGER.debug("Shutting down coordinator")
+        # Cancel any running consumption sync tasks
+        if hasattr(self, "_consumption_sync_task") and self._consumption_sync_task:
+            if not self._consumption_sync_task.done():
+                self._consumption_sync_task.cancel()
+                try:
+                    await self._consumption_sync_task
+                except asyncio.CancelledError:
+                    _LOGGER.debug("Cancelled consumption sync task")
+
+        if self._webuser:
+            await self._webuser.close_session()
+        await self.public_client.close_session()
+
+    @property
+    def is_consumption_history_syncing(self) -> bool:
+        """Return True if CSV import is currently running."""
+        return self._consumption_sync_task is not None and not self._consumption_sync_task.done()
+
+    async def _async_regular_consumption_sync(self) -> None:
+        """Regular consumption sync (called every 60s from _async_update_data).
+
+        Matches hydroqc2mqtt pattern:
+        - First sync: Check last 30 days and fill gaps or trigger CSV import
+        - Regular sync: Only sync last 24 hours
+        - Skips if CSV import is running
+        """
+        if not self.is_portal_mode:
+            return
+
+        # Skip if CSV import is running
+        if self.is_consumption_history_syncing:
+            _LOGGER.debug("CSV import in progress, skipping regular sync")
+            return
+
+        # Auto-detect if this is the first sync
+        is_initial_sync = not self._initial_sync_done
+        if is_initial_sync:
+            self._initial_sync_done = True
+
+        try:
+            if is_initial_sync:
+                # Initial sync: Check last 30 days and fill gaps or trigger CSV import
+                _LOGGER.info("Starting initial consumption statistics sync")
+                sync_start_date = await self._determine_sync_start_date()
+
+                if sync_start_date is not None:
+                    # Found statistics, fill gap from last valid stat to now
+                    days_to_sync = (datetime.date.today() - sync_start_date).days + 1
+                    _LOGGER.info(
+                        "Syncing %d day(s) from %s to now",
+                        days_to_sync,
+                        sync_start_date.isoformat(),
+                    )
+                    await self.async_fetch_hourly_consumption(
+                        sync_start_date, datetime.date.today()
+                    )
+                else:
+                    # No statistics found in last 30 days, trigger CSV import
+                    _LOGGER.warning(
+                        "No statistics found in last 30 days. "
+                        "Triggering CSV import to populate historical data."
+                    )
+                    await self.async_sync_consumption_history(days_back=731)
+
+                    # After CSV import completes, sync recent data (last 30 days)
+                    _LOGGER.info("CSV import completed, now syncing recent data (last 30 days)")
+                    thirty_days_ago = datetime.date.today() - datetime.timedelta(days=30)
+                    await self.async_fetch_hourly_consumption(
+                        thirty_days_ago, datetime.date.today()
+                    )
+            else:
+                # Regular sync: Only sync last 24 hours
+                _LOGGER.debug("Starting regular consumption statistics sync (last 24h)")
+                start_date = datetime.date.today() - datetime.timedelta(days=1)
+                await self.async_fetch_hourly_consumption(start_date, datetime.date.today())
+        except Exception as err:
+            _LOGGER.error("Error during consumption sync: %s", err)
+
+    async def async_sync_consumption_history(self, days_back: int = 731) -> None:
+        """Import historical consumption data via CSV (background task).
+
+        Args:
+            days_back: Number of days back to import (default 731 = ~2 years)
+        """
+        if not self.is_portal_mode:
+            _LOGGER.warning("Consumption history only available in Portal mode")
+            return
+
+        _LOGGER.info("Starting consumption history sync task (CSV import)")
+
+        # Start background task
+        self._consumption_sync_task = asyncio.create_task(
+            self._async_import_csv_consumption_history(days_back)
+        )
+
+    async def async_clear_consumption_history(self) -> None:
+        """Clear all consumption history statistics.
+
+        This will:
+        1. Cancel any running consumption sync task
+        2. Clear all consumption statistics from the recorder
+        3. Reset the initial sync flag to trigger a fresh sync
+        """
+        from homeassistant.components.recorder import get_instance, statistics
+
+        if not self.is_portal_mode:
+            _LOGGER.warning("Clear consumption history only available in portal mode")
+            return
+
+        _LOGGER.info("Clearing consumption history")
+
+        # Cancel running sync task if active
+        if self.is_consumption_history_syncing:
+            _LOGGER.info("Cancelling active consumption sync task")
+            if self._consumption_sync_task:
+                self._consumption_sync_task.cancel()
+                try:
+                    await self._consumption_sync_task
+                except asyncio.CancelledError:
+                    _LOGGER.info("Consumption sync task cancelled")
+
+        # Determine consumption types to clear
+        consumption_types = []
+        if self.rate in {"DT", "DPC"}:
+            consumption_types = ["total", "reg", "haut"]
+        else:
+            consumption_types = ["total"]
+
+        # Clear statistics for each consumption type
+        for consumption_type in consumption_types:
+            statistic_id = self._get_statistic_id(consumption_type)
+            _LOGGER.info(
+                "Clearing statistics for %s (statistic_id: %s)",
+                consumption_type,
+                statistic_id,
+            )
+
+            try:
+                await get_instance(self.hass).async_add_executor_job(
+                    statistics.clear_statistics,
+                    get_instance(self.hass),
+                    [statistic_id],
+                )
+                _LOGGER.info("Cleared statistics for %s", consumption_type)
+            except Exception as err:
+                _LOGGER.error("Failed to clear statistics for %s: %s", consumption_type, err)
+
+        # Reset initial sync flag to trigger fresh sync on next update
+        self._initial_sync_done = False
+
+        _LOGGER.info("Consumption history cleared successfully")
+
+    async def _async_import_csv_consumption_history(self, days_back: int) -> None:
+        """Import historical consumption data from CSV.
+
+        This is a long-running task that fetches all historical data available
+        from Hydro-Québec's CSV export (up to 2 years).
+        """
+
+        from homeassistant.components.recorder import get_instance, statistics
+
+        try:
+            if not self._contract:
+                _LOGGER.warning("Contract not initialized")
+                return
+
+            # Calculate start date
+            today = datetime.date.today()
+            oldest_data_date = today - datetime.timedelta(days=days_back)
+
+            # Try to get contract start date
+            contract_start_date = None
+            if hasattr(self._contract, "start_date") and self._contract.start_date:
+                with contextlib.suppress(ValueError, TypeError):
+                    contract_start_date = datetime.date.fromisoformat(
+                        str(self._contract.start_date)
+                    )
+
+            # Use the more recent date (contract start or days_back)
+            if contract_start_date and contract_start_date > oldest_data_date:
+                start_date = contract_start_date
+            else:
+                start_date = oldest_data_date
+
+            _LOGGER.info(
+                "Importing CSV consumption history from %s to %s (%d days)",
+                start_date,
+                today,
+                (today - start_date).days,
+            )
+
+            # Fetch CSV data
+            csv_data = await self._contract.get_hourly_energy(start_date, today)
+
+            # Determine consumption types based on rate
+            consumption_types = []
+            if self.rate in {"DT", "DPC"}:
+                consumption_types = ["total", "reg", "haut"]
+            else:
+                consumption_types = ["total"]
+
+            # Parse CSV data
+            # Note: pytz is imported at module level to avoid blocking I/O in async context
+            import pytz
+            from pytz import timezone as pytz_timezone
+
+            tz = pytz_timezone("America/Toronto")
+
+            # CSV format: Contract, Date/Time, kWh [, kWh Reg, kWh Haut], ...
+            # Build statistics per consumption type
+            stats_by_type: dict[str, list[dict[str, Any]]] = {
+                ctype: [] for ctype in consumption_types
+            }
+
+            for row in csv_data:
+                # Skip header row
+                if isinstance(row, list) and len(row) > 2:
+                    if row[0] == "Contrat" or row[1] == "Date et heure":
+                        continue
+
+                    # Parse date/time (format: "YYYY-MM-DD HH:MM:SS")
+                    datetime_str = str(row[1])
+                    try:
+                        naive_dt = datetime.datetime.strptime(datetime_str, "%Y-%m-%d %H:%M:%S")
+                    except ValueError as e:
+                        _LOGGER.debug(
+                            "Skipping invalid datetime format: %s (error: %s)",
+                            datetime_str,
+                            e,
+                        )
+                        continue
+
+                    # Use pytz.localize() to properly handle DST transitions
+                    # This works correctly with ambiguous times (fall back) and non-existent times (spring forward)
+                    try:
+                        hour_datetime_tz = tz.localize(naive_dt)
+                    except pytz.exceptions.AmbiguousTimeError:
+                        # During fall DST: 1 AM hour repeats - use the second occurrence (DST=False)
+                        hour_datetime_tz = tz.localize(naive_dt, is_dst=False)
+                        _LOGGER.debug(
+                            "Handling ambiguous DST time: %s (using is_dst=False)",
+                            datetime_str,
+                        )
+                    except pytz.exceptions.NonExistentTimeError:
+                        # During spring DST: 2 AM hour doesn't exist - skip it
+                        _LOGGER.debug("Skipping non-existent DST time: %s", datetime_str)
+                        continue
+                    except Exception as e:
+                        _LOGGER.warning("Error localizing datetime %s: %s", datetime_str, e)
+                        continue
+
+                    # Extract consumption values based on rate
+                    if self.rate in {"DT", "DPC"}:
+                        # CSV columns: [0]=Contract, [1]=DateTime, [2]=kWh Reg, [3]=kWh Haut
+                        # Handle French decimal format (comma separator)
+                        reg_kwh = (
+                            float(str(row[2]).replace(",", ".")) if len(row) > 2 and row[2] else 0.0
+                        )
+                        haut_kwh = (
+                            float(str(row[3]).replace(",", ".")) if len(row) > 3 and row[3] else 0.0
+                        )
+                        total_kwh = reg_kwh + haut_kwh
+
+                        stats_by_type["reg"].append(
+                            {
+                                "start": hour_datetime_tz,
+                                "state": reg_kwh,
+                            }
+                        )
+                        stats_by_type["haut"].append(
+                            {
+                                "start": hour_datetime_tz,
+                                "state": haut_kwh,
+                            }
+                        )
+                        stats_by_type["total"].append(
+                            {
+                                "start": hour_datetime_tz,
+                                "state": total_kwh,
+                            }
+                        )
+                    else:
+                        # CSV columns: [0]=Contract, [1]=DateTime, [2]=kWh Total
+                        # Handle French decimal format (comma separator)
+                        total_kwh = (
+                            float(str(row[2]).replace(",", ".")) if len(row) > 2 and row[2] else 0.0
+                        )
+                        stats_by_type["total"].append(
+                            {
+                                "start": hour_datetime_tz,
+                                "state": total_kwh,
+                            }
+                        )
+
+            # Import statistics for each consumption type
+            for consumption_type in consumption_types:
+                stats_list = stats_by_type[consumption_type]
+
+                if not stats_list:
+                    _LOGGER.warning("No data found for consumption type %s", consumption_type)
+                    continue
+
+                # Sort by timestamp
+                stats_list.sort(key=lambda x: x["start"])
+
+                _LOGGER.info(
+                    "CSV import: Processing %d hourly records for %s (from %s to %s)",
+                    len(stats_list),
+                    consumption_type,
+                    stats_list[0]["start"].date() if stats_list else "N/A",
+                    stats_list[-1]["start"].date() if stats_list else "N/A",
+                )
+
+                # Query previous day's sum to maintain continuity
+                statistic_id = self._get_statistic_id(consumption_type)
+                _LOGGER.debug(
+                    "CSV import: Using statistic_id '%s' for %s",
+                    statistic_id,
+                    consumption_type,
+                )
+                yesterday = start_date - datetime.timedelta(days=1)
+                base_sum = 0.0
+
+                try:
+                    last_stats = await get_instance(self.hass).async_add_executor_job(
+                        statistics.statistics_during_period,
+                        self.hass,
+                        datetime.datetime.combine(yesterday, datetime.time.min).replace(tzinfo=tz),
+                        datetime.datetime.combine(yesterday, datetime.time.max).replace(tzinfo=tz),
+                        {statistic_id},
+                        "hour",
+                        None,
+                        {"sum"},
+                    )
+
+                    if last_stats and statistic_id in last_stats and last_stats[statistic_id]:
+                        base_sum = last_stats[statistic_id][-1]["sum"]
+                        _LOGGER.debug(
+                            "Found base sum %.2f kWh for %s from %s",
+                            base_sum,
+                            consumption_type,
+                            yesterday,
+                        )
+                except Exception as err:
+                    _LOGGER.debug("No previous statistics found for %s: %s", consumption_type, err)
+
+                # Add cumulative sums
+                cumulative_sum = base_sum
+                for stat in stats_list:
+                    cumulative_sum += stat["state"]
+                    stat["sum"] = round(cumulative_sum, 2)
+
+                # Import to recorder
+                metadata = {
+                    "source": "hydroqc",
+                    "statistic_id": statistic_id,
+                    "unit_of_measurement": "kWh",
+                    "has_mean": False,
+                    "has_sum": True,
+                    "mean_type": StatisticMeanType.NONE,
+                    "name": f"{consumption_type.capitalize()} Hourly Consumption",
+                    "unit_class": "energy",
+                }
+
+                await get_instance(self.hass).async_add_executor_job(
+                    statistics.async_add_external_statistics,
+                    self.hass,
+                    metadata,
+                    stats_list,
+                )
+
+                _LOGGER.info(
+                    "Imported %d CSV statistics for %s (sum: %.2f kWh)",
+                    len(stats_list),
+                    consumption_type,
+                    cumulative_sum,
+                )
+
+            _LOGGER.info("Completed CSV consumption history import")
+
+        except asyncio.CancelledError:
+            _LOGGER.info("CSV consumption history import cancelled")
+            raise
+        except Exception as err:
+            _LOGGER.error("Error importing CSV consumption history: %s", err, exc_info=True)
+
+    async def _determine_sync_start_date(self) -> datetime.date | None:
+        """Determine the start date for syncing consumption data.
+
+        Logic:
+        1. Query last 30 days for statistics
+        2. No statistics found → Return None (trigger CSV import)
+        3. Statistics found → Check first day coverage:
+           - First day has NO data (state = 0) → Return None (need CSV import)
+           - First day has data → Check for corruption and gaps
+           - Find most recent valid state > 0
+           - Return next day after last valid data
+
+        Returns the date to start incremental sync from, or None to trigger CSV import.
+        """
+        import zoneinfo
+
+        from homeassistant.components.recorder import get_instance, statistics
+
+        try:
+            # Check last 30 days for existing statistics
+            today = datetime.date.today()
+            thirty_days_ago = today - datetime.timedelta(days=30)
+            tz = zoneinfo.ZoneInfo("America/Toronto")
+
+            statistic_id = self._get_statistic_id("total")
+
+            all_stats = await get_instance(self.hass).async_add_executor_job(
+                statistics.statistics_during_period,
+                self.hass,
+                datetime.datetime.combine(thirty_days_ago, datetime.time.min).replace(tzinfo=tz),
+                datetime.datetime.combine(today, datetime.time.max).replace(tzinfo=tz),
+                {statistic_id},
+                "hour",
+                None,
+                {"sum", "state"},
+            )
+
+            if not all_stats or statistic_id not in all_stats or not all_stats[statistic_id]:
+                _LOGGER.info("No existing statistics found in last 30 days → Triggering CSV import")
+                return None
+
+            stats_list = all_stats[statistic_id]
+            _LOGGER.debug("Found %d statistics in last 30 days", len(stats_list))
+
+            # Check first day - if it has no data (state = 0), we need full CSV import
+            first_stat = stats_list[0]
+            first_state = first_stat.get("state", 0)
+            if first_state == 0:
+                _LOGGER.info(
+                    "First day has no data (state = 0) → Triggering CSV import for complete history"
+                )
+                return None
+
+            # We have data - now check for corruption and find last valid date
+            last_valid_stat = None
+            for i, stat in enumerate(stats_list):
+                stat_state = stat.get("state", 0)
+                stat_sum = stat.get("sum", 0)
+
+                # Check for corruption: decreasing sum
+                if i > 0 and stat_sum < stats_list[i - 1].get("sum", 0):
+                    _LOGGER.warning(
+                        "Detected decreasing sum at index %d (sum: %.2f → %.2f). "
+                        "Will sync from this point.",
+                        i,
+                        stats_list[i - 1].get("sum", 0),
+                        stat_sum,
+                    )
+                    break
+
+                # Track last valid data point (state > 0)
+                if stat_state > 0:
+                    last_valid_stat = stat
+
+            if not last_valid_stat:
+                _LOGGER.info("No valid data found (all states = 0) → Triggering CSV import")
+                return None
+
+            # Convert timestamp to date
+            last_stat_time = last_valid_stat["start"]
+
+            if isinstance(last_stat_time, (int, float)):
+                # Home Assistant returns timestamps in seconds (Unix epoch)
+                last_date = datetime.datetime.fromtimestamp(last_stat_time, tz=datetime.UTC).date()
+            elif isinstance(last_stat_time, str):
+                last_date = datetime.datetime.fromisoformat(
+                    last_stat_time.replace("Z", "+00:00")
+                ).date()
+            elif isinstance(last_stat_time, datetime.datetime):
+                last_date = last_stat_time.date()
+            else:
+                _LOGGER.warning("Unexpected timestamp type: %s", type(last_stat_time))
+                last_date = today
+
+            # Sanity check: reject dates before 2020 (corrupted database)
+            if last_date.year < 2020:
+                _LOGGER.warning(
+                    "Found corrupted statistics with date %s (before 2020) → Triggering CSV import",
+                    last_date,
+                )
+                return None
+
+            sync_start = last_date + datetime.timedelta(days=1)
+
+            # Don't sync if we're already up to date
+            if sync_start >= today:
+                _LOGGER.info("Statistics already up to date (last valid: %s)", last_date)
+                return None
+
+            _LOGGER.info(
+                "Found valid statistics up to %s (state: %.2f kWh, sum: %.2f kWh) → Incremental sync from %s",
+                last_date,
+                last_valid_stat.get("state", 0),
+                last_valid_stat.get("sum", 0),
+                sync_start,
+            )
+
+            return sync_start
+
+        except Exception as err:
+            _LOGGER.error("Error determining sync start date: %s", err, exc_info=True)
+            return None
+
+    async def async_fetch_hourly_consumption(
+        self, start_date: datetime.date, end_date: datetime.date
+    ) -> None:
+        """Fetch hourly consumption data and import to Home Assistant energy dashboard.
+
+        Only available in portal mode (requires login).
+        Uses recorder API to import statistics directly into HA energy dashboard.
+        """
+        import zoneinfo
+
+        from homeassistant.components.recorder import get_instance, statistics
+
+        if not self.is_portal_mode:
+            _LOGGER.warning("Hourly consumption only available in portal mode")
+            return
+
+        if not self._contract:
+            _LOGGER.warning("Contract not initialized")
+            return
+
+        try:
+            # Ensure we're logged in
+            if self._webuser and self._webuser.session_expired:
+                await self._webuser.login()
+
+            # Determine consumption types based on rate
+            consumption_types = []
+            if self.rate in {"DT", "DPC"}:
+                # Dual tariff rates have reg, haut, and total
+                consumption_types = ["total", "reg", "haut"]
+            else:
+                # Single tariff rates only have total
+                consumption_types = ["total"]
+
+            tz = zoneinfo.ZoneInfo("America/Toronto")
+            current_date = start_date
+
+            # Fetch and import data for each day in range
+            while current_date <= end_date:
+                try:
+                    _LOGGER.info("Fetching hourly consumption for %s", current_date)
+
+                    # Get hourly data for this specific date
+                    hourly_data = await self._contract.get_hourly_consumption(current_date)
+
+                    if not hourly_data or "results" not in hourly_data:
+                        _LOGGER.debug("No consumption data for %s", current_date)
+                        current_date += datetime.timedelta(days=1)
+                        continue
+
+                    hourly_list = hourly_data["results"].get("listeDonneesConsoEnergieHoraire", [])
+                    if not hourly_list:
+                        _LOGGER.debug("Empty hourly consumption list for %s", current_date)
+                        current_date += datetime.timedelta(days=1)
+                        continue
+
+                    # Process each consumption type
+                    for consumption_type in consumption_types:
+                        statistic_id = self._get_statistic_id(consumption_type)
+
+                        # Query existing statistics to get the last cumulative sum
+                        yesterday = current_date - datetime.timedelta(days=1)
+                        yesterday_start = datetime.datetime.combine(yesterday, datetime.time(0, 0))
+                        yesterday_end = datetime.datetime.combine(
+                            yesterday, datetime.time(23, 59, 59)
+                        )
+
+                        yesterday_start_tz = yesterday_start.replace(tzinfo=tz)
+                        yesterday_end_tz = yesterday_end.replace(tzinfo=tz)
+
+                        # Get last known sum from yesterday
+                        base_sum = 0.0
+                        try:
+                            last_stats = await get_instance(self.hass).async_add_executor_job(
+                                statistics.statistics_during_period,
+                                self.hass,
+                                yesterday_start_tz,
+                                yesterday_end_tz,
+                                {statistic_id},
+                                "day",
+                                None,
+                                {"sum"},
+                            )
+                            if (
+                                last_stats
+                                and statistic_id in last_stats
+                                and last_stats[statistic_id]
+                            ):
+                                base_sum = last_stats[statistic_id][-1]["sum"]
+                                _LOGGER.debug(
+                                    "Found base sum %.2f kWh for %s from %s",
+                                    base_sum,
+                                    consumption_type,
+                                    yesterday,
+                                )
+                        except Exception as err:
+                            _LOGGER.debug(
+                                "No previous statistics found for %s: %s",
+                                consumption_type,
+                                err,
+                            )
+
+                        # Build statistics list for today
+                        stats_list = []
+                        cumulative_sum = base_sum
+
+                        for hour_data in hourly_list:
+                            # Parse hour time (format: "HH:MM:SS")
+                            hour_str = hour_data["heure"]
+                            hour_parts = [int(p) for p in hour_str.split(":")]
+                            hour_time = datetime.time(hour_parts[0], hour_parts[1], hour_parts[2])
+
+                            # Create timezone-aware datetime
+                            hour_datetime = datetime.datetime.combine(current_date, hour_time)
+                            hour_datetime_tz = hour_datetime.replace(tzinfo=tz)
+
+                            # Get consumption value for this type
+                            consumption_key = f"conso{consumption_type.capitalize()}"
+                            consumption_kwh = hour_data.get(consumption_key, 0.0)
+
+                            # Update cumulative sum
+                            cumulative_sum += consumption_kwh
+
+                            stats_list.append(
+                                {
+                                    "start": hour_datetime_tz,
+                                    "state": consumption_kwh,
+                                    "sum": round(cumulative_sum, 2),
+                                }
+                            )
+
+                        # Import statistics using recorder API
+                        if stats_list:
+                            metadata = {
+                                "source": "hydroqc",
+                                "statistic_id": statistic_id,
+                                "unit_of_measurement": "kWh",
+                                "has_mean": False,
+                                "has_sum": True,
+                                "mean_type": StatisticMeanType.NONE,
+                                "name": f"{consumption_type.capitalize()} Hourly Consumption",
+                                "unit_class": "energy",
+                            }
+
+                            await get_instance(self.hass).async_add_executor_job(
+                                statistics.async_add_external_statistics,
+                                self.hass,
+                                metadata,
+                                stats_list,
+                            )
+
+                            _LOGGER.info(
+                                "Imported %d hourly statistics for %s on %s (sum: %.2f kWh)",
+                                len(stats_list),
+                                consumption_type,
+                                current_date,
+                                cumulative_sum,
+                            )
+
+                    current_date += datetime.timedelta(days=1)
+
+                except Exception as err:
+                    _LOGGER.exception(
+                        "Failed to fetch/import consumption for %s: %s",
+                        current_date,
+                        err,
+                    )
+                    current_date += datetime.timedelta(days=1)
+                    continue
+
+            _LOGGER.info(
+                "Completed hourly consumption sync from %s to %s",
+                start_date,
+                end_date,
+            )
+
+        except Exception as err:
+            _LOGGER.exception("Error fetching hourly consumption")
+            raise UpdateFailed(f"Failed to fetch hourly consumption: {err}") from err
+
+    def _get_statistic_id(self, consumption_type: str) -> str:
+        """Get the statistic_id for a consumption type.
+
+        External statistics don't use entity IDs, they use domain:name format.
+        """
+        # Use contract name from entry data, slugify it
+        from homeassistant.util import slugify
+
+        contract_name = self.entry.data.get(CONF_CONTRACT_NAME, "home")
+        base_name = slugify(contract_name)
+
+        if consumption_type == "total":
+            return f"hydroqc:{base_name}_hourly_consumption"
+        return f"hydroqc:{base_name}_{consumption_type}_hourly_consumption"
+
+    def get_sensor_value(self, data_source: str) -> Any:
+        """Extract sensor value from data using dot-notation path.
+
+        Example: "contract.cp_current_bill" -> walks the object graph.
+        Returns None if data not available.
+        """
+        if not self.data:
+            return None
+
+        parts = data_source.split(".")
+        obj = None
+
+        # Start with the root object
+        if parts[0] == "contract":
+            obj = self.data.get("contract")
+        elif parts[0] == "account":
+            obj = self.data.get("account")
+        elif parts[0] == "customer":
+            obj = self.data.get("customer")
+        elif parts[0] == "public_client":
+            obj = self.data.get("public_client")
+
+        if obj is None:
+            return None
+
+        # Walk the path
+        for part in parts[1:]:
+            if obj is None:
+                # If we hit None in the middle of the path, return None
+                return None
+            if not hasattr(obj, part):
+                _LOGGER.debug("Attribute %s not found in %s", part, type(obj).__name__)
+                return None
+            try:
+                obj = getattr(obj, part)
+            except AttributeError:
+                # Handle case where getattr fails on None or invalid object
+                return None
+
+        return obj
+
+    def is_sensor_seasonal(self, data_source: str) -> bool:
+        """Check if a winter credit sensor is in season.
+
+        Winter credit sensors should only show data during the winter season.
+        This applies ONLY to Portal mode sensors that fetch from contract data.
+        OpenData mode sensors (public_client) are always available.
+        """
+        # OpenData mode sensors using public_client are never seasonal
+        if data_source.startswith("public_client."):
+            return True
+
+        if "peak_handler" not in data_source or self.rate_option != "CPC":
+            return True  # Not a seasonal sensor
+
+        if not self.data or not self.data.get("contract"):
+            return False
+
+        contract = self.data["contract"]
+        if not isinstance(contract, ContractDCPC) or not contract.peak_handler:
+            return False
+
+        today = datetime.date.today()
+        winter_start = contract.peak_handler.winter_start_date.date()
+        winter_end = contract.peak_handler.winter_end_date.date()
+
+        return winter_start <= today <= winter_end

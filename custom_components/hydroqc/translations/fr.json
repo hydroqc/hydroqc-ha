@@ -1,0 +1,109 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Choisir le mode de connexion",
+        "description": "Sélectionnez comment vous voulez vous connecter à Hydro-Québec",
+        "data": {
+          "auth_mode": "Mode de connexion"
+        },
+        "data_description": {
+          "auth_mode": "Mode Portail : Connectez-vous pour un accès complet au compte. Mode Données Ouvertes : Utilisez les données publiques uniquement (sans connexion requise)"
+        }
+      },
+      "account": {
+        "title": "Mode Portail - Connexion au compte",
+        "description": "Entrez vos identifiants Hydro-Québec",
+        "data": {
+          "username": "Nom d'utilisateur (Courriel)",
+          "password": "Mot de passe",
+          "contract_name": "Nom du contrat"
+        },
+        "data_description": {
+          "username": "Votre adresse courriel du compte Hydro-Québec",
+          "password": "Votre mot de passe du compte Hydro-Québec",
+          "contract_name": "Un nom convivial pour ce contrat (p. ex., 'Maison', 'Chalet')"
+        }
+      },
+      "select_contract": {
+        "title": "Sélectionner le contrat",
+        "description": "Choisissez le contrat à surveiller",
+        "data": {
+          "contract": "Contrat"
+        },
+        "data_description": {
+          "contract": "Sélectionnez le contrat que vous souhaitez ajouter à Home Assistant"
+        }
+      },
+      "configure_preheat": {
+        "title": "Configurer la durée de préchauffage",
+        "description": "Configurez quand déclencher les alertes de préchauffage pour {rate_name}",
+        "data": {
+          "preheat_duration_minutes": "Durée de préchauffage (minutes)"
+        },
+        "data_description": {
+          "preheat_duration_minutes": "Durée avant les pointes critiques pour déclencher le préchauffage (0-240 minutes, défaut: 120)"
+        }
+      },
+      "import_history": {
+        "title": "Importer l'historique de consommation",
+        "description": "Combien de jours d'historique de consommation souhaitez-vous importer? Les 30 derniers jours seront synchronisés automatiquement. L'historique maximum disponible est de 800 jours. Définissez à 0 pour ignorer l'importation d'historique supplémentaire. L'importation se fait en arrière-plan et peut prendre plusieurs minutes.",
+        "data": {
+          "history_days": "Jours d'historique à importer"
+        },
+        "data_description": {
+          "history_days": "Nombre de jours à importer (0-800). Définissez à 0 pour synchroniser uniquement les 30 derniers jours, ou entrez une valeur pour l'historique plus ancien."
+        }
+      },
+      "opendata": {
+        "title": "Mode Données Ouvertes - Sélection du secteur",
+        "description": "Configurez la surveillance en utilisant les données publiques (sans connexion requise). Premièrement, sélectionnez votre secteur de clientèle",
+        "data": {
+          "sector": "Secteur de clientèle"
+        },
+        "data_description": {
+          "sector": "Sélectionnez si vous êtes un client résidentiel ou commercial"
+        }
+      },
+      "opendata_offer": {
+        "title": "Mode Données Ouvertes - Sélectionner le tarif",
+        "description": "Sélectionnez votre tarif d'électricité pour les clients {sector}. Les options disponibles sont récupérées depuis l'API publique d'Hydro-Québec",
+        "data": {
+          "contract_name": "Nom du contrat",
+          "rate_selection": "Tarif",
+          "preheat_duration_minutes": "Durée de préchauffage (minutes)"
+        },
+        "data_description": {
+          "contract_name": "Un nom convivial pour cette configuration (ex: 'Maison', 'Chalet')",
+          "rate_selection": "Sélectionnez votre tarif d'électricité parmi les options disponibles",
+          "preheat_duration_minutes": "Durée avant les pointes critiques pour déclencher le préchauffage (0-240 minutes, défaut: 120)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Échec de connexion à Hydro-Québec",
+      "invalid_auth": "Nom d'utilisateur ou mot de passe invalide",
+      "no_contracts": "Aucun contrat trouvé pour ce compte",
+      "unknown": "Erreur inattendue"
+    },
+    "abort": {
+      "already_configured": "Ce contrat est déjà configuré"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Options Hydro-Québec",
+        "description": "Configurer les options d'intégration",
+        "data": {
+          "update_interval": "Intervalle de mise à jour (secondes)",
+          "preheat_duration_minutes": "Durée de préchauffage (minutes)"
+        },
+        "data_description": {
+          "update_interval": "Fréquence de récupération des données d'Hydro-Québec (30-600 secondes)",
+          "preheat_duration_minutes": "Durée avant les événements de pointe critique pour déclencher le préchauffage (0-240 minutes)"
+        }
+      }
+    }
+  }
+}

@@ -1,0 +1,109 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Choose Connection Mode",
+        "description": "Select how you want to connect to Hydro-Québec",
+        "data": {
+          "auth_mode": "Connection Mode"
+        },
+        "data_description": {
+          "auth_mode": "Portal Mode: Sign in for full account access. OpenData Mode: Use public data only (no login required)"
+        }
+      },
+      "account": {
+        "title": "Portal Mode - Account Login",
+        "description": "Enter your Hydro-Québec credentials",
+        "data": {
+          "username": "Username (Email)",
+          "password": "Password",
+          "contract_name": "Contract Name"
+        },
+        "data_description": {
+          "username": "Your Hydro-Québec account email address",
+          "password": "Your Hydro-Québec account password",
+          "contract_name": "A friendly name for this contract (e.g., 'Home', 'Cottage')"
+        }
+      },
+      "select_contract": {
+        "title": "Select Contract",
+        "description": "Choose which contract to monitor",
+        "data": {
+          "contract": "Contract"
+        },
+        "data_description": {
+          "contract": "Select the contract you want to add to Home Assistant"
+        }
+      },
+      "configure_preheat": {
+        "title": "Configure Pre-heat Duration",
+        "description": "Configure when to trigger pre-heating alerts for {rate_name}",
+        "data": {
+          "preheat_duration_minutes": "Pre-heat Duration (minutes)"
+        },
+        "data_description": {
+          "preheat_duration_minutes": "Duration before critical peak events to trigger pre-heating (0-240 minutes, default: 120)"
+        }
+      },
+      "import_history": {
+        "title": "Import Consumption History",
+        "description": "How many days of consumption history would you like to import? The last 30 days will be synced automatically. Maximum available history is 800 days. Set to 0 to skip additional history import. The import runs in the background and may take several minutes.",
+        "data": {
+          "history_days": "Days of History to Import"
+        },
+        "data_description": {
+          "history_days": "Number of days to import (0-800). Set to 0 to sync only the last 30 days, or enter a value for older history."
+        }
+      },
+      "opendata": {
+        "title": "OpenData Mode - Select Sector",
+        "description": "Configure monitoring using public data (no login required). First, select your customer sector",
+        "data": {
+          "sector": "Customer Sector"
+        },
+        "data_description": {
+          "sector": "Select whether you are a residential or commercial customer"
+        }
+      },
+      "opendata_offer": {
+        "title": "OpenData Mode - Select Rate",
+        "description": "Select your electricity rate plan for {sector} customers. Available options are fetched from Hydro-Québec's public API",
+        "data": {
+          "contract_name": "Contract Name",
+          "rate_selection": "Rate Plan",
+          "preheat_duration_minutes": "Pre-heat Duration (minutes)"
+        },
+        "data_description": {
+          "contract_name": "A friendly name for this configuration (e.g., 'Home', 'Cottage')",
+          "rate_selection": "Select your electricity rate plan from available options",
+          "preheat_duration_minutes": "Duration before critical peak events to trigger pre-heating (0-240 minutes, default: 120)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Failed to connect to Hydro-Québec",
+      "invalid_auth": "Invalid username or password",
+      "no_contracts": "No contracts found for this account",
+      "unknown": "Unexpected error occurred"
+    },
+    "abort": {
+      "already_configured": "This contract is already configured"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Hydro-Québec Options",
+        "description": "Configure integration options",
+        "data": {
+          "update_interval": "Update Interval (seconds)",
+          "preheat_duration_minutes": "Pre-heat Duration (minutes)"
+        },
+        "data_description": {
+          "update_interval": "How often to fetch data from Hydro-Québec (30-600 seconds)",
+          "preheat_duration_minutes": "Duration before critical peak events to trigger pre-heating (0-240 minutes)"
+        }
+      }
+    }
+  }
+}

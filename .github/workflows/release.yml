@@ -1,0 +1,73 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Create Release
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Extract version from tag
+        id: version
+        run: |
+          VERSION=${GITHUB_REF#refs/tags/v}
+          echo "version=$VERSION" >> $GITHUB_OUTPUT
+          echo "Version: $VERSION"
+
+      - name: Update manifest version
+        run: |
+          python3 -c "
+          import json
+          with open('custom_components/hydroqc/manifest.json', 'r') as f:
+              manifest = json.load(f)
+          manifest['version'] = '${{ steps.version.outputs.version }}'
+          with open('custom_components/hydroqc/manifest.json', 'w') as f:
+              json.dump(manifest, f, indent=2)
+              f.write('\n')
+          "
+
+      - name: Create release archive
+        run: |
+          cd custom_components
+          zip -r ../hydroqc-${{ steps.version.outputs.version }}.zip hydroqc/
+          cd ..
+
+      - name: Generate changelog
+        id: changelog
+        run: |
+          if [ -f CHANGELOG.md ]; then
+            echo "changelog<<EOF" >> $GITHUB_OUTPUT
+            sed -n "/^## \[${{ steps.version.outputs.version }}\]/,/^## \[/p" CHANGELOG.md | sed '$ d' >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "changelog=Release ${{ steps.version.outputs.version }}" >> $GITHUB_OUTPUT
+          fi
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: hydroqc-${{ steps.version.outputs.version }}.zip
+          body: ${{ steps.changelog.outputs.changelog }}
+          draft: false
+          prerelease: false
+          generate_release_notes: true
+
+      - name: Update HACS repository JSON
+        run: |
+          echo "{
+            \"name\": \"Hydro-Québec\",
+            \"render_readme\": true,
+            \"version\": \"${{ steps.version.outputs.version }}\"
+          }" > hacs.json

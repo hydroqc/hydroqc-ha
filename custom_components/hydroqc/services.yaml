@@ -1,0 +1,27 @@
+# Service definitions for Hydro-Québec integration
+refresh_data:
+  name: Refresh data
+  description: Manually refresh data from Hydro-Québec API
+  target:
+    entity:
+      integration: hydroqc
+  fields: {}
+
+sync_consumption_history:
+  name: Sync consumption history
+  description: Import historical hourly consumption data from Hydro-Québec (CSV import for up to 2 years of data). Runs as a background task.
+  target:
+    device:
+      integration: hydroqc
+  fields:
+    days_back:
+      name: Days back
+      description: Number of days of historical data to import (default 731 = ~2 years)
+      required: false
+      default: 731
+      example: 731
+      selector:
+        number:
+          min: 1
+          max: 2000
+          mode: box

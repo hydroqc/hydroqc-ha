@@ -40,9 +40,9 @@ jobs:
 
       - name: Create release archive
         run: |
-          cd custom_components
-          zip -r ../hydroqc.zip hydroqc/
-          cd ..
+          cd custom_components/hydroqc
+          zip -r ../../hydroqc.zip .
+          cd ../..
 
       - name: Generate changelog
         id: changelog

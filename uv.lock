@@ -1231,7 +1231,7 @@ wheels = [
 
 [[package]]
 name = "hydro-quebec-api-wrapper"
-version = "4.2.2"
+version = "4.2.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "aiocache" },
@@ -1240,9 +1240,9 @@ dependencies = [
     { name = "python-dateutil" },
     { name = "pytz" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/2b/1b/f1c046bb87a930ee07c7e395018f4aebd401b5c0d6c73e1b8c18fa4ea354/hydro_quebec_api_wrapper-4.2.2.tar.gz", hash = "sha256:ad709557f2864f93c4e7f2bcdc3fe73c60a0bc5baa356c7c7bd94d6c6e09d1d8", size = 395403, upload-time = "2025-11-27T17:54:17.264Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/86/16/71bb05e48bcc605b6ed565b032f41fa80596d7e0f9146dac5c34660c5465/hydro_quebec_api_wrapper-4.2.3.tar.gz", hash = "sha256:e97d282ffc4e070202ec3bc98fdd3a85a2ba515a787b3c55ec1d316340f8ffd9", size = 395322, upload-time = "2025-11-29T18:36:58.604Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/5a/b7/19a7ec23cda20d1bbeeaa3329eec82293b4b5180fa493f2a98e1cc1be9ae/hydro_quebec_api_wrapper-4.2.2-py3-none-any.whl", hash = "sha256:68b5cbe810b72826ad1c2f78a1de7cc39b00f0a2356a1bb37e7d72ad5ff2306a", size = 59255, upload-time = "2025-11-27T17:54:15.64Z" },
+    { url = "https://files.pythonhosted.org/packages/15/6e/3675c76888baadeccddd99674122fdaae253fb4a7fee6936b36aa6431e1b/hydro_quebec_api_wrapper-4.2.3-py3-none-any.whl", hash = "sha256:c5c98ffc10f9697f8d73de907597045f78d3e0d0c2e7e496ed5e1c6d9c142d3d", size = 59161, upload-time = "2025-11-29T18:36:57.175Z" },
 ]
 
 [[package]]
@@ -1267,7 +1267,7 @@ dev = [
 [package.metadata.requires-dev]
 dev = [
     { name = "freezegun", specifier = ">=1.5.0" },
-    { name = "hydro-quebec-api-wrapper", specifier = "==4.2.2" },
+    { name = "hydro-quebec-api-wrapper", specifier = "==4.2.3" },
     { name = "mypy", specifier = ">=1.13.0" },
     { name = "pytest", specifier = ">=8.3.0" },
     { name = "pytest-asyncio", specifier = ">=0.24.0" },

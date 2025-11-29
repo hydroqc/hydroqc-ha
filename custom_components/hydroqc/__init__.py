@@ -63,18 +63,28 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # This runs after HA setup completes to avoid blocking startup
     coordinator._first_refresh_done = True
     if coordinator.is_portal_mode and coordinator._contract:
-        # If user requested history import during setup, trigger it now
-        # Only use CSV import for > 30 days (regular sync already covers last 30 days)
+        # Check if this is the first setup (history_days present) or a restart (flag removed)
+        # We only import history once after initial setup, not on every restart
         history_days = entry.data.get("history_days", 0)
-        if history_days > 30:
-            _LOGGER.info(
-                "User requested %d-day history import, starting CSV import "
-                "(regular sync will run after CSV import completes)",
-                history_days,
-            )
-            coordinator.async_sync_consumption_history(days_back=history_days)
+
+        if history_days > 0:
+            # First setup - remove the flag so it doesn't run again on restart
+            new_data = dict(entry.data)
+            del new_data["history_days"]
+            hass.config_entries.async_update_entry(entry, data=new_data)
+
+            if history_days > 30:
+                _LOGGER.info(
+                    "User requested %d-day history import, starting CSV import "
+                    "(regular sync will run after CSV import completes)",
+                    history_days,
+                )
+                coordinator.async_sync_consumption_history(days_back=history_days)
+            else:
+                # 30 days or less: regular initial sync already covers this
+                hass.async_create_task(coordinator._async_regular_consumption_sync())
         else:
-            # 30 days or less: regular initial sync already covers this
+            # Restart - just run regular sync to catch up on recent data
             hass.async_create_task(coordinator._async_regular_consumption_sync())
 
     return True

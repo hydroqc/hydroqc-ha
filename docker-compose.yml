@@ -1,0 +1,14 @@
+## We use this for tests, do not deploy using this docker-compose!!!
+
+services:
+  homeassistant:
+    container_name: homeassistant
+    image: "ghcr.io/home-operations/home-assistant:2025.11.3"
+    volumes:
+      - ./.ha-test-config:/config
+      - ./custom_components/hydroqc:/config/custom_components/hydroqc
+      - /etc/localtime:/etc/localtime:ro
+      - /run/dbus:/run/dbus:ro
+    restart: unless-stopped
+    ports:
+      - 8123:8123

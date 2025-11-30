@@ -15,6 +15,12 @@ CONF_AUTH_MODE: Final = "auth_mode"
 CONF_PREHEAT_DURATION: Final = "preheat_duration_minutes"
 CONF_UPDATE_INTERVAL: Final = "update_interval"
 CONF_HISTORY_DAYS: Final = "history_days"
+CONF_MIGRATE_TOTAL: Final = "migrate_total"
+CONF_MIGRATE_REG: Final = "migrate_reg"
+CONF_MIGRATE_HAUT: Final = "migrate_haut"
+
+# Migration constants
+MIGRATION_NONE_VALUE: Final = "none"
 
 # Auth modes
 AUTH_MODE_PORTAL: Final = "portal"

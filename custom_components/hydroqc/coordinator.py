@@ -149,7 +149,11 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._statistics_manager is None:
             contract_name = self.entry.data.get(CONF_CONTRACT_NAME, "home")
             self._statistics_manager = StatisticsManager(
-                self.hass, self._contract, self._rate, self._get_statistic_id, contract_name
+                self.hass,
+                self._contract,
+                self._rate,
+                self._get_statistic_id,
+                contract_name,
             )
         if self._history_importer is None and self._contract is not None:
             self._history_importer = ConsumptionHistoryImporter(

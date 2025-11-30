@@ -6,8 +6,10 @@ import asyncio
 import datetime
 import logging
 import zoneinfo
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
+from homeassistant.components import persistent_notification
 from homeassistant.components.recorder import get_instance, statistics
 from homeassistant.components.recorder.models import StatisticMeanType
 from homeassistant.helpers.update_coordinator import UpdateFailed
@@ -28,7 +30,7 @@ class StatisticsManager:
         hass: HomeAssistant,
         contract: Contract | None,
         rate: str,
-        get_statistic_id_func: callable,
+        get_statistic_id_func: Callable[[str], str],
         contract_name: str = "home",
     ) -> None:
         """Initialize the statistics manager.
@@ -455,3 +457,301 @@ class StatisticsManager:
                     current_date,
                     cumulative_sum,
                 )
+
+
+async def get_available_energy_statistics(
+    hass: HomeAssistant, exclude_prefix: str = "hydroqc:"
+) -> list[dict[str, str]]:
+    """Get available energy statistics from recorder for migration.
+
+    Args:
+        hass: Home Assistant instance
+        exclude_prefix: Prefix to exclude from results (default: "hydroqc:")
+
+    Returns:
+        List of dicts with 'value' and 'label' keys for UI selection
+    """
+    try:
+        # Get all statistic IDs from recorder
+        statistic_ids = await get_instance(hass).async_add_executor_job(
+            statistics.list_statistic_ids,
+            hass,
+            None,  # statistic_type (None = all types)
+        )
+
+        _LOGGER.debug(
+            "Found %d total statistics, first few: %s",
+            len(statistic_ids),
+            statistic_ids[:3] if statistic_ids else [],
+        )
+
+        # Filter for energy statistics, exclude current integration
+        energy_stats = []
+        for stat in statistic_ids:
+            statistic_id = stat.get("statistic_id", "")
+            unit_class = stat.get("unit_class")
+            unit = stat.get("statistics_unit_of_measurement", "")
+
+            # Skip if not energy class or not kWh, or if it's from current integration
+            if unit_class != "energy" or unit != "kWh" or statistic_id.startswith(exclude_prefix):
+                continue
+
+            source = stat.get("source", "recorder")
+            name = stat.get("name") or statistic_id
+
+            energy_stats.append({"value": statistic_id, "label": f"{name} ({source})"})
+
+        # Sort by label for better UX
+        energy_stats.sort(key=lambda x: x["label"])
+
+        # Add "None - Skip" option at the beginning
+        energy_stats.insert(0, {"value": "none", "label": "None - Skip"})
+
+        _LOGGER.debug("Found %d energy statistics available for migration", len(energy_stats) - 1)
+        return energy_stats
+
+    except Exception as err:
+        _LOGGER.error("Failed to fetch available statistics: %s", err)
+        return [{"value": "none", "label": "None - Skip"}]
+
+
+async def check_statistics_exist(
+    hass: HomeAssistant, statistic_ids: list[str]
+) -> dict[str, dict[str, Any]]:
+    """Check if target statistics already exist.
+
+    Args:
+        hass: Home Assistant instance
+        statistic_ids: List of statistic IDs to check
+
+    Returns:
+        Dict mapping statistic_id to {'exists': bool, 'count': int}
+    """
+    result = {}
+
+    try:
+        # Query last 7 days to check for existing data
+        today = datetime.date.today()
+        seven_days_ago = today - datetime.timedelta(days=7)
+        tz = zoneinfo.ZoneInfo("America/Toronto")
+
+        for statistic_id in statistic_ids:
+            all_stats = await get_instance(hass).async_add_executor_job(
+                statistics.statistics_during_period,
+                hass,
+                datetime.datetime.combine(seven_days_ago, datetime.time.min).replace(tzinfo=tz),
+                datetime.datetime.combine(today, datetime.time.max).replace(tzinfo=tz),
+                {statistic_id},
+                "hour",
+                None,
+                {"sum"},
+            )
+
+            exists = bool(all_stats and statistic_id in all_stats and all_stats[statistic_id])
+            count = len(all_stats.get(statistic_id, [])) if exists else 0
+
+            result[statistic_id] = {"exists": exists, "count": count}
+
+        return result
+
+    except Exception as err:
+        _LOGGER.error("Failed to check existing statistics: %s", err)
+        return {sid: {"exists": False, "count": 0} for sid in statistic_ids}
+
+
+async def migrate_statistics_streams(  # noqa: PLR0912, PLR0915
+    hass: HomeAssistant,
+    source_mapping: dict[str, str],
+    target_get_id_func: Callable[[str], str],
+    contract_name: str,
+) -> dict[str, dict[str, Any | int | bool | str]]:
+    """Migrate statistics from source IDs to target IDs.
+
+    Args:
+        hass: Home Assistant instance
+        source_mapping: Dict mapping stream type to source statistic_id
+                       e.g., {"total": "sensor.old_total", "reg": "none", "haut": "sensor.old_haut"}
+        target_get_id_func: Function to get target statistic_id for stream type
+        contract_name: Contract name for notifications
+
+    Returns:
+        Dict with migration results per stream: {'total': {'success': bool, 'records': int, 'error': str}}
+    """
+
+    results = {}
+    tz = zoneinfo.ZoneInfo("America/Toronto")
+
+    # Create progress notification
+    notification_id = f"hydroqc_migration_{contract_name.lower().replace(' ', '_')}"
+    await persistent_notification.async_create(
+        hass,
+        f"Migrating consumption history for {contract_name}...",
+        "Hydro-Québec Migration",
+        notification_id,
+    )
+
+    try:
+        for stream_type, source_id in source_mapping.items():
+            # Skip if source is "none"
+            if source_id == "none":
+                _LOGGER.debug("Skipping migration for %s (source is 'none')", stream_type)
+                results[stream_type] = {"success": True, "records": 0, "skipped": True}
+                continue
+
+            target_id = target_get_id_func(stream_type)
+            _LOGGER.info("Migrating %s: %s → %s", stream_type, source_id, target_id)
+
+            try:
+                # Query all available statistics from source
+                # Use a wide date range to capture all historical data
+                start_date = datetime.datetime(2020, 1, 1, tzinfo=tz)
+                end_date = datetime.datetime.now(tz)
+
+                source_stats = await get_instance(hass).async_add_executor_job(
+                    statistics.statistics_during_period,
+                    hass,
+                    start_date,
+                    end_date,
+                    {source_id},
+                    "hour",
+                    None,
+                    {"sum", "state"},
+                )
+
+                if not source_stats or source_id not in source_stats:
+                    _LOGGER.warning("No statistics found for source %s", source_id)
+                    results[stream_type] = {
+                        "success": False,
+                        "records": 0,
+                    }
+                    continue
+
+                stats_list = source_stats[source_id]
+                _LOGGER.info("Found %d records to migrate for %s", len(stats_list), stream_type)
+
+                # Validate and prepare statistics for migration
+                valid_stats: list[Any] = []  # StatisticsRow from HA recorder
+                now = datetime.datetime.now(tz)
+
+                for stat in stats_list:
+                    # Extract timestamp (already in seconds)
+                    start_ts = stat.get("start")
+                    if not start_ts:
+                        continue
+
+                    start_dt = datetime.datetime.fromtimestamp(start_ts, tz=tz)
+
+                    # Validate: no future dates
+                    if start_dt > now:
+                        _LOGGER.warning("Skipping future date in %s: %s", stream_type, start_dt)
+                        continue
+
+                    # Validate: monotonic sums (warn but continue)
+                    if valid_stats:
+                        last_sum = valid_stats[-1].get("sum", 0.0)
+                        current_sum = stat.get("sum", 0.0)
+                        if (
+                            current_sum is not None
+                            and last_sum is not None
+                            and current_sum < last_sum
+                        ):
+                            _LOGGER.warning(
+                                "Non-monotonic sum detected in %s at %s (%.2f < %.2f)",
+                                stream_type,
+                                start_dt,
+                                current_sum,
+                                last_sum,
+                            )
+
+                    valid_stats.append(stat)
+
+                if not valid_stats:
+                    _LOGGER.warning("No valid statistics after validation for %s", stream_type)
+                    results[stream_type] = {
+                        "success": False,
+                        "records": 0,
+                    }
+                    continue
+
+                # Build metadata for target
+                metadata = {
+                    "source": "hydroqc",
+                    "statistic_id": target_id,
+                    "unit_of_measurement": "kWh",
+                    "has_mean": False,
+                    "has_sum": True,
+                    "mean_type": StatisticMeanType.NONE,
+                    "name": f"{contract_name.title()} {stream_type.capitalize()} Hourly Consumption",
+                    "unit_class": "energy",
+                }
+
+                # Import statistics
+                await get_instance(hass).async_add_executor_job(
+                    statistics.async_add_external_statistics,
+                    hass,
+                    metadata,
+                    valid_stats,
+                )
+
+                _LOGGER.info(
+                    "Successfully migrated %d records for %s",
+                    len(valid_stats),
+                    stream_type,
+                )
+                results[stream_type] = {"success": True, "records": len(valid_stats)}
+
+            except Exception as err:
+                _LOGGER.error(
+                    "Failed to migrate %s stream: %s. "
+                    "Check your statistics data at "
+                    "https://www.home-assistant.io/docs/tools/dev-tools/#statistics-tab",
+                    stream_type,
+                    err,
+                )
+                results[stream_type] = {"success": False, "records": 0}
+
+        # Update notification with results
+        success_count = sum(1 for r in results.values() if r.get("success"))
+        total_count = len([r for r in results.values() if not r.get("skipped", False)])
+
+        if success_count == total_count and total_count > 0:
+            # Full success
+            records_summary = ", ".join(
+                f"{k}: {v['records']}" for k, v in results.items() if v.get("records", 0) > 0
+            )
+            await persistent_notification.async_create(
+                hass,
+                f"Successfully migrated consumption history for {contract_name}.\n\nRecords: {records_summary}",
+                "Hydro-Québec Migration Complete",
+                notification_id,
+            )
+        elif success_count > 0:
+            # Partial success
+            success_streams = [k for k, v in results.items() if v.get("success")]
+            failed_streams = [k for k, v in results.items() if not v.get("success")]
+            await persistent_notification.async_create(
+                hass,
+                f"Partial migration completed for {contract_name}.\n\n"
+                f"Successful: {', '.join(success_streams)}\n"
+                f"Failed: {', '.join(failed_streams)}\n\n"
+                "Check logs for details.",
+                "Hydro-Québec Migration Partial",
+                notification_id,
+            )
+        else:
+            # Complete failure
+            await persistent_notification.async_create(
+                hass,
+                f"Migration failed for {contract_name}. See logs for details.",
+                "Hydro-Québec Migration Failed",
+                notification_id,
+            )
+
+    except Exception as err:
+        _LOGGER.error("Migration process failed: %s", err)
+        await persistent_notification.async_dismiss(
+            hass,
+            notification_id,
+        )
+
+    return results

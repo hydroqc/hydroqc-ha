@@ -347,14 +347,6 @@ last_date = datetime.datetime.fromtimestamp(
 ).date()  # Results in dates around 1970!
 ```
 
-**Detecting corrupted data**: Add sanity checks to reject obviously invalid dates:
-
-```python
-if last_date.year < 2020:
-    _LOGGER.warning("Found corrupted statistics with date %s", last_date)
-    return None  # Trigger fresh import instead
-```
-
 ### CSV Import vs Hourly Fetch
 
 Two methods for importing consumption history:
@@ -397,7 +389,6 @@ Two methods for importing consumption history:
 - **Statistics timestamps**: Must use aware datetime objects (with timezone), preferably `America/Toronto` (EST)
 - **Cumulative sum**: Statistics require running total from first import, not just hourly state
 - **Timestamp format**: HA returns Unix epoch **seconds** not milliseconds - don't divide by 1000!
-- **Database corruption**: Old statistics with dates before 2020 indicate corrupted data - add sanity checks
 - **Task separation**: CSV import uses `_csv_import_task`, regular sync uses `_regular_sync_task` - never confuse them
 - **History import threshold**: Only trigger CSV import for >30 days (regular sync covers ≤30 days efficiently)
 - **Statistics naming**: Display names include contract name prefix (e.g., "Home Total Hourly Consumption")
@@ -550,7 +541,6 @@ Tests cover critical bugs that were fixed:
 3. **French decimals**: CSV parsing with comma decimal separators
 4. **Statistics metadata**: HA 2025.11+ requires `mean_type` field
 5. **Timestamp handling**: HA returns Unix seconds, not milliseconds
-6. **Corrupted data**: Sanity checks for dates before 2020
 
 ### CI/CD Integration
 

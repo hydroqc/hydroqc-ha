@@ -182,7 +182,11 @@ class TestHydroQcSensor:
 
             # Find the projected bill sensor
             projected_bill_sensor = next(
-                (e for e in entities if e._sensor_key == "current_billing_period_projected_bill"),
+                (
+                    e
+                    for e in entities
+                    if e._sensor_key == "current_billing_period_projected_bill"
+                ),
                 None,
             )
             assert projected_bill_sensor is not None

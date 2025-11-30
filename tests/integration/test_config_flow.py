@@ -34,7 +34,9 @@ class TestConfigFlow:
         assert result["type"] == "form"
         assert result["step_id"] == "user"
 
-    async def test_auth_login_success(self, hass: HomeAssistant, mock_webuser: MagicMock) -> None:
+    async def test_auth_login_success(
+        self, hass: HomeAssistant, mock_webuser: MagicMock
+    ) -> None:
         """Test successful authentication."""
         with patch(
             "custom_components.hydroqc.config_flow.WebUser",

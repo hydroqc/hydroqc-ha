@@ -25,3 +25,32 @@ sync_consumption_history:
           min: 1
           max: 2000
           mode: box
+
+migrate_statistics:
+  name: Migrate statistics
+  description: Migrate consumption history statistics from another integration (e.g., hydroqc2mqtt) to this integration. Useful for preserving historical Energy Dashboard data.
+  target:
+    entity:
+      integration: hydroqc
+  fields:
+    source_total:
+      name: Total consumption source
+      description: Statistic ID for total consumption (required)
+      required: true
+      example: "sensor.hydroqc2mqtt_total_consumption"
+      selector:
+        text:
+    source_reg:
+      name: Regular rate consumption source
+      description: Statistic ID for regular rate consumption (optional, for DT/DPC rates)
+      required: false
+      example: "sensor.hydroqc2mqtt_reg_consumption"
+      selector:
+        text:
+    source_haut:
+      name: Higher rate consumption source
+      description: Statistic ID for higher rate consumption (optional, for DT/DPC rates)
+      required: false
+      example: "sensor.hydroqc2mqtt_haut_consumption"
+      selector:
+        text:

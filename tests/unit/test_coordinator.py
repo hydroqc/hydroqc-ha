@@ -24,7 +24,9 @@ class TestHydroQcDataCoordinator:
         """Test coordinator initializes correctly."""
         mock_config_entry.add_to_hass(hass)
 
-        with patch("custom_components.hydroqc.coordinator.WebUser") as mock_webuser_class:
+        with patch(
+            "custom_components.hydroqc.coordinator.WebUser"
+        ) as mock_webuser_class:
             mock_webuser = MagicMock()
             mock_webuser.login = AsyncMock(return_value=True)
             mock_webuser_class.return_value = mock_webuser
@@ -65,7 +67,9 @@ class TestHydroQcDataCoordinator:
         mock_config_entry.add_to_hass(hass)
 
         with (
-            patch("custom_components.hydroqc.coordinator.WebUser") as mock_webuser_class,
+            patch(
+                "custom_components.hydroqc.coordinator.WebUser"
+            ) as mock_webuser_class,
             patch("custom_components.hydroqc.coordinator.PublicDataClient"),
         ):
             mock_webuser = MagicMock()

@@ -45,6 +45,30 @@
           "preheat_duration_minutes": "Duration before critical peak events to trigger pre-heating (0-240 minutes, default: 120)"
         }
       },
+      "migrate_statistics": {
+        "title": "Migrate Statistics",
+        "description": "Do you want to migrate consumption history from another integration (e.g., hydroqc2mqtt)? This will preserve your historical Energy Dashboard data.",
+        "data": {
+          "migrate": "Migrate from another integration"
+        },
+        "data_description": {
+          "migrate": "Enable to select source statistics for migration"
+        }
+      },
+      "select_migration_sources": {
+        "title": "Select Migration Sources",
+        "description": "Select the source statistics to migrate. Total consumption is required. Regular and Higher rate consumption are only needed for DT/DPC rates or if you previously had DT/DPC rates.",
+        "data": {
+          "migrate_total": "Total Consumption Source",
+          "migrate_reg": "Regular Rate Consumption Source",
+          "migrate_haut": "Higher Rate Consumption Source"
+        },
+        "data_description": {
+          "migrate_total": "Statistic ID for total consumption (required)",
+          "migrate_reg": "Statistic ID for regular rate consumption (optional, for DT/DPC rates)",
+          "migrate_haut": "Statistic ID for higher rate consumption (optional, for DT/DPC rates)"
+        }
+      },
       "import_history": {
         "title": "Import Consumption History",
         "description": "How many days of consumption history would you like to import? The last 30 days will be synced automatically. Maximum available history is 800 days. Set to 0 to skip additional history import. The import runs in the background and may take several minutes.",
@@ -57,7 +81,7 @@
       },
       "opendata": {
         "title": "OpenData Mode - Select Sector",
-        "description": "Configure monitoring using public data (no login required). First, select your customer sector",
+        "description": "Configure monitoring using public data (no login required). First, select your customer sector.",
         "data": {
           "sector": "Customer Sector"
         },
@@ -67,7 +91,7 @@
       },
       "opendata_offer": {
         "title": "OpenData Mode - Select Rate",
-        "description": "Select your electricity rate plan for {sector} customers. Available options are fetched from Hydro-Québec's public API",
+        "description": "Select your electricity rate plan for {sector} customers. Available options are fetched from Hydro-Québec's public API.",
         "data": {
           "contract_name": "Contract Name",
           "rate_selection": "Rate Plan",
@@ -84,6 +108,7 @@
       "cannot_connect": "Failed to connect to Hydro-Québec",
       "invalid_auth": "Invalid username or password",
       "no_contracts": "No contracts found for this account",
+      "total_required": "Total consumption source is required",
       "unknown": "Unexpected error occurred"
     },
     "abort": {

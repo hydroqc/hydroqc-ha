@@ -45,6 +45,30 @@
           "preheat_duration_minutes": "Durée avant les pointes critiques pour déclencher le préchauffage (0-240 minutes, défaut: 120)"
         }
       },
+      "migrate_statistics": {
+        "title": "Migrer les statistiques",
+        "description": "Voulez-vous migrer l'historique de consommation depuis une autre intégration (ex: hydroqc2mqtt)? Cela préservera vos données historiques du tableau de bord Énergie.",
+        "data": {
+          "migrate": "Migrer depuis une autre intégration"
+        },
+        "data_description": {
+          "migrate": "Activer pour sélectionner les statistiques sources pour la migration"
+        }
+      },
+      "select_migration_sources": {
+        "title": "Sélectionner les sources de migration",
+        "description": "Sélectionnez les statistiques sources à migrer. La consommation totale est requise. La consommation au tarif régulier et au tarif supérieur sont seulement nécessaires pour les tarifs DT/DPC ou si vous aviez précédemment des tarifs DT/DPC.",
+        "data": {
+          "migrate_total": "Source de consommation totale",
+          "migrate_reg": "Source de consommation au tarif régulier",
+          "migrate_haut": "Source de consommation au tarif supérieur"
+        },
+        "data_description": {
+          "migrate_total": "ID de statistique pour la consommation totale (requis)",
+          "migrate_reg": "ID de statistique pour la consommation au tarif régulier (optionnel, pour tarifs DT/DPC)",
+          "migrate_haut": "ID de statistique pour la consommation au tarif supérieur (optionnel, pour tarifs DT/DPC)"
+        }
+      },
       "import_history": {
         "title": "Importer l'historique de consommation",
         "description": "Combien de jours d'historique de consommation souhaitez-vous importer? Les 30 derniers jours seront synchronisés automatiquement. L'historique maximum disponible est de 800 jours. Définissez à 0 pour ignorer l'importation d'historique supplémentaire. L'importation se fait en arrière-plan et peut prendre plusieurs minutes.",
@@ -84,6 +108,7 @@
       "cannot_connect": "Échec de connexion à Hydro-Québec",
       "invalid_auth": "Nom d'utilisateur ou mot de passe invalide",
       "no_contracts": "Aucun contrat trouvé pour ce compte",
+      "total_required": "La source de consommation totale est requise",
       "unknown": "Erreur inattendue"
     },
     "abort": {

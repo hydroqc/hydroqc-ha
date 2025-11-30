@@ -51,7 +51,9 @@ class ConsumptionHistoryImporter:
         self._get_statistic_id = get_statistic_id_func
         self._statistics_manager = statistics_manager
 
-    async def import_csv_history(self, days_back: int) -> None:  # noqa: PLR0912, PLR0915
+    async def import_csv_history(  # noqa: PLR0912, PLR0915
+        self, days_back: int
+    ) -> None:
         """Import historical consumption data from CSV using iterative approach.
 
         Process:

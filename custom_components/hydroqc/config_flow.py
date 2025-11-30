@@ -31,6 +31,9 @@ from .const import (
     CONF_CONTRACT_NAME,
     CONF_CUSTOMER_ID,
     CONF_HISTORY_DAYS,
+    CONF_MIGRATE_HAUT,
+    CONF_MIGRATE_REG,
+    CONF_MIGRATE_TOTAL,
     CONF_PREHEAT_DURATION,
     CONF_RATE,
     CONF_RATE_OPTION,
@@ -38,7 +41,9 @@ from .const import (
     DEFAULT_PREHEAT_DURATION,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
+    MIGRATION_NONE_VALUE,
 )
+from .statistics_manager import get_available_energy_statistics
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -182,6 +187,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._available_sectors: list[str] = []
         self._selected_sector: str | None = None
         self._available_rates: list[dict[str, str]] = []
+        self._available_statistics: list[dict[str, str]] = []
+        self._migration_sources: dict[str, str] = {}
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
         """Handle the initial step - choose auth mode."""
@@ -301,8 +308,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     # Show preheat configuration step
                     return await self.async_step_configure_preheat()
 
-                # For other rates, skip preheat and go directly to import history step
-                return await self.async_step_import_history()
+                # For other rates, skip preheat and go to migration step
+                return await self.async_step_migrate_statistics()
 
         # Build contract selection options
         contract_options = [
@@ -328,11 +335,11 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> FlowResult:
         """Configure preheat duration for DPC/DCPC rates."""
         if user_input is not None:
-            # Store preheat duration and proceed to import history step
+            # Store preheat duration and proceed to migration step
             self._selected_contract["preheat_duration"] = user_input.get(
                 CONF_PREHEAT_DURATION, DEFAULT_PREHEAT_DURATION
             )
-            return await self.async_step_import_history()
+            return await self.async_step_migrate_statistics()
 
         rate_name = (
             "Flex-D (DPC)" if self._selected_contract["rate"] == "DPC" else "Winter Credits (D+CPC)"
@@ -357,6 +364,80 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             description_placeholders={"rate_name": rate_name},
         )
 
+    async def async_step_migrate_statistics(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Ask user if they want to migrate statistics from another integration."""
+        if user_input is not None:
+            if user_input.get("migrate", False):
+                # User wants to migrate - fetch available statistics
+                return await self.async_step_select_migration_sources()
+            # User doesn't want to migrate - proceed to history import
+            return await self.async_step_import_history()
+
+        return self.async_show_form(
+            step_id="migrate_statistics",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("migrate", default=False): bool,
+                }
+            ),
+        )
+
+    async def async_step_select_migration_sources(
+        self, user_input: dict[str, Any] | None = None
+    ) -> FlowResult:
+        """Select source statistics for migration."""
+        errors: dict[str, str] = {}
+
+        # Fetch available statistics if not already done
+        if not self._available_statistics:
+            self._available_statistics = await get_available_energy_statistics(self.hass)
+
+        if user_input is not None:
+            migrate_total = user_input.get("migrate_total", MIGRATION_NONE_VALUE)
+            migrate_reg = user_input.get("migrate_reg", MIGRATION_NONE_VALUE)
+            migrate_haut = user_input.get("migrate_haut", MIGRATION_NONE_VALUE)
+
+            # Validate: total is required
+            if migrate_total == MIGRATION_NONE_VALUE:
+                errors["migrate_total"] = "total_required"
+            else:
+                # Store migration sources
+                self._migration_sources = {
+                    "total": migrate_total,
+                    "reg": migrate_reg,
+                    "haut": migrate_haut,
+                }
+                return await self.async_step_import_history()
+
+        return self.async_show_form(
+            step_id="select_migration_sources",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("migrate_total", default=MIGRATION_NONE_VALUE): SelectSelector(
+                        SelectSelectorConfig(
+                            options=self._available_statistics,
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required("migrate_reg", default=MIGRATION_NONE_VALUE): SelectSelector(
+                        SelectSelectorConfig(
+                            options=self._available_statistics,
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                    vol.Required("migrate_haut", default=MIGRATION_NONE_VALUE): SelectSelector(
+                        SelectSelectorConfig(
+                            options=self._available_statistics,
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                }
+            ),
+            errors=errors,
+        )
+
     async def async_step_import_history(
         self, user_input: dict[str, Any] | None = None
     ) -> FlowResult:
@@ -371,21 +452,33 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "preheat_duration", DEFAULT_PREHEAT_DURATION
             )
 
+            # Build entry data
+            entry_data = {
+                CONF_AUTH_MODE: AUTH_MODE_PORTAL,
+                CONF_USERNAME: self._username,
+                CONF_PASSWORD: self._password,
+                CONF_CONTRACT_NAME: self._contract_name,
+                CONF_CUSTOMER_ID: self._selected_contract["customer_id"],
+                CONF_ACCOUNT_ID: self._selected_contract["account_id"],
+                CONF_CONTRACT_ID: self._selected_contract["contract_id"],
+                CONF_RATE: self._selected_contract["rate"],
+                CONF_RATE_OPTION: self._selected_contract["rate_option"],
+                CONF_PREHEAT_DURATION: preheat_duration,
+                CONF_HISTORY_DAYS: history_days,
+            }
+
+            # Add migration sources if present (and not "none")
+            if self._migration_sources:
+                if self._migration_sources.get("total") != MIGRATION_NONE_VALUE:
+                    entry_data[CONF_MIGRATE_TOTAL] = self._migration_sources["total"]
+                if self._migration_sources.get("reg") != MIGRATION_NONE_VALUE:
+                    entry_data[CONF_MIGRATE_REG] = self._migration_sources["reg"]
+                if self._migration_sources.get("haut") != MIGRATION_NONE_VALUE:
+                    entry_data[CONF_MIGRATE_HAUT] = self._migration_sources["haut"]
+
             return self.async_create_entry(
                 title=f"{self._contract_name} ({self._selected_contract['rate']}{self._selected_contract['rate_option']})",
-                data={
-                    CONF_AUTH_MODE: AUTH_MODE_PORTAL,
-                    CONF_USERNAME: self._username,
-                    CONF_PASSWORD: self._password,
-                    CONF_CONTRACT_NAME: self._contract_name,
-                    CONF_CUSTOMER_ID: self._selected_contract["customer_id"],
-                    CONF_ACCOUNT_ID: self._selected_contract["account_id"],
-                    CONF_CONTRACT_ID: self._selected_contract["contract_id"],
-                    CONF_RATE: self._selected_contract["rate"],
-                    CONF_RATE_OPTION: self._selected_contract["rate_option"],
-                    CONF_PREHEAT_DURATION: preheat_duration,
-                    CONF_HISTORY_DAYS: history_days,
-                },
+                data=entry_data,
             )
 
         return self.async_show_form(

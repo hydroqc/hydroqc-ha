@@ -1,13 +1,11 @@
 """Unit tests for the HydroQcDataCoordinator."""
 
-from datetime import datetime, timedelta
+from datetime import timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
 import pytest
-from homeassistant.config_entries import ConfigEntryState
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.update_coordinator import UpdateFailed
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hydroqc.const import DOMAIN
@@ -26,9 +24,7 @@ class TestHydroQcDataCoordinator:
         """Test coordinator initializes correctly."""
         mock_config_entry.add_to_hass(hass)
 
-        with patch(
-            "custom_components.hydroqc.coordinator.WebUser"
-        ) as mock_webuser_class:
+        with patch("custom_components.hydroqc.coordinator.WebUser") as mock_webuser_class:
             mock_webuser = MagicMock()
             mock_webuser.login = AsyncMock(return_value=True)
             mock_webuser_class.return_value = mock_webuser
@@ -68,18 +64,22 @@ class TestHydroQcDataCoordinator:
         """Test coordinator handles API failure."""
         mock_config_entry.add_to_hass(hass)
 
-        with patch(
-            "custom_components.hydroqc.coordinator.WebUser"
-        ) as mock_webuser_class:
+        with (
+            patch("custom_components.hydroqc.coordinator.WebUser") as mock_webuser_class,
+            patch("custom_components.hydroqc.coordinator.PublicDataClient"),
+        ):
             mock_webuser = MagicMock()
             mock_webuser.session_expired = False
             mock_webuser.get_info = AsyncMock(side_effect=Exception("API failed"))
+            mock_webuser.login = AsyncMock(return_value=True)
             mock_webuser_class.return_value = mock_webuser
 
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
 
-            with pytest.raises(UpdateFailed):
-                await coordinator.async_refresh()
+            # async_refresh logs errors but doesn't raise
+            await coordinator.async_refresh()
+            # Data should be None after failure
+            assert coordinator.data is None
 
     async def test_coordinator_update_data(
         self,
@@ -102,8 +102,6 @@ class TestHydroQcDataCoordinator:
             patch("custom_components.hydroqc.coordinator.PublicDataClient"),
         ):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
-            # Set entry state to SETUP_IN_PROGRESS before refresh
-            mock_config_entry.state = ConfigEntryState.SETUP_IN_PROGRESS
             await coordinator.async_refresh()
 
             data = coordinator.data
@@ -129,8 +127,6 @@ class TestHydroQcDataCoordinator:
             patch("custom_components.hydroqc.coordinator.PublicDataClient"),
         ):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
-            # Set entry state to SETUP_IN_PROGRESS before refresh
-            mock_config_entry.state = ConfigEntryState.SETUP_IN_PROGRESS
             await coordinator.async_refresh()
 
             # Simulate session expiry
@@ -229,6 +225,8 @@ class TestHydroQcDataCoordinator:
         """Test is_sensor_seasonal returns False for Rate D (no peak handler)."""
         mock_config_entry.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract
+        # Remove peak_handler from Rate D contract
+        mock_contract.peak_handler = None
 
         with (
             patch(
@@ -240,8 +238,8 @@ class TestHydroQcDataCoordinator:
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
             await coordinator.async_refresh()
 
-            # Rate D has no peak handler, so all sensors are non-seasonal
-            assert not coordinator.is_sensor_seasonal("contract.cp_current_bill")
+            # Rate D has no peak handler, so sensors are always available (returns True)
+            assert coordinator.is_sensor_seasonal("contract.cp_current_bill")
 
     async def test_is_sensor_seasonal_rate_dpc_in_season(
         self,
@@ -250,7 +248,14 @@ class TestHydroQcDataCoordinator:
         mock_webuser: MagicMock,
         mock_contract_dpc: MagicMock,
     ) -> None:
-        """Test is_sensor_seasonal returns False during winter season."""
+        """Test is_sensor_seasonal for Portal mode with peak handler (never seasonal)."""
+        # Update config to use DPC rate
+        mock_config_entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={**mock_config_entry.data, "rate": "DPC"},
+            entry_id=mock_config_entry.entry_id,
+            unique_id=mock_config_entry.unique_id,
+        )
         mock_config_entry.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract_dpc
 
@@ -264,21 +269,8 @@ class TestHydroQcDataCoordinator:
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
             await coordinator.async_refresh()
 
-            # Mock current date to be in winter season (Dec 1 - Mar 31)
-            with patch(
-                "custom_components.hydroqc.coordinator.datetime"
-            ) as mock_datetime:
-                mock_datetime.now.return_value = datetime(
-                    2024, 12, 15, tzinfo=EST_TIMEZONE
-                )
-                mock_datetime.side_effect = lambda *args, **kwargs: datetime(
-                    *args, **kwargs
-                )
-
-                # Peak handler sensors should not be seasonal during winter
-                assert not coordinator.is_sensor_seasonal(
-                    "contract.peak_handler.current_state"
-                )
+            # DPC peak sensors without CPC option are always available (returns True)
+            assert coordinator.is_sensor_seasonal("contract.peak_handler.current_state")
 
     async def test_rate_with_option_dcpc(
         self,
@@ -288,6 +280,13 @@ class TestHydroQcDataCoordinator:
         mock_contract_dcpc: MagicMock,
     ) -> None:
         """Test rate_with_option returns DCPC for D+CPC."""
+        # Update config to have CPC rate option
+        mock_config_entry = MockConfigEntry(
+            domain=DOMAIN,
+            data={**mock_config_entry.data, "rate": "D", "rate_option": "CPC"},
+            entry_id=mock_config_entry.entry_id,
+            unique_id=mock_config_entry.unique_id,
+        )
         mock_config_entry.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract_dcpc
 

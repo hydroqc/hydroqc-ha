@@ -70,7 +70,14 @@ class TestHydroQcSensor:
         mock_contract_dcpc: MagicMock,
     ) -> None:
         """Test sensor setup for Rate D+CPC contract (winter credits)."""
-        mock_config_entry.add_to_hass(hass)
+        # Update config to use CPC rate option
+        dcpc_config = MockConfigEntry(
+            domain=DOMAIN,
+            data={**mock_config_entry.data, "rate": "D", "rate_option": "CPC"},
+            entry_id=mock_config_entry.entry_id,
+            unique_id=mock_config_entry.unique_id,
+        )
+        dcpc_config.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract_dcpc
 
         with (
@@ -80,22 +87,23 @@ class TestHydroQcSensor:
             ),
             patch("custom_components.hydroqc.coordinator.PublicDataClient"),
         ):
-            coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+            coordinator = HydroQcDataCoordinator(hass, dcpc_config)
             await coordinator.async_refresh()
 
             # Register coordinator in hass.data like real integration does
             hass.data.setdefault(DOMAIN, {})
-            hass.data[DOMAIN][mock_config_entry.entry_id] = coordinator
+            hass.data[DOMAIN][dcpc_config.entry_id] = coordinator
 
             async_add_entities = MagicMock()
-            await async_setup_entry(hass, mock_config_entry, async_add_entities)
+            await async_setup_entry(hass, dcpc_config, async_add_entities)
 
             entities = async_add_entities.call_args[0][0]
             sensor_keys = [entity._sensor_key for entity in entities]
 
             # Should have winter credit sensors
             assert "wc_cumulated_credit" in sensor_keys
-            assert "wc_yesterday_peak_performance" in sensor_keys
+            assert "wc_yesterday_morning_peak_credit" in sensor_keys
+            assert "wc_yesterday_evening_peak_credit" in sensor_keys
 
     async def test_sensor_setup_rate_dpc(
         self,
@@ -105,7 +113,14 @@ class TestHydroQcSensor:
         mock_contract_dpc: MagicMock,
     ) -> None:
         """Test sensor setup for Flex-D (DPC) contract."""
-        mock_config_entry.add_to_hass(hass)
+        # Update config to use DPC rate
+        dpc_config = MockConfigEntry(
+            domain=DOMAIN,
+            data={**mock_config_entry.data, "rate": "DPC"},
+            entry_id=mock_config_entry.entry_id,
+            unique_id=mock_config_entry.unique_id,
+        )
+        dpc_config.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract_dpc
 
         with (
@@ -115,23 +130,23 @@ class TestHydroQcSensor:
             ),
             patch("custom_components.hydroqc.coordinator.PublicDataClient"),
         ):
-            coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+            coordinator = HydroQcDataCoordinator(hass, dpc_config)
             await coordinator.async_refresh()
 
             # Register coordinator in hass.data like real integration does
             hass.data.setdefault(DOMAIN, {})
-            hass.data[DOMAIN][mock_config_entry.entry_id] = coordinator
+            hass.data[DOMAIN][dpc_config.entry_id] = coordinator
 
             async_add_entities = MagicMock()
-            await async_setup_entry(hass, mock_config_entry, async_add_entities)
+            await async_setup_entry(hass, dpc_config, async_add_entities)
 
             entities = async_add_entities.call_args[0][0]
             sensor_keys = [entity._sensor_key for entity in entities]
 
             # Should have Flex-D sensors
-            assert "dpc_current_state" in sensor_keys
-            assert "dpc_next_event_date" in sensor_keys
-            assert "dpc_critical_peak_count" in sensor_keys
+            assert "dpc_state" in sensor_keys
+            assert "dpc_next_peak_start" in sensor_keys
+            assert "dpc_critical_hours_count" in sensor_keys
 
     async def test_sensor_state_value(
         self,
@@ -143,6 +158,8 @@ class TestHydroQcSensor:
         """Test sensor returns correct state value."""
         mock_config_entry.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract
+        # Set the projected bill value on mock contract
+        mock_contract.cp_projected_bill = 75.00
 
         with (
             patch(
@@ -163,15 +180,15 @@ class TestHydroQcSensor:
 
             entities = async_add_entities.call_args[0][0]
 
-            # Find the current_bill sensor
-            current_bill_sensor = next(
-                (e for e in entities if e._sensor_key == "current_bill"),
+            # Find the projected bill sensor
+            projected_bill_sensor = next(
+                (e for e in entities if e._sensor_key == "current_billing_period_projected_bill"),
                 None,
             )
-            assert current_bill_sensor is not None
+            assert projected_bill_sensor is not None
 
             # Verify it returns the correct value from coordinator
-            assert current_bill_sensor.native_value == 45.67
+            assert projected_bill_sensor.native_value == 75.00
 
     async def test_sensor_attributes(
         self,

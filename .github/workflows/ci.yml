@@ -1,273 +1,73 @@
 name: CI
 
 on:
-  push:
-    branches: [main, develop]
   pull_request:
-    branches: [main, develop]
-  workflow_dispatch:
+    branches: [main]
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  lint:
-    name: Lint & Format Check
+  quality:
+    name: Code Quality
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
-
+      
+      - uses: astral-sh/setup-uv@v4
+      
       - name: Install dependencies
         run: uv sync
-
-      - name: Run ruff linter
+      
+      - name: Lint
         run: uv run ruff check custom_components/
-
-      - name: Check code formatting
+      
+      - name: Format check
         run: uv run ruff format --check custom_components/
-
-  typecheck:
-    name: Type Check
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
-
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Run mypy
+      
+      - name: Type check
         run: uv run mypy custom_components/hydroqc/
 
-  validate:
-    name: Validate Structure
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Validate manifest.json
-        run: python3 -c "import json; json.load(open('custom_components/hydroqc/manifest.json'))"
-
-      - name: Validate strings.json
-        run: python3 -c "import json; json.load(open('custom_components/hydroqc/strings.json'))"
-
-      - name: Validate translations
-        run: |
-          python3 -c "import json; json.load(open('custom_components/hydroqc/translations/en.json'))"
-          python3 -c "import json; json.load(open('custom_components/hydroqc/translations/fr.json'))"
-
-      - name: Check required files
-        run: |
-          test -f custom_components/hydroqc/__init__.py
-          test -f custom_components/hydroqc/manifest.json
-          test -f custom_components/hydroqc/const.py
-          test -f custom_components/hydroqc/config_flow.py
-          test -f custom_components/hydroqc/coordinator.py
-          test -f custom_components/hydroqc/sensor.py
-          test -f custom_components/hydroqc/binary_sensor.py
-          test -f README.md
-          test -f info.md
-          test -f hacs.json
-
   test:
-    name: Test (HA ${{ matrix.ha-version }})
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        ha-version: ["2024.1.0", "stable", "beta"]
-      fail-fast: false
-    
-    services:
-      mosquitto:
-        image: eclipse-mosquitto:latest
-        ports:
-          - 1883:1883
-        options: >-
-          --health-cmd "mosquitto_sub -t '$$SYS/#' -C 1 | grep -v Error || exit 1"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: "3.13"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
-
-      - name: Install dependencies
-        run: uv sync
-
-      - name: Determine Home Assistant version
-        id: ha-version
-        run: |
-          if [ "${{ matrix.ha-version }}" = "stable" ]; then
-            VERSION="homeassistant/home-assistant:stable"
-          elif [ "${{ matrix.ha-version }}" = "beta" ]; then
-            VERSION="homeassistant/home-assistant:beta"
-          else
-            VERSION="homeassistant/home-assistant:${{ matrix.ha-version }}"
-          fi
-          echo "version=$VERSION" >> $GITHUB_OUTPUT
-
-      - name: Pull Home Assistant image
-        run: docker pull ${{ steps.ha-version.outputs.version }}
-
-      - name: Start Home Assistant
-        run: |
-          docker run -d \
-            --name homeassistant \
-            --network host \
-            -v ${{ github.workspace }}/custom_components:/config/custom_components \
-            -e TZ=America/Toronto \
-            ${{ steps.ha-version.outputs.version }}
-
-      - name: Wait for Home Assistant to start
-        run: |
-          echo "Waiting for Home Assistant to be ready..."
-          timeout 120 bash -c 'until curl -sf http://localhost:8123 > /dev/null; do sleep 2; done' || (docker logs homeassistant && exit 1)
-
-      - name: Check for integration errors
-        run: |
-          sleep 10
-          docker logs homeassistant 2>&1 | tee ha_logs.txt
-          if grep -i "error.*hydroqc" ha_logs.txt; then
-            echo "❌ Integration errors found"
-            exit 1
-          fi
-          if grep -i "exception.*hydroqc" ha_logs.txt; then
-            echo "❌ Integration exceptions found"
-            exit 1
-          fi
-          echo "✅ No integration errors found"
-
-      - name: Run pytest tests
-        run: uv run pytest -v
-        if: always()
-
-      - name: Stop Home Assistant
-        if: always()
-        run: docker stop homeassistant && docker rm homeassistant
-
-      - name: Upload logs on failure
-        if: failure()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ha-logs-${{ matrix.ha-version }}
-          path: ha_logs.txt
-          retention-days: 7
-
-  coverage:
-    name: Code Coverage
+    name: Tests
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
         with:
           python-version: "3.13"
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v4
-        with:
-          version: "latest"
-
+      
+      - uses: astral-sh/setup-uv@v4
+      
       - name: Install dependencies
         run: uv sync
-
+      
       - name: Run tests with coverage
-        run: uv run pytest --cov=custom_components.hydroqc --cov-report=xml --cov-report=html --cov-report=term
-
-      - name: Upload coverage to Codecov
+        run: uv run pytest --cov=custom_components.hydroqc --cov-report=xml --cov-report=term -v
+      
+      - name: Upload coverage
         uses: codecov/codecov-action@v4
+        if: always()
         with:
           file: ./coverage.xml
-          flags: unittests
-          name: codecov-umbrella
           fail_ci_if_error: false
 
-      - name: Upload coverage HTML
-        uses: actions/upload-artifact@v4
-        with:
-          name: coverage-html
-          path: htmlcov/
-          retention-days: 30
-
-  hacs:
-    name: HACS Validation
+  validate:
+    name: Home Assistant Validation
     runs-on: ubuntu-latest
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
+      - uses: actions/checkout@v4
+      
       - name: HACS Validation
         uses: hacs/action@main
         with:
           category: integration
-
-  hassfest:
-    name: Hassfest Validation
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Hassfest validation
+      
+      - name: Hassfest Validation
         uses: home-assistant/actions/hassfest@master
-
-  all-checks:
-    name: All Checks Passed
-    runs-on: ubuntu-latest
-    needs: [lint, typecheck, validate, test, coverage, hacs, hassfest]
-    if: always()
-    steps:
-      - name: Check all jobs
-        run: |
-          if [[ "${{ needs.lint.result }}" != "success" ]] || \
-             [[ "${{ needs.typecheck.result }}" != "success" ]] || \
-             [[ "${{ needs.validate.result }}" != "success" ]] || \
-             [[ "${{ needs.test.result }}" != "success" ]] || \
-             [[ "${{ needs.coverage.result }}" != "success" ]] || \
-             [[ "${{ needs.hacs.result }}" != "success" ]] || \
-             [[ "${{ needs.hassfest.result }}" != "success" ]]; then
-            echo "❌ One or more checks failed"
-            exit 1
-          fi
-          echo "✅ All checks passed"

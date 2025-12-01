@@ -31,7 +31,6 @@ De nouveaux blueprints vont être créés spécifiquement pour cette intégratio
 - ✅ **Notifications de pannes** : Informations sur les pannes prochaines/actuelles avec détails
 - ✅ **Mode pointes uniquement** : Surveillez les pointes sans identifiants de compte
 - ✅ **Support multi-contrats** : Ajoutez plusieurs contrats (un par entrée de configuration)
-- ✅ **Bilingue** : Support complet en français et anglais
 
 ## Tarifs supportés
 

@@ -37,7 +37,7 @@ async def async_setup_entry(
         # In opendata mode, only create sensors that use public_client data
         if coordinator.is_opendata_mode:
             data_source = sensor_config["data_source"]
-            if not data_source.startswith("public_client."):
+            if isinstance(data_source, str) and not data_source.startswith("public_client."):
                 _LOGGER.debug(
                     "Skipping binary sensor %s in opendata mode (requires portal login)",
                     sensor_key,

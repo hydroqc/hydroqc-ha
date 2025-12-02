@@ -9,8 +9,8 @@ import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-import pytz
-from homeassistant.components.recorder import get_instance, statistics
+import pytz  # type: ignore[import-untyped]
+from homeassistant.components.recorder import get_instance, statistics  # type: ignore[attr-defined]
 from homeassistant.core import HomeAssistant
 from pytz import timezone as pytz_timezone
 
@@ -175,7 +175,7 @@ class ConsumptionHistoryImporter:
                         ", ".join(consumption_types),
                     )
 
-                    stats_by_type = self._parse_csv_data(csv_data, consumption_types)
+                    stats_by_type = self._parse_csv_data(csv_data, consumption_types)  # type: ignore[arg-type]
 
                     _LOGGER.debug(
                         "[RECORDER IMPORT] Iteration %d: Importing to Home Assistant recorder",
@@ -434,10 +434,10 @@ class ConsumptionHistoryImporter:
         else:
             # CSV columns: [0]=Contract, [1]=DateTime, [2]=kWh Total
             # Handle French decimal format (comma separator) and N.D. (non-disponible)
-            total_kwh = safe_float_convert(row[2]) if len(row) > 2 else None
+            total_kwh_value = safe_float_convert(row[2]) if len(row) > 2 else None
 
             # Skip this hour if data is not available
-            if total_kwh is None:
+            if total_kwh_value is None:
                 _LOGGER.debug(
                     "Skipping hour %s: data not available (total=%s)",
                     hour_datetime_tz,
@@ -447,7 +447,7 @@ class ConsumptionHistoryImporter:
             stats_by_type["total"].append(
                 {
                     "start": hour_datetime_tz,
-                    "state": total_kwh,
+                    "state": total_kwh_value,
                 }
             )
 

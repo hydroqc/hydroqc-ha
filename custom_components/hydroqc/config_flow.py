@@ -3,17 +3,18 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
+from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
-from homeassistant.data_entry_flow import FlowResult
 from homeassistant.helpers.selector import (
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectOptionDict,
     SelectSelector,
     SelectSelectorConfig,
     SelectSelectorMode,
@@ -183,7 +184,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._selected_sector: str | None = None
         self._available_rates: list[dict[str, str]] = []
 
-    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the initial step - choose auth mode."""
         if user_input is None:
             return self.async_show_form(
@@ -192,16 +193,19 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     {
                         vol.Required(CONF_AUTH_MODE): SelectSelector(
                             SelectSelectorConfig(
-                                options=[
-                                    {
-                                        "value": AUTH_MODE_PORTAL,
-                                        "label": "Portal Mode (requires login)",
-                                    },
-                                    {
-                                        "value": AUTH_MODE_OPENDATA,
-                                        "label": "OpenData Mode (no login required)",
-                                    },
-                                ],
+                                options=cast(
+                                    list[SelectOptionDict],
+                                    [
+                                        {
+                                            "value": AUTH_MODE_PORTAL,
+                                            "label": "Portal Mode (requires login)",
+                                        },
+                                        {
+                                            "value": AUTH_MODE_OPENDATA,
+                                            "label": "OpenData Mode (no login required)",
+                                        },
+                                    ],
+                                ),
                                 mode=SelectSelectorMode.LIST,
                             )
                         )
@@ -215,7 +219,9 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return await self.async_step_account()
         return await self.async_step_opendata()
 
-    async def async_step_account(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_account(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle portal mode account setup."""
         errors: dict[str, str] = {}
 
@@ -282,7 +288,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_select_contract(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle contract selection."""
         if user_input is not None:
             # Find selected contract
@@ -315,7 +321,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required("contract"): SelectSelector(
                         SelectSelectorConfig(
-                            options=contract_options,
+                            options=cast(list[SelectOptionDict], contract_options),
                             mode=SelectSelectorMode.DROPDOWN,
                         )
                     ),
@@ -325,14 +331,18 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_configure_preheat(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Configure preheat duration for DPC/DCPC rates."""
         if user_input is not None:
             # Store preheat duration and proceed to import history step
-            self._selected_contract["preheat_duration"] = user_input.get(
-                CONF_PREHEAT_DURATION, DEFAULT_PREHEAT_DURATION
-            )
+            if self._selected_contract is not None:
+                self._selected_contract["preheat_duration"] = user_input.get(
+                    CONF_PREHEAT_DURATION, DEFAULT_PREHEAT_DURATION
+                )
             return await self.async_step_import_history()
+
+        if self._selected_contract is None:
+            return self.async_abort(reason="missing_contract")
 
         rate_name = (
             "Flex-D (DPC)" if self._selected_contract["rate"] == "DPC" else "Winter Credits (D+CPC)"
@@ -359,8 +369,11 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def async_step_import_history(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Ask user how many days of consumption history to import."""
+        if self._selected_contract is None:
+            return self.async_abort(reason="missing_contract")
+
         if user_input is not None:
             # Check if already configured
             await self.async_set_unique_id(self._selected_contract["contract_id"])
@@ -404,7 +417,9 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
         )
 
-    async def async_step_opendata(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_opendata(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
         """Handle opendata mode setup - select sector."""
         errors: dict[str, str] = {}
 
@@ -415,7 +430,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             # Store selected sector and move to offer selection
             self._selected_sector = user_input["sector"]
-            return await self.async_step_opendata_offer()
+            return await self.async_step_opendata_rate()
 
         # Build sector selection dropdown
         sector_options = [
@@ -429,7 +444,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 {
                     vol.Required("sector"): SelectSelector(
                         SelectSelectorConfig(
-                            options=sector_options,
+                            options=cast(list[SelectOptionDict], sector_options),
                             mode=SelectSelectorMode.DROPDOWN,
                         )
                     ),
@@ -438,10 +453,13 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_opendata_offer(
+    async def async_step_opendata_rate(
         self, user_input: dict[str, Any] | None = None
-    ) -> FlowResult:
+    ) -> ConfigFlowResult:
         """Handle opendata mode setup - select offer for chosen sector."""
+        if self._selected_sector is None:
+            return self.async_abort(reason="missing_sector")
+
         errors: dict[str, str] = {}
 
         # Fetch offers for selected sector
@@ -473,7 +491,11 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ]:
                 preheat_duration = user_input.get(CONF_PREHEAT_DURATION, DEFAULT_PREHEAT_DURATION)
 
-            sector_label = SECTOR_MAPPING.get(self._selected_sector, self._selected_sector)
+            sector_label = (
+                SECTOR_MAPPING.get(self._selected_sector, self._selected_sector)
+                if self._selected_sector
+                else "Unknown"
+            )
             return self.async_create_entry(
                 title=f"{contract_name} ({sector_label} - {rate}{rate_option})",
                 data={
@@ -488,7 +510,11 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Build rate selection dropdown from API data
         rate_options = [{"value": r["value"], "label": r["label"]} for r in self._available_rates]
 
-        sector_label = SECTOR_MAPPING.get(self._selected_sector, self._selected_sector)
+        sector_label = (
+            SECTOR_MAPPING.get(self._selected_sector, self._selected_sector)
+            if self._selected_sector
+            else "Unknown"
+        )
         return self.async_show_form(
             step_id="opendata_offer",
             data_schema=vol.Schema(
@@ -496,7 +522,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Required(CONF_CONTRACT_NAME, default="Home"): str,
                     vol.Required("rate_selection"): SelectSelector(
                         SelectSelectorConfig(
-                            options=rate_options,
+                            options=cast(list[SelectOptionDict], rate_options),
                             mode=SelectSelectorMode.DROPDOWN,
                         )
                     ),
@@ -528,7 +554,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 class HydroQcOptionsFlow(config_entries.OptionsFlow):
     """Handle options flow for Hydro-Québec integration."""
 
-    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> FlowResult:
+    async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage the options."""
         if user_input is not None:
             return self.async_create_entry(title="", data=user_input)

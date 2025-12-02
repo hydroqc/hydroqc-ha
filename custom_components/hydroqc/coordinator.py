@@ -22,7 +22,7 @@ from hydroqc.customer import Customer
 from hydroqc.webuser import WebUser
 
 try:
-    HYDROQC_VERSION = hydroqc.__version__
+    HYDROQC_VERSION = hydroqc.__version__  # type: ignore[attr-defined]
 except AttributeError:
     HYDROQC_VERSION = "unknown"
 
@@ -83,6 +83,9 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Track regular sync task (for recent data updates)
         self._regular_sync_task: asyncio.Task[None] | None = None
 
+        # Track first refresh completion (set by __init__.py after setup)
+        self._first_refresh_done: bool = False
+
         # Initialize helper modules (lazy initialization after contract is available)
         self._statistics_manager: StatisticsManager | None = None
         self._history_importer: ConsumptionHistoryImporter | None = None
@@ -117,12 +120,12 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
     @property
     def is_portal_mode(self) -> bool:
         """Return True if using portal authentication."""
-        return self._auth_mode == AUTH_MODE_PORTAL
+        return bool(self._auth_mode == AUTH_MODE_PORTAL)
 
     @property
     def is_opendata_mode(self) -> bool:
         """Return True if using open data API only."""
-        return self._auth_mode == AUTH_MODE_OPENDATA
+        return bool(self._auth_mode == AUTH_MODE_OPENDATA)
 
     @property
     def rate(self) -> str:
@@ -347,6 +350,10 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             # Yield control to let HA finish starting
             await asyncio.sleep(0.1)
 
+            if self._statistics_manager is None:
+                _LOGGER.warning("Statistics manager not initialized, skipping initial sync")
+                return
+
             (
                 needs_csv_import,
                 sync_start_date,
@@ -409,6 +416,9 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         async def _csv_import_with_followup() -> None:
             """Run CSV import followed by initial sync to get most recent data."""
             try:
+                if self._history_importer is None:
+                    _LOGGER.error("History importer not initialized")
+                    return
                 await self._history_importer.import_csv_history(days_back)
                 _LOGGER.info("CSV import completed, running initial sync to get recent data")
                 await self._async_initial_sync()
@@ -439,6 +449,10 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
 
         # Ensure helper modules are initialized
         self._ensure_helper_modules()
+
+        if self._statistics_manager is None:
+            _LOGGER.error("Statistics manager not initialized")
+            return
 
         # Delegate to StatisticsManager
         await self._statistics_manager.fetch_and_import_hourly_consumption(start_date, end_date)

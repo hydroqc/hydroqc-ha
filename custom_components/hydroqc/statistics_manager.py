@@ -6,9 +6,10 @@ import asyncio
 import datetime
 import logging
 import zoneinfo
+from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.recorder import get_instance, statistics
+from homeassistant.components.recorder import get_instance, statistics  # type: ignore[attr-defined]
 from homeassistant.components.recorder.models import StatisticMeanType
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
@@ -28,7 +29,7 @@ class StatisticsManager:
         hass: HomeAssistant,
         contract: Contract | None,
         rate: str,
-        get_statistic_id_func: callable,
+        get_statistic_id_func: Callable[[str], str],
         contract_name: str = "home",
     ) -> None:
         """Initialize the statistics manager.
@@ -46,7 +47,7 @@ class StatisticsManager:
         self._get_statistic_id = get_statistic_id_func
         self._contract_name = contract_name
 
-    async def determine_sync_start_date(  # noqa: PLR0911, PLR0912, PLR0915
+    async def determine_sync_start_date(  # noqa: PLR0911, PLR0915
         self,
     ) -> tuple[bool, datetime.date | None]:
         """Determine the start date for syncing consumption data.
@@ -101,18 +102,7 @@ class StatisticsManager:
 
             # Convert first stat time for logging
             first_stat_time = first_stat["start"]
-            if isinstance(first_stat_time, (int, float)):
-                first_date = datetime.datetime.fromtimestamp(
-                    first_stat_time, tz=datetime.UTC
-                ).date()
-            elif isinstance(first_stat_time, str):
-                first_date = datetime.datetime.fromisoformat(
-                    first_stat_time.replace("Z", "+00:00")
-                ).date()
-            elif isinstance(first_stat_time, datetime.datetime):
-                first_date = first_stat_time.date()
-            else:
-                first_date = thirty_days_ago
+            first_date = datetime.datetime.fromtimestamp(first_stat_time, tz=datetime.UTC).date()
 
             _LOGGER.debug(
                 "First day check: date=%s, state=%.2f kWh, sum=%.2f kWh",
@@ -138,7 +128,7 @@ class StatisticsManager:
                 # Check for corruption: decreasing sum
                 if i > 0:
                     prev_sum = stats_list[i - 1].get("sum", 0)
-                    if stat_sum < prev_sum:
+                    if prev_sum is not None and stat_sum is not None and stat_sum < prev_sum:
                         _LOGGER.warning(
                             "Detected decreasing sum at index %d (sum: %.2f → %.2f). "
                             "Will sync from day before corruption.",
@@ -159,7 +149,7 @@ class StatisticsManager:
                         )
 
                 # Track last valid data point (state > 0)
-                if stat_state > 0:
+                if stat_state is not None and stat_state > 0:
                     last_valid_stat = stat
 
             if corruption_index is None:
@@ -170,18 +160,9 @@ class StatisticsManager:
                 corrupted_stat = stats_list[corruption_index - 1]
                 corrupted_stat_time = corrupted_stat["start"]
 
-                if isinstance(corrupted_stat_time, (int, float)):
-                    corrupted_date = datetime.datetime.fromtimestamp(
-                        corrupted_stat_time, tz=datetime.UTC
-                    ).date()
-                elif isinstance(corrupted_stat_time, str):
-                    corrupted_date = datetime.datetime.fromisoformat(
-                        corrupted_stat_time.replace("Z", "+00:00")
-                    ).date()
-                elif isinstance(corrupted_stat_time, datetime.datetime):
-                    corrupted_date = corrupted_stat_time.date()
-                else:
-                    corrupted_date = today
+                corrupted_date = datetime.datetime.fromtimestamp(
+                    corrupted_stat_time, tz=datetime.UTC
+                ).date()
 
                 _LOGGER.info(
                     "Syncing from day before corruption: %s",
@@ -196,18 +177,8 @@ class StatisticsManager:
             # Convert timestamp to date
             last_stat_time = last_valid_stat["start"]
 
-            if isinstance(last_stat_time, (int, float)):
-                # Home Assistant returns timestamps in seconds (Unix epoch)
-                last_date = datetime.datetime.fromtimestamp(last_stat_time, tz=datetime.UTC).date()
-            elif isinstance(last_stat_time, str):
-                last_date = datetime.datetime.fromisoformat(
-                    last_stat_time.replace("Z", "+00:00")
-                ).date()
-            elif isinstance(last_stat_time, datetime.datetime):
-                last_date = last_stat_time.date()
-            else:
-                _LOGGER.warning("Unexpected timestamp type: %s", type(last_stat_time))
-                last_date = today
+            # Home Assistant returns timestamps in seconds (Unix epoch)
+            last_date = datetime.datetime.fromtimestamp(last_stat_time, tz=datetime.UTC).date()
 
             sync_start = last_date + datetime.timedelta(days=1)
 
@@ -261,11 +232,6 @@ class StatisticsManager:
                     # Get hourly data for this specific date
                     hourly_data = await self._contract.get_hourly_consumption(current_date)
 
-                    if not hourly_data or "results" not in hourly_data:
-                        _LOGGER.debug("No consumption data for %s", current_date)
-                        current_date += datetime.timedelta(days=1)
-                        continue
-
                     hourly_list = hourly_data["results"].get("listeDonneesConsoEnergieHoraire", [])
                     if not hourly_list:
                         _LOGGER.debug("Empty hourly consumption list for %s", current_date)
@@ -274,7 +240,10 @@ class StatisticsManager:
 
                     # Process each consumption type
                     await self._process_day_consumption(
-                        current_date, hourly_list, consumption_types, tz
+                        current_date,
+                        hourly_list,
+                        consumption_types,
+                        tz,  # type: ignore[arg-type]
                     )
 
                     current_date += datetime.timedelta(days=1)
@@ -377,7 +346,7 @@ class StatisticsManager:
                     consumption_type,
                     reference_date,
                 )
-                return base_sum
+                return float(base_sum) if base_sum is not None else 0.0
         except Exception as err:
             _LOGGER.debug(
                 "No previous statistics found for %s on %s: %s",

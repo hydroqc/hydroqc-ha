@@ -5,12 +5,12 @@ from __future__ import annotations
 import datetime
 import logging
 from collections.abc import Mapping
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import DeviceInfo  # type: ignore[attr-defined]
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 
@@ -30,7 +30,8 @@ async def async_setup_entry(
 
     entities: list[HydroQcSensor] = []
 
-    for sensor_key, sensor_config in SENSORS.items():
+    for sensor_key, sensor_config_obj in SENSORS.items():
+        sensor_config = cast(Mapping[str, Any], sensor_config_obj)
         # Check if sensor is applicable for this rate
         rates = sensor_config.get("rates", [])
         if "ALL" not in rates:

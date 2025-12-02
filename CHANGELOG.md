@@ -1,12 +1,36 @@
-## [Unreleased]
+## [Non publié]
 
-### Added
+### Ajouté
 
-### Changed
+### Modifié
 
-### Fixed
+### Corrigé
 
-### Removed
+### Retiré
+
+---
+
+## [0.1.3-beta.1] - 2025-12-02
+
+### Corrigé
+- Résolution de l'ensemble des 65 erreurs de typage mypy strict améliorant la qualité et la sûreté du code (#11)
+- Correction des retours de propriétés booléennes du coordinateur avec appels `bool()` explicites
+- Ajout de vérifications `None` appropriées pour l'accès aux attributs `statistics_manager` et `history_importer`
+- Correction du placement des annotations `type: ignore` pour compatibilité avec les types de la librairie hydroqc
+- Correction du casting des types d'options `SelectSelectorConfig` dans le flux de configuration
+- Correction du nom de méthode `async_step_opendata_offer` (renommée en `async_step_opendata_rate`)
+- Correction de l'annotation de type pour l'import `DeviceInfo`
+
+### Modifié
+- Mise à jour de tous les types de retour du flux de configuration de `FlowResult` vers `ConfigFlowResult`
+- Amélioration des annotations de type dans les modules coordinateur, gestionnaire de statistiques et historique de consommation
+- Renforcement de la sûreté des types avec annotations `Callable` appropriées et gardes `None`
+
+### Retiré
+- Retrait de 10 tests d'intégration ignorés qui n'étaient pas prévus pour implémentation
+  - Tests config_flow.py (5 tests nécessitant le chargeur HA complet)
+  - Tests services.py (2 tests nécessitant le chargeur HA complet)
+  - Tests de méthodes privées consumption_history.py (3 tests)
 
 ---
 

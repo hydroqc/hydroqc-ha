@@ -473,6 +473,236 @@ Two methods for importing consumption history:
   - Contract types: `ContractDCPC`, `ContractDPC`, `ContractDT` (subclasses of `Contract`)
 - **Home Assistant 2024.1.0+**: Uses `DataUpdateCoordinator`, `ConfigFlow`, `CoordinatorEntity`
 
+## Processus de Release
+
+### Schéma de Versionnage Beta
+
+**Statut actuel**: Projet en phase beta  
+**Format de version**: `v0.X.Y-beta.Z` (ex: `v0.1.3-beta.1`)
+
+**Composantes**:
+- **Majeure (0)**: Reste à 0 durant la beta
+- **Mineure (X)**: Incrémentée pour les releases de fonctionnalités
+- **Correctif (Y)**: Incrémentée pour les releases de corrections  
+- **Beta (beta.Z)**: Itération beta (généralement `.1` pour chaque version)
+
+**Exemples**:
+- Corrections/améliorations types: `v0.1.2-beta.1` → `v0.1.3-beta.1`
+- Nouvelles fonctionnalités/capteurs: `v0.1.3-beta.1` → `v0.2.0-beta.1`
+- Changements incompatibles: `v0.2.0-beta.1` → `v0.3.0-beta.1`
+
+**Sortie de la Beta**:
+Quand prêt pour release stable, retirer le suffixe `-beta.1`:
+- `v0.1.3-beta.1` → `v1.0.0` (première version stable)
+
+### Fichiers Nécessitant une Mise à Jour de Version
+
+1. **`custom_components/hydroqc/manifest.json`** - Champ `version` (ex: `"0.1.3-beta.1"`)
+2. **`CHANGELOG.md`** - Déplacer les changements de `[Unreleased]` vers la nouvelle section de version
+
+**Note**: La version dans `pyproject.toml` reste à `0.1.0` (non distribué comme package Python)
+
+### Étapes de Release
+
+**1. Mettre à jour CHANGELOG.md**
+
+Déplacer les changements de la section `[Unreleased]` vers une nouvelle section avec suffixe beta:
+
+```markdown
+## [Non publié]
+
+### Ajouté
+### Modifié  
+### Corrigé
+### Retiré
+
+---
+
+## [0.1.3-beta.1] - 2025-12-02
+
+### Corrigé
+- Résolution de 65 erreurs de typage mypy strict pour améliorer la qualité du code (#11)
+- Correction du placement des annotations type ignore pour compatibilité avec la librairie hydroqc
+
+### Retiré
+- Retrait de 10 tests ignorés qui n'allaient pas être implémentés
+```
+
+**Catégories de changements**:
+- **Ajouté**: Nouvelles fonctionnalités, capteurs, support de tarifs
+- **Modifié**: Modifications aux fonctionnalités existantes  
+- **Corrigé**: Corrections de bugs, erreurs de typage, gestion d'erreurs
+- **Retiré**: Fonctionnalités dépréciées, code inutilisé
+- **Sécurité**: Corrections de vulnérabilités de sécurité
+
+**2. Mettre à jour la version dans manifest.json**
+
+Inclure le suffixe `-beta.1`:
+
+```json
+{
+  "version": "0.1.3-beta.1"
+}
+```
+
+**3. Commit du bump de version**
+
+```bash
+git add custom_components/hydroqc/manifest.json CHANGELOG.md
+git commit -m "chore(release): bump version to 0.1.3-beta.1"
+git push origin <branch>
+```
+
+**4. Fusionner vers main**
+
+Fusionner le PR/branche vers la branche main.
+
+**5. Créer et pousser le tag git**
+
+Format du tag inclut le préfixe `v` et le suffixe `-beta.1`:
+
+```bash
+git checkout main
+git pull origin main
+git tag -a v0.1.3-beta.1 -m "Release v0.1.3-beta.1"
+git push origin v0.1.3-beta.1
+```
+
+**6. Automatisation GitHub Actions**
+
+Le workflow de release (`.github/workflows/release.yml`) automatiquement:
+- Extrait la version du tag (`v0.1.3-beta.1` → `0.1.3-beta.1`)
+- Met à jour la version dans manifest.json (redondant si déjà fait)
+- Crée l'archive `hydroqc.zip` pour la release
+- Extrait le changelog pour cette version
+- Crée la Release GitHub avec:
+  - Notes de release depuis CHANGELOG.md
+  - Notes de release auto-générées depuis les commits
+  - Asset `hydroqc.zip` attaché
+  - **Marquée comme pre-release** (auto-détecté depuis `-beta` dans la version)
+
+### Caractéristiques des Releases Beta
+
+GitHub marque automatiquement les releases comme "pre-release" quand la version contient:
+- `alpha`
+- `beta`  
+- `rc` (release candidate)
+
+**Indicateurs de pre-release**:
+- ⚠️ Badge affiché sur la page de release
+- Non affiché comme release "Latest" par défaut
+- HACS traite comme version beta/test
+
+### Release Manuelle (si nécessaire)
+
+Si GitHub Actions échoue:
+
+```bash
+# Créer l'archive zip
+cd custom_components/hydroqc
+zip -r ../../hydroqc.zip .
+cd ../..
+
+# Créer la release manuellement sur GitHub
+# Aller à: https://github.com/hydroqc/hydroqc-ha/releases/new
+# - Tag: v0.1.3-beta.1
+# - Titre: Release v0.1.3-beta.1
+# - Corps: Copier depuis CHANGELOG.md
+# - Cocher "This is a pre-release"
+# - Téléverser: hydroqc.zip
+```
+
+### Liste de Vérification Post-Release
+
+- ✅ Vérifier que la release est marquée "Pre-release" sur GitHub
+- ✅ Vérifier que `hydroqc.zip` est attaché et téléchargeable
+- ✅ Vérifier que HACS détecte la nouvelle version beta (peut prendre des heures)
+- ✅ Tester l'installation depuis HACS avec la nouvelle version
+- ✅ Surveiller les retours/problèmes des utilisateurs beta
+
+### Décider de l'Incrément de Version
+
+**Incrément correctif (0.1.X → 0.1.Y)**:
+- Corrections de bugs uniquement
+- Corrections d'erreurs de typage
+- Améliorations des tests
+- Mises à jour de documentation
+- Aucune nouvelle fonctionnalité
+
+**Incrément mineur (0.X.0 → 0.Y.0)**:
+- Nouveaux capteurs ou fonctionnalités
+- Support de nouveaux tarifs
+- Améliorations significatives
+- Changements rétrocompatibles
+
+**Itération beta (beta.1 → beta.2)**:
+- Même version avec corrections additionnelles
+- Rarement utilisé (préférer nouvelle version correctif)
+- Exemple: `v0.1.3-beta.1` → `v0.1.3-beta.2`
+
+### Support Beta dans HACS
+
+HACS supporte pleinement les releases beta:
+- Les utilisateurs peuvent installer les versions beta depuis HACS
+- Les versions beta sont affichées séparément dans la liste des versions
+- Badge pre-release visible dans l'interface HACS
+- Les mises à jour automatiques fonctionnent pour les versions beta
+
+**Configuration** (`hacs.json`):
+```json
+{
+  "name": "Hydro-Québec",
+  "zip_release": true,
+  "filename": "hydroqc.zip"
+}
+```
+
+### Transition vers Stable
+
+Quand prêt à sortir de beta (typiquement après validation de la saison hivernale):
+
+1. **Retirer le suffixe beta** de la version:
+   - `v0.1.3-beta.1` → `v1.0.0`
+2. **Mettre à jour CHANGELOG.md**:
+   - Ajouter section `[1.0.0]`
+   - Marquer comme release stable
+3. **Mettre à jour manifest.json**: `"version": "1.0.0"`
+4. **Tag sans beta**: `git tag -a v1.0.0 -m "Release stable v1.0.0"`
+5. **Release GitHub** automatiquement marquée comme Latest (pas pre-release)
+
+### Processus de Hotfix (Beta)
+
+Pour corrections urgentes à la version beta actuelle:
+
+```bash
+# Option 1: Nouvelle beta correctif
+v0.1.3-beta.1 → v0.1.4-beta.1
+
+# Option 2: Même version, nouvelle itération beta (rare)
+v0.1.3-beta.1 → v0.1.3-beta.2
+```
+
+Préférer Option 1 (nouveau correctif) sauf si multiples itérations rapides nécessaires.
+
+### Dépannage
+
+**Release non marquée comme pre-release:**
+- Vérifier que le tag contient `beta`, `alpha`, ou `rc`
+- Vérifier que le workflow de release détecte correctement le flag prerelease
+- Éditer manuellement la release et cocher "This is a pre-release"
+
+**HACS affiche beta comme latest:**
+- C'est normal - HACS affiche toutes les releases
+- Les utilisateurs doivent explicitement choisir les versions beta
+- Les releases stables remplaceront les beta lors de la publication
+
+**Erreurs de format de version:**
+- Format du tag: `vX.Y.Z-beta.N` (beta en minuscule, séparateur tiret)
+- manifest.json: `X.Y.Z-beta.N` (pas de préfixe `v`)
+- CHANGELOG.md: `[X.Y.Z-beta.N]` (crochets, pas de préfixe `v`)
+
+---
+
 ## Commit & PR Guidelines
 
 ### Commit Message Format (Conventional Commits)

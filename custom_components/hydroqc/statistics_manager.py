@@ -241,9 +241,9 @@ class StatisticsManager:
                     # Process each consumption type
                     await self._process_day_consumption(
                         current_date,
-                        hourly_list,
+                        hourly_list,  # type: ignore[arg-type]
                         consumption_types,
-                        tz,  # type: ignore[arg-type]
+                        tz,
                     )
 
                     current_date += datetime.timedelta(days=1)

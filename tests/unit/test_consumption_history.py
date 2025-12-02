@@ -18,50 +18,6 @@ EST_TIMEZONE = ZoneInfo("America/Toronto")
 class TestConsumptionHistorySync:
     """Test consumption history synchronization."""
 
-    # These tests were testing private implementation details (_determine_sync_start_date)
-    # Skip them until we refactor to test public API behavior
-    @pytest.mark.skip(
-        reason="Test accesses private method _determine_sync_start_date - needs refactoring"
-    )
-    async def test_determine_sync_start_date_no_existing_stats(
-        self,
-        hass: HomeAssistant,
-        mock_config_entry: MockConfigEntry,
-        mock_webuser: MagicMock,
-        mock_contract: MagicMock,
-        mock_statistics_api: MagicMock,
-    ) -> None:
-        """Test determining sync start date with no existing statistics."""
-        pass
-
-    @pytest.mark.skip(
-        reason="Test accesses private method _determine_sync_start_date - needs refactoring"
-    )
-    async def test_determine_sync_start_date_with_existing_stats(
-        self,
-        hass: HomeAssistant,
-        mock_config_entry: MockConfigEntry,
-        mock_webuser: MagicMock,
-        mock_contract: MagicMock,
-        mock_statistics_api: MagicMock,
-    ) -> None:
-        """Test determining sync start date with existing statistics."""
-        pass
-
-    @pytest.mark.skip(
-        reason="Test accesses private method _determine_sync_start_date - needs refactoring"
-    )
-    async def test_determine_sync_start_date_corrupted_data(
-        self,
-        hass: HomeAssistant,
-        mock_config_entry: MockConfigEntry,
-        mock_webuser: MagicMock,
-        mock_contract: MagicMock,
-        mock_statistics_api: MagicMock,
-    ) -> None:
-        """Test handling of corrupted statistics with invalid timestamps."""
-        pass
-
     @freeze_time("2024-03-10 01:30:00", tz_offset=-5)  # Before DST (EST)
     async def test_hourly_sync_before_spring_dst(
         self,

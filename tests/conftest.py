@@ -393,3 +393,163 @@ async def hass_with_recorder(hass: HomeAssistant) -> HomeAssistant:
     # The recorder component will be automatically set up by pytest-homeassistant
     # Just return the hass instance
     return hass
+
+
+# OpenData mode fixtures
+
+
+@pytest.fixture
+def mock_config_entry_opendata() -> MockConfigEntry:
+    """Return a mock config entry for OpenData mode testing."""
+    from custom_components.hydroqc.const import AUTH_MODE_OPENDATA
+
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title="Test OpenData DPC",
+        data={
+            CONF_AUTH_MODE: AUTH_MODE_OPENDATA,
+            CONF_RATE: "DPC",
+            CONF_RATE_OPTION: "",
+            CONF_PREHEAT_DURATION: 120,
+            CONF_UPDATE_INTERVAL: 60,
+        },
+        unique_id="opendata_dpc",
+    )
+
+
+@pytest.fixture
+def mock_config_entry_opendata_dcpc() -> MockConfigEntry:
+    """Return a mock config entry for OpenData mode DCPC testing."""
+    from custom_components.hydroqc.const import AUTH_MODE_OPENDATA
+
+    return MockConfigEntry(
+        domain=DOMAIN,
+        title="Test OpenData DCPC",
+        data={
+            CONF_AUTH_MODE: AUTH_MODE_OPENDATA,
+            CONF_RATE: "D",
+            CONF_RATE_OPTION: "CPC",
+            CONF_PREHEAT_DURATION: 120,
+            CONF_UPDATE_INTERVAL: 60,
+        },
+        unique_id="opendata_dcpc",
+    )
+
+
+@pytest.fixture
+def mock_public_client() -> MagicMock:
+    """Return a mock PublicDataClient instance."""
+    client = MagicMock()
+    client.rate_code = "DPC"
+    client.fetch_peak_data = AsyncMock()
+    client.close_session = AsyncMock()
+
+    # Mock peak handler
+    peak_handler = MagicMock()
+    peak_handler.current_state = "normal"
+    peak_handler.next_peak = None
+    peak_handler.next_critical_peak = None
+    peak_handler.current_peak = None
+    peak_handler.preheat_in_progress = False
+    peak_handler.peak_in_progress = False
+    peak_handler.is_any_critical_peak_coming = False
+    peak_handler.today_morning_peak = None
+    peak_handler.today_evening_peak = None
+    peak_handler.tomorrow_morning_peak = None
+    peak_handler.tomorrow_evening_peak = None
+    client.peak_handler = peak_handler
+
+    return client
+
+
+@pytest.fixture
+def mock_public_client_dcpc() -> MagicMock:
+    """Return a mock PublicDataClient instance for DCPC (Winter Credits)."""
+    client = MagicMock()
+    client.rate_code = "DCPC"
+    client.fetch_peak_data = AsyncMock()
+    client.close_session = AsyncMock()
+
+    # Mock peak handler with winter credits data
+    peak_handler = MagicMock()
+    peak_handler.current_state = "normal"
+    peak_handler.next_peak = None
+    peak_handler.next_critical_peak = None
+    peak_handler.current_peak = None
+    peak_handler.preheat_in_progress = False
+    peak_handler.peak_in_progress = False
+    peak_handler.is_any_critical_peak_coming = False
+
+    # Mock today's peaks (non-critical generated schedule)
+    today_morning = MagicMock()
+    today_morning.start_date = datetime(2024, 12, 15, 6, 0, tzinfo=EST_TIMEZONE)
+    today_morning.end_date = datetime(2024, 12, 15, 10, 0, tzinfo=EST_TIMEZONE)
+    today_morning.is_critical = False
+    today_morning.time_slot = "AM"
+
+    today_evening = MagicMock()
+    today_evening.start_date = datetime(2024, 12, 15, 16, 0, tzinfo=EST_TIMEZONE)
+    today_evening.end_date = datetime(2024, 12, 15, 20, 0, tzinfo=EST_TIMEZONE)
+    today_evening.is_critical = False
+    today_evening.time_slot = "PM"
+
+    peak_handler.today_morning_peak = today_morning
+    peak_handler.today_evening_peak = today_evening
+    peak_handler.tomorrow_morning_peak = None
+    peak_handler.tomorrow_evening_peak = None
+
+    client.peak_handler = peak_handler
+
+    return client
+
+
+@pytest.fixture
+def sample_opendata_api_response() -> dict[str, Any]:
+    """Return sample OpenData API response for testing."""
+    return {
+        "total_count": 2,
+        "results": [
+            {
+                "offre": "TPC-DPC",
+                "datedebut": "2024-12-15 13:00",
+                "datefin": "2024-12-15 17:00",
+                "plagehoraire": "PM",
+                "duree": "PT04H00MS",
+                "secteurclient": "Résidentiel",
+            },
+            {
+                "offre": "TPC-DPC",
+                "datedebut": "2024-12-16 13:00",
+                "datefin": "2024-12-16 17:00",
+                "plagehoraire": "PM",
+                "duree": "PT04H00MS",
+                "secteurclient": "Résidentiel",
+            },
+        ],
+    }
+
+
+@pytest.fixture
+def sample_opendata_api_response_dcpc() -> dict[str, Any]:
+    """Return sample OpenData API response for DCPC (Winter Credits) testing."""
+    return {
+        "total_count": 2,
+        "results": [
+            {
+                "offre": "CPC-D",
+                "datedebut": "2024-12-15 06:00",
+                "datefin": "2024-12-15 10:00",
+                "plagehoraire": "AM",
+                "duree": "PT04H00MS",
+                "secteurclient": "Résidentiel",
+            },
+            {
+                "offre": "CPC-D",
+                "datedebut": "2024-12-15 16:00",
+                "datefin": "2024-12-15 20:00",
+                "plagehoraire": "PM",
+                "duree": "PT04H00MS",
+                "secteurclient": "Résidentiel",
+            },
+        ],
+    }

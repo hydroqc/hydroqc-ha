@@ -83,7 +83,8 @@ class HydroQcBinarySensor(CoordinatorEntity[HydroQcDataCoordinator], BinarySenso
         self._sensor_config = sensor_config
         self._data_source = sensor_config["data_source"]
 
-        contract_name = entry.data[CONF_CONTRACT_NAME]
+        # OpenData mode uses entry_id, Portal mode uses contract info
+        contract_name = entry.data.get(CONF_CONTRACT_NAME, "OpenData")
         contract_id = entry.data.get(CONF_CONTRACT_ID, entry.entry_id)
 
         # Entity configuration

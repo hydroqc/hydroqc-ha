@@ -514,7 +514,11 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             and self.rate_with_option == "DCPC"
         ):
             public_client = self.data.get("public_client")
-            if public_client and public_client.peak_handler and public_client.peak_handler.next_peak:
+            if (
+                public_client
+                and public_client.peak_handler
+                and public_client.peak_handler.next_peak
+            ):
                 # Only return preheat start time if the next peak is critical
                 if public_client.peak_handler.next_peak.is_critical:
                     return public_client.peak_handler.next_peak.preheat.start_date

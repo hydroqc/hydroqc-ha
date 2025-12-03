@@ -512,16 +512,27 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 if data_source.endswith(".is_critical"):
                     return False
                 return None
-            if not hasattr(obj, part):
-                _LOGGER.debug("Attribute %s not found in %s", part, type(obj).__name__)
-                # For binary sensors ending with is_critical, return False
-                if data_source.endswith(".is_critical"):
-                    return False
-                return None
             try:
+                # Check if attribute exists and get it
+                # hasattr() can trigger property getters that may raise exceptions
+                if not hasattr(obj, part):
+                    _LOGGER.debug("Attribute %s not found in %s", part, type(obj).__name__)
+                    # For binary sensors ending with is_critical, return False
+                    if data_source.endswith(".is_critical"):
+                        return False
+                    return None
                 obj = getattr(obj, part)
-            except AttributeError:
-                # Handle case where getattr fails on None or invalid object
+            except (AttributeError, TypeError, ValueError) as e:
+                # Handle various exceptions that can occur during attribute access:
+                # - AttributeError: Attribute doesn't exist or getattr fails
+                # - TypeError: Property getter receives None when expecting a number
+                # - ValueError: Property getter receives invalid data format
+                _LOGGER.debug(
+                    "Error accessing attribute %s on %s: %s",
+                    part,
+                    type(obj).__name__,
+                    str(e),
+                )
                 # For binary sensors ending with is_critical, return False
                 if data_source.endswith(".is_critical"):
                     return False

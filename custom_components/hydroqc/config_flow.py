@@ -516,7 +516,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else "Unknown"
         )
         return self.async_show_form(
-            step_id="opendata_offer",
+            step_id="opendata_rate",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_CONTRACT_NAME, default="Home"): str,

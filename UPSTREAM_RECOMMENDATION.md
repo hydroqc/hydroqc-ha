@@ -139,8 +139,8 @@ When maintaining libraries used by Home Assistant integrations:
 
 - [Python Packaging Guide: Dependencies](https://packaging.python.org/en/latest/discussions/install-requires-vs-requirements/)
 - [Home Assistant Requirements](https://github.com/home-assistant/core/blob/dev/requirements.txt)
-- [Issue in hydroqc-ha](https://github.com/hydroqc/hydroqc-ha/issues/XXX)
-- [This fix implementation](https://github.com/hydroqc/hydroqc-ha/pull/XXX)
+- Issue in hydroqc-ha: See GitHub issues for "Config flow could not be loaded: 500 Internal Server Error"
+- This fix implementation: See pull request for dependency constraint loosening
 
 ## Questions?
 

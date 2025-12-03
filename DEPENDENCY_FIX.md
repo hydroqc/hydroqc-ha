@@ -102,6 +102,6 @@ The fix has been tested to ensure:
 
 ## References
 
-- Issue: [Config flow could not be loaded: 500 Internal Server Error](https://github.com/hydroqc/hydroqc-ha/issues/XXX)
+- Issue: Config flow could not be loaded: 500 Internal Server Error (see GitHub issues)
 - Upstream library: https://gitlab.com/hydroqc/hydroqc
 - PyPI package: https://pypi.org/project/Hydro-Quebec-API-Wrapper/

@@ -478,12 +478,34 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Special handling for binary sensors (paths ending with is_critical):
         - If intermediate object is None, returns False (not None/Unknown)
         - Ensures binary sensors show False outside season instead of Unknown
+        
+        Special handling for DCPC preheat_in_progress:
+        - Only returns True if preheat is in progress AND next peak is critical
+        - This prevents preheat triggers on non-critical peaks
         """
         if not self.data:
             # For binary sensors ending with is_critical, return False instead of None
             if data_source.endswith(".is_critical"):
                 return False
             return None
+
+        # Special handling for DCPC winter credits preheat
+        # Only trigger preheat for critical peaks, not regular scheduled peaks
+        if (
+            data_source == "public_client.peak_handler.preheat_in_progress"
+            and self.rate_with_option == "DCPC"
+        ):
+            public_client = self.data.get("public_client")
+            if public_client and public_client.peak_handler:
+                preheat_active = public_client.peak_handler.preheat_in_progress
+                next_peak_critical = (
+                    public_client.peak_handler.next_peak.is_critical
+                    if public_client.peak_handler.next_peak
+                    else False
+                )
+                # Only return True if both preheat is active AND next peak is critical
+                return preheat_active and next_peak_critical
+            return False
 
         parts = data_source.split(".")
         obj = None

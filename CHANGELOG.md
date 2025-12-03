@@ -1,10 +1,13 @@
 ## [Non publié]
 
 ### Ajouté
+- Documentation sur la résolution du conflit de dépendances (DEPENDENCY_FIX.md)
 
 ### Modifié
+- Modification de la dépendance `Hydro-Quebec-API-Wrapper` de `==4.2.4` à `>=4.0.0,<5.0.0` pour résoudre les conflits avec les versions stables de Home Assistant
 
 ### Corrigé
+- Erreur 500 "Config flow could not be loaded" causée par un conflit de version d'aiohttp avec Home Assistant 2024.8-2024.12
 
 ### Retiré
 

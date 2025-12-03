@@ -43,14 +43,14 @@ def mock_config_entry() -> MockConfigEntry:
             CONF_PASSWORD: "test_password",
             CONF_CUSTOMER_ID: "test_customer_id",
             CONF_ACCOUNT_ID: "test_account_id",
-            CONF_CONTRACT_ID: "test_contract_id",
-            CONF_CONTRACT_NAME: "Test Contract",
+            CONF_CONTRACT_ID: "contract123",
+            CONF_CONTRACT_NAME: "Home",
             CONF_RATE: "D",
             CONF_RATE_OPTION: "",
             CONF_PREHEAT_DURATION: 120,
             CONF_UPDATE_INTERVAL: 60,
         },
-        unique_id="test_contract_id",
+        unique_id="contract123",
     )
 
 

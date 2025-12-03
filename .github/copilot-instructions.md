@@ -267,24 +267,8 @@ def test_consumption_fall_dst():
 - Winter credit anchor/peak times during DST transitions
 - Timezone-aware datetime handling in recorder statistics
 
-### Integration Testing
-
-**CI runs tests against HA stable, beta, and specific versions** (see `.github/workflows/ci.yml`). Tests:
-1. Validate JSON files (manifest, strings, translations)
-2. Lint & format check (ruff)
-3. Type check (mypy strict)
-4. Start HA in docker, mount integration, check for errors in logs
-5. pytest suite (unit + integration tests)
-6. HACS validation
-7. Hassfest (official HA integration validator)
-
-**Manual testing checklist**:
-- Test both auth modes (account login + peak-only)
-- Verify sensors appear for selected rate
-- Check state updates (wait 60s for coordinator refresh)
-- Validate attributes on sensors with nested data
-- Test services: `hydroqc.refresh_data`, `hydroqc.fetch_hourly_consumption`
-- Test during DST transition periods (March/November)
+**Test of new features**
+We should aim for a 100% test coverage. When adding new features adding tests should be part of the process by default.
 
 ## Consumption History Import (Energy Dashboard Integration)
 
@@ -379,20 +363,20 @@ await get_instance(hass).async_add_executor_job(
 
 ## External Dependencies
 
-- **Hydro-Quebec-API-Wrapper 4.2.2**: From private GitLab PyPI index (configured in `pyproject.toml`)
+- **Hydro-Quebec-API-Wrapper**: Available from PyPI (standard public package registry)
   ```toml
-  [tool.uv.sources]
-  Hydro-Quebec-API-Wrapper = { index = "hydroqc-gitlab" }
-  
-  [[tool.uv.index]]
-  name = "hydroqc-gitlab"
-  url = "https://gitlab.com/api/v4/projects/32908244/packages/pypi/simple"
+  [dependency-groups]
+  dev = [
+      "Hydro-Quebec-API-Wrapper==4.2.4",
+      ...
+  ]
   ```
   - Main classes: `WebUser`, `Customer`, `Account`, `Contract`, `PublicClient`
   - Contract types: `ContractDCPC`, `ContractDPC`, `ContractDT` (subclasses of `Contract`)
+  - Install/update: `uv sync` or `uv add Hydro-Quebec-API-Wrapper@latest`
 - **Home Assistant 2024.1.0+**: Uses `DataUpdateCoordinator`, `ConfigFlow`, `CoordinatorEntity`
 
-**Important**: Always use `uv` for dependency management - it handles the custom GitLab index automatically.
+**Important**: Always use `uv` for dependency management - it installs from PyPI automatically.
 
 ### Timestamp Handling in Statistics
 
@@ -409,23 +393,6 @@ last_date = datetime.datetime.fromtimestamp(
     last_stat_time / 1000, tz=datetime.timezone.utc
 ).date()  # Results in dates around 1970!
 ```
-
-**Detecting corrupted data**: Add sanity checks to reject obviously invalid dates:
-
-```python
-if last_date.year < 2020:
-    _LOGGER.warning("Found corrupted statistics with date %s", last_date)
-    return None  # Trigger fresh import instead
-```
-
-### CSV Import vs Hourly Fetch
-
-Two methods for importing consumption history:
-
-1. **CSV Import** (`async_sync_consumption_history`): Bulk historical data (731 days)
-   - Used when no statistics found or significant gaps
-   - Downloads CSV from HQ API, parses all hourly data
-   - Handles DST transitions by skipping ambiguous times
    
 ### CSV Import vs Hourly Fetch
 
@@ -453,7 +420,6 @@ Two methods for importing consumption history:
   - `current_state` shows "Off Season (Dec 1 - Mar 31)" when no events
   - DCPC schedule generation only runs during winter season (Dec 1 - Mar 31)
 - **is_critical property**: 
-  - **CRITICAL FIX NEEDED**: Current logic using offer prefix (`startswith("TPC")`) is WRONG and must be removed
   - Correct behavior: All events from OpenData API are critical announcements (regardless of offer code)
   - Use `force_critical` parameter in PeakEvent to explicitly mark API events as critical
   - Generated schedule peaks (DCPC only) are non-critical unless matched with API event
@@ -545,17 +511,23 @@ Inclure le suffixe `-beta.1`:
 }
 ```
 
-**3. Commit du bump de version**
+**3. Créer une branche de release**
+
+**IMPORTANT**: La branche `main` est protégée - vous ne pouvez pas pousser directement dessus. Toutes les modifications doivent passer par une Pull Request.
 
 ```bash
+# Créer une nouvelle branche pour la release
+git checkout -b release/v0.1.3-beta.1
+
+# Commit du bump de version
 git add custom_components/hydroqc/manifest.json CHANGELOG.md
 git commit -m "chore(release): bump version to 0.1.3-beta.1"
-git push origin <branch>
+git push origin release/v0.1.3-beta.1
 ```
 
-**4. Fusionner vers main**
+**4. Fusionner vers main via Pull Request**
 
-Fusionner le PR/branche vers la branche main.
+Créer une Pull Request depuis la branche `release/v0.1.3-beta.1` vers `main`, puis fusionner après validation des CI checks.
 
 **5. Créer et pousser le tag git**
 

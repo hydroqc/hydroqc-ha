@@ -368,6 +368,26 @@ def statistics_metadata() -> dict[str, Any]:
 
 
 @pytest.fixture
+def mock_integration_version() -> Generator[AsyncMock]:
+    """Mock the integration version API for both sensor and binary_sensor."""
+    mock_integration = MagicMock()
+    mock_integration.version = "0.1.4-beta.1"
+
+    # Patch where it's imported (in sensor.py and binary_sensor.py)
+    with (
+        patch(
+            "custom_components.hydroqc.sensor.async_get_integration",
+            new=AsyncMock(return_value=mock_integration),
+        ) as mock_sensor,
+        patch(
+            "custom_components.hydroqc.binary_sensor.async_get_integration",
+            new=AsyncMock(return_value=mock_integration),
+        ),
+    ):
+        yield mock_sensor
+
+
+@pytest.fixture
 async def hass_with_recorder(hass: HomeAssistant) -> HomeAssistant:
     """Return a Home Assistant instance with recorder set up."""
     # The recorder component will be automatically set up by pytest-homeassistant

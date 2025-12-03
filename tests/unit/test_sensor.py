@@ -25,6 +25,7 @@ class TestHydroQcSensor:
         mock_config_entry: MockConfigEntry,
         mock_webuser: MagicMock,
         mock_contract: MagicMock,
+        mock_integration_version: MagicMock,
     ) -> None:
         """Test sensor setup for Rate D contract."""
         mock_config_entry.add_to_hass(hass)
@@ -68,6 +69,7 @@ class TestHydroQcSensor:
         mock_config_entry: MockConfigEntry,
         mock_webuser: MagicMock,
         mock_contract_dcpc: MagicMock,
+        mock_integration_version: MagicMock,
     ) -> None:
         """Test sensor setup for Rate D+CPC contract (winter credits)."""
         # Update config to use CPC rate option
@@ -111,6 +113,7 @@ class TestHydroQcSensor:
         mock_config_entry: MockConfigEntry,
         mock_webuser: MagicMock,
         mock_contract_dpc: MagicMock,
+        mock_integration_version: MagicMock,
     ) -> None:
         """Test sensor setup for Flex-D (DPC) contract."""
         # Update config to use DPC rate
@@ -154,6 +157,7 @@ class TestHydroQcSensor:
         mock_config_entry: MockConfigEntry,
         mock_webuser: MagicMock,
         mock_contract: MagicMock,
+        mock_integration_version: MagicMock,
     ) -> None:
         """Test sensor returns correct state value."""
         mock_config_entry.add_to_hass(hass)
@@ -196,6 +200,7 @@ class TestHydroQcSensor:
         mock_config_entry: MockConfigEntry,
         mock_webuser: MagicMock,
         mock_contract: MagicMock,
+        mock_integration_version: MagicMock,
     ) -> None:
         """Test sensor includes correct attributes."""
         mock_config_entry.add_to_hass(hass)
@@ -238,6 +243,7 @@ class TestHydroQcSensor:
         mock_config_entry: MockConfigEntry,
         mock_webuser: MagicMock,
         mock_contract: MagicMock,
+        mock_integration_version: MagicMock,
     ) -> None:
         """Test sensor availability based on data presence."""
         mock_config_entry.add_to_hass(hass)
@@ -272,6 +278,7 @@ class TestHydroQcSensor:
         mock_config_entry: MockConfigEntry,
         mock_webuser: MagicMock,
         mock_contract: MagicMock,
+        mock_integration_version: MagicMock,
     ) -> None:
         """Test sensor device info is correctly set."""
         mock_config_entry.add_to_hass(hass)
@@ -310,6 +317,7 @@ class TestHydroQcSensor:
         mock_config_entry: MockConfigEntry,
         mock_webuser: MagicMock,
         mock_contract: MagicMock,
+        mock_integration_version: MagicMock,
     ) -> None:
         """Test sensor unique IDs are correctly formatted."""
         mock_config_entry.add_to_hass(hass)

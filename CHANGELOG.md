@@ -10,6 +10,18 @@
 
 ---
 
+## [0.1.5-beta.1] - 2025-12-03
+
+### Ajouté
+- Affichage de la version actuelle de l'intégration dans les informations de l'appareil (remplace "Firmware: 1.0" par la version réelle)
+
+### Modifié
+- Mise à jour de la documentation des instructions Copilot pour refléter l'utilisation de PyPI pour Hydro-Quebec-API-Wrapper
+- Ajout de note sur la protection de la branche `main` dans le processus de release
+- Amélioration du formatage du fixture `mock_integration_version` dans les tests
+
+---
+
 ## [0.1.4-beta.1] - 2025-12-03
 
 ### Corrigé

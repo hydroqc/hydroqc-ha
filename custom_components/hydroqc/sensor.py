@@ -13,6 +13,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.entity import DeviceInfo  # type: ignore[attr-defined]
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.loader import async_get_integration
 
 from .const import CONF_CONTRACT_ID, CONF_CONTRACT_NAME, DOMAIN, SENSORS
 from .coordinator import HydroQcDataCoordinator
@@ -27,6 +28,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up Hydro-Québec sensors from a config entry."""
     coordinator: HydroQcDataCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    # Get integration version from manifest
+    integration = await async_get_integration(hass, DOMAIN)
+    version = str(integration.version) if integration.version else "unknown"
 
     entities: list[HydroQcSensor] = []
 
@@ -54,7 +59,7 @@ async def async_setup_entry(
         if "contract.peak_handler." in data_source_str and coordinator.rate_option != "CPC":
             continue
 
-        entities.append(HydroQcSensor(coordinator, entry, sensor_key, sensor_config))
+        entities.append(HydroQcSensor(coordinator, entry, sensor_key, sensor_config, version))
 
     async_add_entities(entities)
     _LOGGER.debug("Added %d sensor entities", len(entities))
@@ -71,6 +76,7 @@ class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], SensorEntity):
         entry: ConfigEntry,
         sensor_key: str,
         sensor_config: Mapping[str, Any],
+        version: str,
     ) -> None:
         """Initialize the sensor."""
         super().__init__(coordinator)
@@ -97,7 +103,7 @@ class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], SensorEntity):
             name=f"Hydro-Québec - {contract_name}",
             manufacturer="Hydro-Québec",
             model=f"{coordinator.rate}{coordinator.rate_option}",
-            sw_version="1.0",
+            sw_version=version,
         )
 
     @property

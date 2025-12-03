@@ -11,6 +11,7 @@ from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
+from homeassistant.loader import async_get_integration
 
 from .const import BINARY_SENSORS, CONF_CONTRACT_ID, CONF_CONTRACT_NAME, DOMAIN
 from .coordinator import HydroQcDataCoordinator
@@ -25,6 +26,10 @@ async def async_setup_entry(
 ) -> None:
     """Set up Hydro-Québec binary sensors from a config entry."""
     coordinator: HydroQcDataCoordinator = hass.data[DOMAIN][entry.entry_id]
+
+    # Get integration version from manifest
+    integration = await async_get_integration(hass, DOMAIN)
+    version = str(integration.version) if integration.version else "unknown"
 
     entities: list[HydroQcBinarySensor] = []
 
@@ -52,7 +57,7 @@ async def async_setup_entry(
         ):
             continue
 
-        entities.append(HydroQcBinarySensor(coordinator, entry, sensor_key, sensor_config))
+        entities.append(HydroQcBinarySensor(coordinator, entry, sensor_key, sensor_config, version))
 
     async_add_entities(entities)
     _LOGGER.debug("Added %d binary sensor entities", len(entities))
@@ -69,6 +74,7 @@ class HydroQcBinarySensor(CoordinatorEntity[HydroQcDataCoordinator], BinarySenso
         entry: ConfigEntry,
         sensor_key: str,
         sensor_config: dict[str, Any],
+        version: str,
     ) -> None:
         """Initialize the binary sensor."""
         super().__init__(coordinator)
@@ -92,7 +98,7 @@ class HydroQcBinarySensor(CoordinatorEntity[HydroQcDataCoordinator], BinarySenso
             name=f"Hydro-Québec - {contract_name}",
             manufacturer="Hydro-Québec",
             model=f"{coordinator.rate}{coordinator.rate_option}",
-            sw_version="1.0",
+            sw_version=version,
         )
 
     @property

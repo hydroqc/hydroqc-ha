@@ -10,6 +10,16 @@
 
 ---
 
+## [0.1.4-beta.1] - 2025-12-03
+
+### Corrigé
+- Gestion gracieuse des valeurs `None` retournées par l'API Hydro-Québec (évite les crashs quand `montantProjetePeriode` est `None`)
+- Ajout de gestion d'exceptions `TypeError` et `ValueError` dans `get_sensor_value()` du coordinateur
+- Correction de l'identifiant d'étape du flux de configuration OpenData (`opendata_offer` → `opendata_rate`)
+- Résolution de l'erreur `UnknownStep` lors de l'ajout d'appareils en mode OpenData
+
+---
+
 ## [0.1.3-beta.1] - 2025-12-02
 
 ### Corrigé

@@ -11,7 +11,7 @@ sync_consumption_history:
   name: Sync consumption history
   description: Import historical hourly consumption data from Hydro-Québec (CSV import for up to 2 years of data). Runs as a background task.
   target:
-    device:
+    entity:
       integration: hydroqc
   fields:
     days_back:

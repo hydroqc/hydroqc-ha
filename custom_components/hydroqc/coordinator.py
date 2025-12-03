@@ -205,7 +205,7 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # If in peak-only mode, we're done
         if self.is_opendata_mode:
             _LOGGER.debug("OpenData mode: skipping portal data fetch")
-            return {}
+            return data
 
         # Portal mode: fetch contract data
         try:

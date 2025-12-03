@@ -10,6 +10,39 @@
 
 ---
 
+## [0.1.6-beta.1] - 2025-12-03
+
+### Corrigé
+- Correction des capteurs de préchauffage DCPC (Crédits hivernaux) qui se déclenchaient pour les pics non-critiques (#18, #20)
+  - Le capteur binaire `wc_pre_heat` ne retourne maintenant `True` que si le préchauffage est actif ET le prochain pic est critique
+  - Le capteur timestamp `wc_next_pre_heat_start` ne retourne maintenant l'horodatage que si le prochain pic est critique
+  - Les pics non-critiques (pics réguliers programmés) ne déclenchent plus d'alertes de préchauffage
+- Correction du mode OpenData qui retournait toujours des capteurs non disponibles
+  - Le coordinateur retourne maintenant correctement les données du `public_client` au lieu d'un dictionnaire vide
+  - Tous les capteurs du mode OpenData s'affichent maintenant correctement
+- Correction des capteurs et capteurs binaires pour supporter le mode OpenData
+  - Les champs `contract_name` et `contract_id` sont maintenant optionnels (mode OpenData utilise l'ID d'entrée de configuration)
+- Correction du fichier `services.yaml` pour utiliser le ciblage d'entité au lieu du ciblage d'appareil (non supporté)
+- Correction de la validation hassfest du manifest
+  - Ajout du champ requis `integration_type` (défini à `service`)
+  - Changement de `dependencies` à `after_dependencies` pour `recorder` (patron correct pour dépendance optionnelle)
+  - Tri alphabétique des clés du manifest (domaine, nom, puis alphabétique)
+- Correction de la validation HACS en ajoutant `ignore: brands` au workflow CI
+
+### Modifié
+- Mise à jour de Hydro-Quebec-API-Wrapper de 4.2.4 à 4.2.5
+- Changement de `integration_type` de `hub` à `service` (classification plus appropriée)
+
+### Ajouté
+- Ajout de tests complets pour le mode OpenData (14 nouveaux tests, total de 83 tests)
+  - Tests du coordinateur OpenData (8 tests): initialisation, récupération de données, gestion des erreurs
+  - Tests des capteurs OpenData (6 tests): création, valeurs d'état, attributs, disponibilité
+  - Fixtures pour tester les modes DPC et DCPC en OpenData
+  - Couverture de test pour le bug de retour de dictionnaire vide
+- Ajout de tests complets pour le filtrage du préchauffage par criticité (5 scénarios couverts)
+
+---
+
 ## [0.1.5-beta.1] - 2025-12-03
 
 ### Ajouté

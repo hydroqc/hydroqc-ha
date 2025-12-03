@@ -86,7 +86,8 @@ class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], SensorEntity):
         self._data_source = sensor_config["data_source"]
         self._attributes_sources = sensor_config.get("attributes", {})
 
-        contract_name = entry.data[CONF_CONTRACT_NAME]
+        # OpenData mode uses entry_id, Portal mode uses contract info
+        contract_name = entry.data.get(CONF_CONTRACT_NAME, "OpenData")
         contract_id = entry.data.get(CONF_CONTRACT_ID, entry.entry_id)
 
         # Entity configuration

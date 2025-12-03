@@ -478,7 +478,7 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Special handling for binary sensors (paths ending with is_critical):
         - If intermediate object is None, returns False (not None/Unknown)
         - Ensures binary sensors show False outside season instead of Unknown
-        
+
         Special handling for DCPC preheat_in_progress:
         - Only returns True if preheat is in progress AND next peak is critical
         - This prevents preheat triggers on non-critical peaks

@@ -1,6 +1,6 @@
 """Unit tests for the HydroQcDataCoordinator."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
@@ -329,15 +329,15 @@ class TestHydroQcDataCoordinator:
             # Mock public client with preheat active
             mock_public_client = MagicMock()
             mock_peak_handler = MagicMock()
-            
+
             # Setup: preheat is in progress
             mock_peak_handler.preheat_in_progress = True
-            
+
             # Test 1: Next peak is NON-critical - preheat should return False
             mock_next_peak = MagicMock()
             mock_next_peak.is_critical = False
             mock_peak_handler.next_peak = mock_next_peak
-            
+
             mock_public_client.peak_handler = mock_peak_handler
             mock_client_class.return_value = mock_public_client
 
@@ -385,18 +385,16 @@ class TestHydroQcDataCoordinator:
             # Mock public client with preheat data
             mock_public_client = MagicMock()
             mock_peak_handler = MagicMock()
-            
+
             # Mock preheat start date
-            from datetime import datetime
-            from zoneinfo import ZoneInfo
             preheat_start = datetime(2025, 12, 3, 8, 0, tzinfo=ZoneInfo("America/Toronto"))
-            
+
             # Setup next peak with preheat
             mock_next_peak = MagicMock()
             mock_preheat = MagicMock()
             mock_preheat.start_date = preheat_start
             mock_next_peak.preheat = mock_preheat
-            
+
             mock_peak_handler.next_peak = mock_next_peak
             mock_public_client.peak_handler = mock_peak_handler
             mock_client_class.return_value = mock_public_client

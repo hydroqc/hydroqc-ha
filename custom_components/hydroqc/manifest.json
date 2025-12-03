@@ -1,9 +1,9 @@
 {
   "domain": "hydroqc",
   "name": "Hydro-Québec",
+  "after_dependencies": ["recorder"],
   "codeowners": ["@mdallaire"],
   "config_flow": true,
-  "after_dependencies": ["recorder"],
   "documentation": "https://github.com/hydroqc/hydroqc-ha",
   "integration_type": "hub",
   "iot_class": "cloud_polling",

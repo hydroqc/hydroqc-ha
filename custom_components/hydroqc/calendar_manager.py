@@ -160,34 +160,43 @@ async def async_get_existing_event_uids(
     existing_uids = set()
 
     try:
-        # Call calendar.list_events service to get existing events
-        response = await hass.services.async_call(
-            "calendar",
-            "list_events",
-            service_data={
-                "start_date_time": start_date.isoformat(),
-                "end_date_time": end_date.isoformat(),
-            },
-            target={"entity_id": calendar_id},
-            blocking=True,
-            return_response=True,
-        )
+        # Get the calendar entity from the entity registry
+        from homeassistant.components.calendar import CalendarEntity
+        from homeassistant.helpers import entity_platform
 
-        # Parse response to extract UIDs from descriptions
-        if response and calendar_id in response:
-            events = response[calendar_id].get("events", [])
-            for event in events:
-                description = event.get("description", "")
-                # Extract UID from description (format: "ID: hydroqc_...")
-                if "ID: hydroqc_" in description:
-                    # Find the UID in the description
-                    uid_start = description.find("ID: hydroqc_")
-                    if uid_start != -1:
-                        uid_line = description[uid_start:].split("\n")[0]
-                        uid = uid_line.replace("ID: ", "").strip()
-                        if uid.startswith("hydroqc_"):
-                            existing_uids.add(uid)
-                            _LOGGER.debug("Found existing event with UID: %s", uid)
+        # Try to get the calendar entity directly
+        component = hass.data.get("calendar")
+        if not component:
+            _LOGGER.debug("Calendar component not loaded, skipping event check")
+            return existing_uids
+
+        # Get the entity from the component
+        calendar_entity = None
+        for entity in component.entities:
+            if entity.entity_id == calendar_id:
+                calendar_entity = entity
+                break
+
+        if not calendar_entity or not isinstance(calendar_entity, CalendarEntity):
+            _LOGGER.debug("Calendar entity %s not found, assuming no existing events", calendar_id)
+            return existing_uids
+
+        # Use the entity's get_events method
+        events = await calendar_entity.async_get_events(hass, start_date, end_date)
+
+        # Parse events to extract UIDs from descriptions
+        for event in events:
+            description = event.description or ""
+            # Extract UID from description (format: "ID: hydroqc_...")
+            if "ID: hydroqc_" in description:
+                # Find the UID in the description
+                uid_start = description.find("ID: hydroqc_")
+                if uid_start != -1:
+                    uid_line = description[uid_start:].split("\n")[0]
+                    uid = uid_line.replace("ID: ", "").strip()
+                    if uid.startswith("hydroqc_"):
+                        existing_uids.add(uid)
+                        _LOGGER.debug("Found existing event with UID: %s", uid)
 
         _LOGGER.info("Found %d existing hydroqc events in calendar", len(existing_uids))
 

@@ -198,8 +198,8 @@ async def test_sync_events_creates_future_events_only(
         include_non_critical=True,
     )
 
-    # Should call list_events once + create 2 events (future ones)
-    assert mock_hass.services.async_call.call_count == 3
+    # Should create 2 events (future ones)
+    assert mock_hass.services.async_call.call_count == 2
     assert len(new_uids) == 2
 
 
@@ -222,8 +222,8 @@ async def test_sync_events_filters_by_criticality(
         include_non_critical=False,
     )
 
-    # Should call list_events once + create 1 event (critical one)
-    assert mock_hass.services.async_call.call_count == 2
+    # Should create 1 event (critical one)
+    assert mock_hass.services.async_call.call_count == 1
     assert len(new_uids) == 1
 
 
@@ -248,8 +248,8 @@ async def test_sync_events_skips_existing(
         include_non_critical=True,
     )
 
-    # Should call list_events once but not create any events
-    assert mock_hass.services.async_call.call_count == 1
+    # Should not create any events (already exists)
+    assert mock_hass.services.async_call.call_count == 0
     assert new_uids == stored_uids
 
 
@@ -281,9 +281,8 @@ async def test_sync_events_continues_on_individual_failure(
     mock_hass: MagicMock, sample_critical_peak: PeakEvent, sample_regular_peak: PeakEvent
 ) -> None:
     """Test that sync continues creating events even if one fails."""
-    # Make list_events succeed, first create fail, second create succeed
+    # Make first create fail, second create succeed
     mock_hass.services.async_call.side_effect = [
-        {},  # list_events returns empty
         Exception("First event failed"),
         None,  # second create succeeds
     ]
@@ -301,8 +300,8 @@ async def test_sync_events_continues_on_individual_failure(
         include_non_critical=True,
     )
 
-    # Should call list_events once + attempt to create both events
-    assert mock_hass.services.async_call.call_count == 3
+    # Should attempt to create both events
+    assert mock_hass.services.async_call.call_count == 2
     # Should only track the successful one
     assert len(new_uids) == 1
 
@@ -343,8 +342,8 @@ async def test_sync_events_includes_all_when_flag_true(
         include_non_critical=True,
     )
 
-    # Should call list_events once + create both events
-    assert mock_hass.services.async_call.call_count == 3
+    # Should create both events
+    assert mock_hass.services.async_call.call_count == 2
     assert len(new_uids) == 2
 
 

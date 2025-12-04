@@ -1,7 +1,7 @@
 {
   "domain": "hydroqc",
   "name": "Hydro-Québec",
-  "after_dependencies": ["recorder"],
+  "after_dependencies": ["recorder", "calendar"],
   "codeowners": ["@mdallaire"],
   "config_flow": true,
   "documentation": "https://github.com/hydroqc/hydroqc-ha",

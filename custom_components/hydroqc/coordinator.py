@@ -289,6 +289,14 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             except Exception as err:
                 _LOGGER.warning("[OpenData] Failed to fetch public peak data: %s", err)
 
+        # Sync calendar events if configured and peak data available (for both modes)
+        # Only start sync if not already running (prevent duplicate event creation)
+        if self._calendar_entity_id and self.public_client.peak_handler:
+            if self._calendar_sync_task is None or self._calendar_sync_task.done():
+                self._calendar_sync_task = asyncio.create_task(self._async_sync_calendar_events())
+            else:
+                _LOGGER.debug("Calendar sync already in progress, skipping")
+
         # If in peak-only mode, we're done
         if self.is_opendata_mode:
             _LOGGER.debug("OpenData mode: skipping portal data fetch")
@@ -362,14 +370,6 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Only if not during first refresh to avoid blocking HA startup
         if self.is_portal_mode and self._contract and hasattr(self, "_first_refresh_done"):
             self._regular_sync_task = asyncio.create_task(self._async_regular_consumption_sync())
-
-        # Sync calendar events if configured and peak data available
-        # Only start sync if not already running (prevent duplicate event creation)
-        if self._calendar_entity_id and self.public_client.peak_handler:
-            if self._calendar_sync_task is None or self._calendar_sync_task.done():
-                self._calendar_sync_task = asyncio.create_task(self._async_sync_calendar_events())
-            else:
-                _LOGGER.debug("Calendar sync already in progress, skipping")
 
         return data
 
@@ -729,10 +729,19 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         Validates calendar entity exists and auto-disables if removed.
         """
         if not self._calendar_entity_id:
+            _LOGGER.debug(
+                "Calendar sync disabled for %s: no calendar entity configured. "
+                "Configure via integration options to enable peak event calendar sync.",
+                self.contract_name,
+            )
             return
 
         # Only sync for rates that support calendar (DPC/DCPC)
         if self.rate_with_option not in ["DPC", "DCPC"]:
+            _LOGGER.debug(
+                "Calendar sync not available for rate %s (only DPC/DCPC supported)",
+                self.rate_with_option,
+            )
             return
 
         # Check if calendar entity exists

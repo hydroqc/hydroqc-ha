@@ -162,7 +162,6 @@ async def async_get_existing_event_uids(
     try:
         # Get the calendar entity from the entity registry
         from homeassistant.components.calendar import CalendarEntity
-        from homeassistant.helpers import entity_platform
 
         # Try to get the calendar entity directly
         component = hass.data.get("calendar")

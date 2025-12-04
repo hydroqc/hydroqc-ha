@@ -117,9 +117,7 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         if self._calendar_entity_id:
             # Create unique storage key per contract to avoid conflicts
             storage_key = f"{STORAGE_KEY_CALENDAR_UIDS}.{entry.entry_id}"
-            self._calendar_uid_store = Store(
-                hass, STORAGE_VERSION, storage_key, encoder=None
-            )
+            self._calendar_uid_store = Store(hass, STORAGE_VERSION, storage_key, encoder=None)
 
         # Initialize webuser if in portal mode
         if self._auth_mode == AUTH_MODE_PORTAL:

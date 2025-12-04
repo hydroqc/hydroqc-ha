@@ -268,8 +268,8 @@ async def test_sync_events_sequential_with_delay(
             set(),
             "contract_123",
             "Home",
-        "DCPC",
-        include_non_critical=True,
+            "DCPC",
+            include_non_critical=True,
         )
 
         # Should sleep once (between two events, not after the last)

@@ -47,14 +47,14 @@ blueprint:
         entity:
           domain: calendar
           multiple: false
-    preheat_offset:
-      name: Délai de pré-chauffage (minutes)
-      description: Temps avant le début de l'événement pour commencer le pré-chauffage (ex. 120 minutes)
-      default: 120
+    preheat_minutes:
+      name: Minutes de pré-chauffage avant l'événement
+      description: Nombre de minutes avant le début de l'événement pour commencer le pré-chauffage (par exemple -120 = 2 heures avant)
+      default: -120
       selector:
         number:
-          min: 0
-          max: 240
+          min: -360
+          max: 0
           step: 15
           unit_of_measurement: minutes
           mode: slider
@@ -85,7 +85,7 @@ trigger:
   - platform: calendar
     entity_id: !input hydroqc_calendar
     event: start
-    offset: !input preheat_offset
+    offset: !input preheat_minutes
     id: pre_heat_trigger
   - platform: calendar
     entity_id: !input hydroqc_calendar

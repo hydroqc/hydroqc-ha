@@ -422,9 +422,7 @@ async def test_get_existing_event_uids_finds_hydroqc_events(mock_hass: MagicMock
     )
 
     mock_event2 = MagicMock()
-    mock_event2.description = (
-        "Another event\nID: hydroqc_contract_123_2025-01-15T16:00:00-05:00"
-    )
+    mock_event2.description = "Another event\nID: hydroqc_contract_123_2025-01-15T16:00:00-05:00"
 
     mock_event3 = MagicMock()
     mock_event3.description = "Event without UID"  # Should be ignored
@@ -484,8 +482,12 @@ async def test_sync_events_dpc_only_critical(
     dpc_peak1 = PeakEvent(
         {
             "offre": "TPC-DPC",
-            "datedebut": (datetime.now(EST) + timedelta(days=1)).replace(hour=14, minute=0).isoformat(),
-            "datefin": (datetime.now(EST) + timedelta(days=1)).replace(hour=18, minute=0).isoformat(),
+            "datedebut": (datetime.now(EST) + timedelta(days=1))
+            .replace(hour=14, minute=0)
+            .isoformat(),
+            "datefin": (datetime.now(EST) + timedelta(days=1))
+            .replace(hour=18, minute=0)
+            .isoformat(),
             "plagehoraire": "PM",
             "duree": "PT04H00MS",
             "secteurclient": "Résidentiel",

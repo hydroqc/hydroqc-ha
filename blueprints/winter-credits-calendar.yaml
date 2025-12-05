@@ -48,6 +48,12 @@ blueprint:
     fin de périodes.
 
 
+    **Important** : Pour éviter qu'une erreur dans une action empêche l'exécution
+    des actions suivantes, il est recommandé d'utiliser des appels d'actions en
+    parallèle. Exemple : au lieu d'une séquence simple, utilisez `parallel:` pour
+    grouper vos actions.
+
+
     **Note** : Ce blueprint différencie automatiquement les pointes critiques et
     non-critiques selon les métadonnées de l''événement. Vous pouvez définir des
     actions différentes pour chaque type de pointe.
@@ -71,7 +77,7 @@ blueprint:
 
     Vous trouverez plus de détails sur les logiques applicables pour les crédits hivernaux
 
-    dans la [documentation Hydro-Québec](https://www.hydroquebec.com/residentiel/espace-clients/tarifs/option-credit-hivernal.html).
+    dans la [documentation Hydro-Québec](https://hydroqc.ca/fr/docs/tarification-dynamique/).
 
     '
   domain: automation

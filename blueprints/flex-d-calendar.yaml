@@ -33,6 +33,12 @@ blueprint:
     fin de périodes.
 
 
+    **Important** : Pour éviter qu''une erreur dans une action empêche l''exécution
+    des actions suivantes, il est recommandé d''utiliser des appels d''actions en
+    parallèle. Exemple : au lieu d''une séquence simple, utilisez `parallel:` pour
+    grouper vos actions.
+
+
     ### Métadonnées disponibles
 
 
@@ -52,7 +58,7 @@ blueprint:
 
     Vous trouverez plus de détails sur les logiques applicables pour Flex-D
 
-    dans la [documentation Hydro-Québec](https://www.hydroquebec.com/residentiel/espace-clients/tarifs/tarif-flex-d.html).
+    dans la [documentation Hydroqc](https://hydroqc.ca/fr/docs/tarification-dynamique/).
 
     '
   domain: automation
@@ -112,23 +118,31 @@ trigger:
     entity_id: !input hydroqc_calendar
     event: end
     id: peak_end_trigger
-# Add condition to filter only peak events (title contains "pointe")
+# Add condition to filter only peak events (title contains "pointe") and DPC rate
 condition:
   - condition: template
     value_template: "{{ 'pointe' in trigger.calendar_event.summary | lower }}"
+  - condition: template
+    value_template: "{{ 'DPC' in trigger.calendar_event.location }}"
 action:
   - choose:
       - conditions:
           - condition: trigger
             id: pre_heat_trigger
-          # Optional: Add rate filter (trigger.calendar_event.location contains 'DPC')
-          # Optional: Check if critical (trigger.calendar_event.description contains 'Critique: Oui')
+          - condition: template
+            value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
         sequence: !input pre_heat_start_action
       - conditions:
           - condition: trigger
             id: peak_start_trigger
+          - condition: template
+            value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
         sequence: !input critical_peak_start_action
       - conditions:
           - condition: trigger
             id: peak_end_trigger
+          - condition: template
+            value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
         sequence: !input critical_peak_end_action
+    default:
+      - parallel: []

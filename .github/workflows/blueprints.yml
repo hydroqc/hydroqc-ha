@@ -1,0 +1,30 @@
+name: Blueprint Validation
+
+on:
+  pull_request:
+    branches: [main]
+    paths:
+      - 'blueprints/**'
+      - 'scripts/validate_blueprints.py'
+      - '.github/workflows/blueprints.yml'
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  validate:
+    name: Validate Blueprints
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      
+      - name: Install PyYAML
+        run: pip install pyyaml
+      
+      - name: Validate Blueprints
+        run: python3 scripts/validate_blueprints.py

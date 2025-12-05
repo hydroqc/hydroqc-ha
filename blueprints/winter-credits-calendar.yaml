@@ -49,8 +49,7 @@ blueprint:
     Les événements de calendrier incluent des métadonnées accessibles dans vos actions :
 
     - trigger.calendar_event.summary : Titre (🔴 Pointe critique / ⚪ Pointe régulière)
-
-    - trigger.calendar_event.location : Tarif (Hydro-Québec DCPC)
+    
 
     - trigger.calendar_event.description : Contient Critique: Oui/Non, Tarif: DCPC, etc.
 

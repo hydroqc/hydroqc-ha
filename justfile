@@ -144,24 +144,18 @@ shell:
     @echo "🐚 Opening shell in Home Assistant container..."
     @docker compose exec homeassistant /bin/bash
 
-# Check integration files
+# Check code linting
 check:
     #!/usr/bin/env fish
     echo ""
-    echo "🔍 Checking Integration Files"
+    echo "🔍 Linting..."
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    if test -d custom_components/hydroqc
-        echo "✅ Integration directory exists"
-        echo ""
-        echo "📁 Files:"
-        ls -lh custom_components/hydroqc/*.py custom_components/hydroqc/*.json 2>/dev/null
-        echo ""
-        echo "📊 Line counts:"
-        wc -l custom_components/hydroqc/*.py | tail -1
+    uv run ruff check custom_components/
+    if test $status -eq 0
+        echo "✅ Linting passed"
     else
-        echo "❌ Integration directory not found!"
-        echo "ℹ️  Expected: custom_components/hydroqc/"
+        echo "❌ Linting failed"
         exit 1
     end
 
@@ -184,6 +178,14 @@ validate:
         end
     else
         echo "❌ manifest.json not found"
+        exit 1
+    end
+
+# Validate blueprints
+validate-blueprints:
+    #!/usr/bin/env fish
+    python3 scripts/validate_blueprints.py
+    if test $status -ne 0
         exit 1
     end
 
@@ -224,21 +226,6 @@ sync:
         exit 1
     end
 
-# Run linting checks
-lint:
-    #!/usr/bin/env fish
-    echo ""
-    echo "🔍 Running linting..."
-    echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-    echo ""
-    uv run ruff check custom_components/
-    if test $status -eq 0
-        echo "✅ Linting passed"
-    else
-        echo "❌ Linting failed"
-        exit 1
-    end
-
 # Check code formatting
 format-check:
     #!/usr/bin/env fish
@@ -250,8 +237,7 @@ format-check:
     if test $status -eq 0
         echo "✅ Formatting check passed"
     else
-        echo "❌ Formatting check failed"
-        echo "ℹ️  Run 'just fix' to auto-format"
+        echo "❌ Formatting check failed (run 'just fix')"
         exit 1
     end
 
@@ -325,7 +311,7 @@ qa:
     echo "🔍 Running QA checks..."
     echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
     echo ""
-    just lint
+    just check
     and just format-check
     and just typecheck
     if test $status -eq 0
@@ -337,7 +323,7 @@ qa:
         exit 1
     end
 
-# Run all checks: sync + qa + validate + test
+# Run all checks: sync + qa + validate + validate-blueprints + test
 ci:
     #!/usr/bin/env fish
     echo ""
@@ -347,6 +333,7 @@ ci:
     just sync
     and just qa
     and just validate
+    and just validate-blueprints
     and just test-cov
     if test $status -eq 0
         echo ""

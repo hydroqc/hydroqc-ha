@@ -58,8 +58,8 @@ jobs:
           file: ./coverage.xml
           fail_ci_if_error: false
 
-  validate:
-    name: Home Assistant Validation
+  hacs:
+    name: HACS Validation
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -69,6 +69,12 @@ jobs:
         with:
           category: integration
           ignore: brands
+  
+  hassfest:
+    name: Hassfest Validation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
       
       - name: Hassfest Validation
         uses: home-assistant/actions/hassfest@master

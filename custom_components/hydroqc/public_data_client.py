@@ -273,7 +273,8 @@ class PeakHandler:
             )
             return []
 
-        # Generate peaks for today and tomorrow
+        # Generate non-critical peaks for today and tomorrow only
+        # Critical peaks beyond tomorrow come from API announcements
         generated_peaks: list[PeakEvent] = []
 
         for day_offset in [0, 1]:  # 0=today, 1=tomorrow
@@ -533,10 +534,16 @@ class PublicDataClient:
 
             # Build refine filter to filter by rate (Opendatasoft API syntax)
             # Use refine parameter: refine=offre:"TPC-DPC"
+            # Filter for events from today onwards (next 7 days)
+            tz = zoneinfo.ZoneInfo("America/Toronto")
+            today = datetime.datetime.now(tz).date()
+            today_str = today.isoformat()
+
             params: dict[str, str | int] = {
                 "limit": 100,
                 "timezone": "America/Toronto",
                 "refine": f'offre:"{hq_offers[0]}"',
+                "where": f"datedebut>='{today_str}'",
             }
 
             if len(hq_offers) > 1:

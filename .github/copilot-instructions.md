@@ -45,7 +45,8 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
    - **API endpoint**: `https://donnees.hydroquebec.com/api/explore/v2.1`
    - **Dataset**: `evenements-pointe` (production dataset for peak events)
    - **Query syntax**: Uses `refine` parameter (e.g., `refine=offre:"TPC-DPC"`), not `where` clauses
-   - **Time window**: Fetches 7 days ahead (not 60)
+   - **Time window**: Fetches 7 days ahead with `where` clause filtering
+   - **Date filtering**: Uses `where=datedebut>='YYYY-MM-DD'` to get only future events
    - `PeakEvent`: Parses API dates (handles both simple `"YYYY-MM-DD HH:MM"` and ISO formats)
    - **Critical timezone requirement**: All datetimes MUST be `America/Toronto` timezone-aware
    - API returns lowercase field names: `datedebut`, `datefin`, `plagehoraire`, `secteurclient`
@@ -79,7 +80,8 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
   - All other peaks in the winter schedule (no API announcement) → **non-critical** (`is_critical=False`)
   - All other anchors (before non-critical peaks) → **non-critical**
 - **API announces critical peaks around noon the day before** - gives enough time to prepare
-- **Schedule generation**: Generate peaks for **today and tomorrow only** (2 days ahead)
+- **Schedule generation**: Generate non-critical peaks for **today and tomorrow only** (2 days)
+- **Critical peaks beyond tomorrow**: Come from API announcements (7-day fetch window)
 - **Outside winter season**: No schedule generation, binary sensors return `False` (not `Unknown`)
 
 **For TPC-DPC (Flex-D) - DPC Rate:**

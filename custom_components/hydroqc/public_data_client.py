@@ -247,7 +247,7 @@ class PeakHandler:
         else:
             # For DPC and other rates, only use API events
             self._events = api_events
-            
+
             # Log critical peak date range for debugging
             if self._events:
                 first_peak = min(self._events, key=lambda e: e.start_date)

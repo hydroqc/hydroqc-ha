@@ -52,6 +52,10 @@
   - Les événements de calendrier sont maintenant créés correctement en mode OpenData
 - Correction du timing de dépendance calendrier
   - Ajout de `calendar` dans `after_dependencies` pour initialisation correcte
+## [0.1.7-beta.1] - 2025-12-05
+
+### Modifié
+- Mise à jour de Hydro-Quebec-API-Wrapper à 4.2.5 avec dépendances assouplies pour compatibilité Home Assistant
 
 ---
 

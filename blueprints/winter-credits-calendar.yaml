@@ -105,7 +105,10 @@ blueprint:
     critical_peak_end_action:
       name: "[Critique] Action fin pointe"
       description: 'Actions pour pointes CRITIQUES - fin pointe (10h/20h). Ex: Rétablissez tous appareils à opération normale.'
-      default: []
+      default:
+        - delay:
+            seconds: "{{ range(120, 360)|random|int }}"
+          alias: Délais 2-6 minutes
       selector:
         action: {}
     

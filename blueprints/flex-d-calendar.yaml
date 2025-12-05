@@ -85,7 +85,10 @@ blueprint:
       name: Action fin pointe critique
       description: Actions à effectuer à la fin de la période de pointe critique pour
         rétablir votre consommation normale.
-      default: []
+      default:
+        - delay:
+            seconds: "{{ range(120, 360)|random|int }}"
+          alias: Délais 2-6 minutes
       selector:
         action: {}
   source_url: https://github.com/hydroqc/hydroqc-ha/blob/main/blueprints/flex-d-calendar.yaml

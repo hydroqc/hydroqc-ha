@@ -10,6 +10,13 @@
 
 ---
 
+## [0.1.7-beta.1] - 2025-12-05
+
+### Modifié
+- Mise à jour de Hydro-Quebec-API-Wrapper à 4.2.5 avec dépendances assouplies pour compatibilité Home Assistant
+
+---
+
 ## [0.1.6-beta.1] - 2025-12-03
 
 ### Corrigé

@@ -742,6 +742,11 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
             return
 
+        # Check if calendar component is loaded (avoid false positives during HA startup)
+        if "calendar" not in self.hass.config.components:
+            _LOGGER.debug("Calendar component not yet loaded, skipping calendar sync")
+            return
+
         # Check if calendar entity exists
         calendar_state = self.hass.states.get(self._calendar_entity_id)
         if not calendar_state:

@@ -326,6 +326,9 @@ class TestHydroQcDataCoordinator:
         )
         mock_config_entry.add_to_hass(hass)
 
+        # Mock calendar component being loaded
+        hass.config.components.add("calendar")
+
         # Set up calendar state
         hass.states.async_set("calendar.test", "idle")
 
@@ -361,9 +364,7 @@ class TestHydroQcDataCoordinator:
         """Test calendar sync auto-disables when entity is missing."""
         # Register persistent_notification service
         mock_notification_service = AsyncMock()
-        hass.services.async_register(
-            "persistent_notification", "create", mock_notification_service
-        )
+        hass.services.async_register("persistent_notification", "create", mock_notification_service)
 
         # Update config to include calendar
         mock_config_entry = MockConfigEntry(
@@ -377,6 +378,9 @@ class TestHydroQcDataCoordinator:
             unique_id=mock_config_entry.unique_id,
         )
         mock_config_entry.add_to_hass(hass)
+
+        # Mock calendar component being loaded
+        hass.config.components.add("calendar")
 
         # Don't set up calendar state (entity missing)
 

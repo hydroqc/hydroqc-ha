@@ -3,22 +3,19 @@ blueprint:
   description: |
     # Gestion des événements de crédit hivernal via calendrier.
 
-    Ce blueprint utilise les événements de calendrier créés automatiquement par l'intégration
-    Hydro-Québec pour déclencher vos automatisations lors des périodes de pointe critique
-    et non-critique (si configuré).
+    Ce blueprint utilise les événements de calendrier créés automatiquement par l'intégration Hydro-Québec pour déclencher vos automatisations lors des périodes de pointe critique et non-critique (si configuré).
 
-    **Prérequis** : Vous devez avoir configuré un calendrier dans les options de
-    votre intégration Hydro-Québec D+CPC (Crédits Hivernaux).
+    **Prérequis** : Vous devez avoir configuré un calendrier dans les options de votre intégration Hydro-Québec D+CPC (Crédits Hivernaux).
 
     ## Configuration
 
     ### Sélection du calendrier
-    Sélectionnez le calendrier que vous avez configuré dans l'intégration Hydro-Québec
-    pour recevoir les événements de pointe.
+
+    Sélectionnez le calendrier que vous avez configuré dans l'intégration Hydro-Québec pour recevoir les événements de pointe.
 
     ### Période de pré-chauffage
-    Définissez combien de temps avant le début de l'événement vous souhaitez commencer
-    le pré-chauffage de votre résidence (en minutes).
+
+    Définissez combien de temps avant le début de l'événement vous souhaitez commencer le pré-chauffage de votre résidence (en minutes).
 
     ### Périodes d'ancrage
     Les périodes d'ancrage sont des périodes de notification avant les pointes :
@@ -30,22 +27,14 @@ blueprint:
     selon l'événement de calendrier.
 
     ### Actions
-    Définition des actions à effectuer dans Home-Assistant lors de chaque début et
-    fin de périodes.
 
-    **Important** : Pour éviter qu'une erreur dans une action empêche l'exécution
-    des actions suivantes, il est recommandé d'utiliser des appels d'actions en
-    parallèle. Exemple : au lieu d'une séquence simple, utilisez `parallel:` pour
-    grouper vos actions.
+    Définition des actions à effectuer dans Home-Assistant lors de chaque début et fin de périodes.
 
-    **Workflows complexes** : Si vous avez besoin de logiques conditionnelles
-    complexes ou de nombreuses étapes, il est recommandé d'utiliser ce blueprint
-    pour déclencher des automatisations séparées plutôt que d'inclure toute la
-    logique ici. Cela facilite la maintenance et le débogage.
+    **Important** : Pour éviter qu'une erreur dans une action empêche l'exécution des actions suivantes, il est recommandé d'utiliser des appels d'actions en parallèle. Exemple : au lieu d'une séquence simple, utilisez `parallel:` pour grouper vos actions.
 
-    **Note** : Ce blueprint différencie automatiquement les pointes critiques et
-    non-critiques selon les métadonnées de l'événement. Vous pouvez définir des
-    actions différentes pour chaque type de pointe.
+    **Workflows complexes** : Si vous avez besoin de logiques conditionnelles complexes ou de nombreuses étapes, il est recommandé d'utiliser ce blueprint pour déclencher des automatisations séparées plutôt que d'inclure toute la logique ici. Cela facilite la maintenance et le débogage.
+
+    **Note** : Ce blueprint différencie automatiquement les pointes critiques et non-critiques selon les métadonnées de l'événement. Vous pouvez définir des actions différentes pour chaque type de pointe.
 
 
     ### Métadonnées disponibles
@@ -64,15 +53,19 @@ blueprint:
 
     ### Création manuelle d'événements
 
-    Si l'intégration ne crée pas automatiquement les événements (API indisponible,
-    problème de configuration), vous pouvez créer manuellement des événements dans
-    votre calendrier :
+    Si l'intégration ne crée pas automatiquement les événements (API indisponible, problème de configuration), vous pouvez créer manuellement des événements dans votre calendrier :
 
     1. Créez un événement aux heures de pointe (6h-10h ou 16h-20h)
-    2. Dans la description, ajoutez obligatoirement "Tarif: DCPC" (requis pour que le blueprint détecte l'événement)
-    3. Ajoutez "Critique: Oui" pour une pointe critique, ou "Critique: Non" pour une pointe non-critique
-    4. Le blueprint se déclenchera automatiquement selon les heures configurées
-    5. Exemple de description : "Tarif: DCPC\nCritique: Oui"
+    2. Titre: "🔴 Pointe critique" ou "⚪ Pointe régulière"
+    3. Dans la description, ajoutez obligatoirement "Tarif: DCPC" (requis pour que le blueprint détecte l'événement)
+    4. Ajoutez "Critique: Oui" pour une pointe critique, ou "Critique: Non" pour une pointe non-critique
+    5. Le blueprint se déclenchera automatiquement selon les heures configurées
+    
+    Exemple de description :
+    ```
+    Tarif: DCPC
+    Critique: Oui
+    ```
 
     Vous trouverez plus de détails sur les logiques applicables pour les crédits hivernaux
 

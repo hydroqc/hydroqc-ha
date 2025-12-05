@@ -220,6 +220,17 @@ class PeakHandler:
             # Sort by start date
             self._events = sorted(merged_events, key=lambda e: e.start_date)
 
+            # Log critical peak date range for debugging
+            critical_peaks = [e for e in self._events if e.is_critical]
+            if critical_peaks:
+                first_critical = min(critical_peaks, key=lambda e: e.start_date)
+                last_critical = max(critical_peaks, key=lambda e: e.start_date)
+                _LOGGER.debug(
+                    "[OpenData] DCPC critical peaks: first=%s, last=%s",
+                    first_critical.start_date.strftime("%Y-%m-%d %H:%M"),
+                    last_critical.start_date.strftime("%Y-%m-%d %H:%M"),
+                )
+
             _LOGGER.debug(
                 "[OpenData] DCPC schedule: %d API events (critical) + %d generated (non-critical) = %d total",
                 len(api_events),
@@ -236,11 +247,24 @@ class PeakHandler:
         else:
             # For DPC and other rates, only use API events
             self._events = api_events
-            _LOGGER.debug(
-                "[OpenData] Loaded %d API peak events for rate %s (all critical)",
-                len(self._events),
-                self.rate_code,
-            )
+            
+            # Log critical peak date range for debugging
+            if self._events:
+                first_peak = min(self._events, key=lambda e: e.start_date)
+                last_peak = max(self._events, key=lambda e: e.start_date)
+                _LOGGER.debug(
+                    "[OpenData] %s peaks: first=%s, last=%s, total=%d (all critical)",
+                    self.rate_code,
+                    first_peak.start_date.strftime("%Y-%m-%d %H:%M"),
+                    last_peak.start_date.strftime("%Y-%m-%d %H:%M"),
+                    len(self._events),
+                )
+            else:
+                _LOGGER.debug(
+                    "[OpenData] Loaded %d API peak events for rate %s (all critical)",
+                    len(self._events),
+                    self.rate_code,
+                )
 
     def _generate_dcpc_schedule(self) -> list[PeakEvent]:
         """Generate DCPC (Winter Credits) peak schedule for today and tomorrow.

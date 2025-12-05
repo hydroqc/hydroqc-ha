@@ -1,61 +1,45 @@
 blueprint:
   name: Hydro-Québec Crédits Hivernaux (Événements de calendrier)
-  description: '# Gestion des événements de crédit hivernal via calendrier.
+  description: |
+    # Gestion des événements de crédit hivernal via calendrier.
 
-
-    Ce blueprint utilise les événements de calendrier créés automatiquement par l''intégration
+    Ce blueprint utilise les événements de calendrier créés automatiquement par l'intégration
     Hydro-Québec pour déclencher vos automatisations lors des périodes de pointe critique
     et non-critique (si configuré).
-
 
     **Prérequis** : Vous devez avoir configuré un calendrier dans les options de
     votre intégration Hydro-Québec D+CPC (Crédits Hivernaux).
 
-
     ## Configuration
 
-
     ### Sélection du calendrier
-
-    Sélectionnez le calendrier que vous avez configuré dans l''intégration Hydro-Québec
+    Sélectionnez le calendrier que vous avez configuré dans l'intégration Hydro-Québec
     pour recevoir les événements de pointe.
 
-
     ### Période de pré-chauffage
-
-    Définissez combien de temps avant le début de l''événement vous souhaitez commencer
+    Définissez combien de temps avant le début de l'événement vous souhaitez commencer
     le pré-chauffage de votre résidence (en minutes).
 
-
-    ### Périodes d''ancrage
-
-    Les périodes d''ancrage sont des périodes de notification avant les pointes :
-
+    ### Périodes d'ancrage
+    Les périodes d'ancrage sont des périodes de notification avant les pointes :
     - Pointes du matin (AM, 6h-10h) : Ancrage débute 5h avant, se termine 2h avant la pointe
-
     - Pointes du soir (PM, 16h-20h) : Ancrage débute 4h avant, se termine 2h avant la pointe
-
 
     Ce blueprint utilise des déclencheurs multiples pour capturer toutes les combinaisons possibles.
     Les valeurs par défaut couvrent les deux cas (matin et soir), déclenchant aux moments appropriés
-    selon l''événement de calendrier.
-
+    selon l'événement de calendrier.
 
     ### Actions
-
-
     Définition des actions à effectuer dans Home-Assistant lors de chaque début et
     fin de périodes.
-
 
     **Important** : Pour éviter qu'une erreur dans une action empêche l'exécution
     des actions suivantes, il est recommandé d'utiliser des appels d'actions en
     parallèle. Exemple : au lieu d'une séquence simple, utilisez `parallel:` pour
     grouper vos actions.
 
-
     **Note** : Ce blueprint différencie automatiquement les pointes critiques et
-    non-critiques selon les métadonnées de l''événement. Vous pouvez définir des
+    non-critiques selon les métadonnées de l'événement. Vous pouvez définir des
     actions différentes pour chaque type de pointe.
 
 

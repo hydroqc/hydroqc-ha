@@ -1,41 +1,31 @@
 blueprint:
   name: Hydro-Québec Flex D (Événements de calendrier)
-  description: '# Gestion des événements de pointe critique "Flex D" via calendrier.
+  description: |
+    # Gestion des événements de pointe critique "Flex D" via calendrier.
 
-
-    Ce blueprint utilise les événements de calendrier créés automatiquement par l''intégration
+    Ce blueprint utilise les événements de calendrier créés automatiquement par l'intégration
     Hydro-Québec pour déclencher vos automatisations lors des périodes de pointe critique.
-
 
     **Prérequis** : Vous devez avoir configuré un calendrier dans les options de
     votre intégration Hydro-Québec Flex-D (DPC).
 
-
     ## Configuration
 
-
     ### Sélection du calendrier
-
-    Sélectionnez le calendrier que vous avez configuré dans l''intégration Hydro-Québec
+    Sélectionnez le calendrier que vous avez configuré dans l'intégration Hydro-Québec
     pour recevoir les événements de pointe critique.
 
-
     ### Période de pré-chauffage
-
-    Définissez combien de temps avant le début de l''événement vous souhaitez commencer
+    Définissez combien de temps avant le début de l'événement vous souhaitez commencer
     le pré-chauffage de votre résidence (en minutes).
 
-
     ### Actions
-
-
     Définition des actions à effectuer dans Home-Assistant lors de chaque début et
     fin de périodes.
 
-
-    **Important** : Pour éviter qu''une erreur dans une action empêche l''exécution
-    des actions suivantes, il est recommandé d''utiliser des appels d''actions en
-    parallèle. Exemple : au lieu d''une séquence simple, utilisez `parallel:` pour
+    **Important** : Pour éviter qu'une erreur dans une action empêche l'exécution
+    des actions suivantes, il est recommandé d'utiliser des appels d'actions en
+    parallèle. Exemple : au lieu d'une séquence simple, utilisez `parallel:` pour
     grouper vos actions.
 
 

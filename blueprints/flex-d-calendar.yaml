@@ -96,9 +96,11 @@ trigger:
     event: start
     offset: !input preheat_offset
     id: pre_heat_trigger
+  # Critical peak start: configurable offset before official peak start (default 1min before)
   - platform: calendar
     entity_id: !input hydroqc_calendar
     event: start
+    offset: !input critical_peak_offset
     id: peak_start_trigger
   - platform: calendar
     entity_id: !input hydroqc_calendar

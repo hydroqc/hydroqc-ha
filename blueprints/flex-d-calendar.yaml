@@ -67,6 +67,15 @@ blueprint:
       selector:
         text:
           type: text
+    critical_peak_offset:
+      name: Délai avant début pointe critique
+      description: "Temps avant le début officiel de la pointe pour déclencher les actions (permet aux appareils de se stabiliser avant la pointe). Format -HH:MM:SS, ex: -00:01:00 pour 1 minute avant"
+      default: "-00:01:00"
+      selector:
+        text:
+          type: text
+    
+    # ===== ACTIONS =====
     pre_heat_start_action:
       name: Action de pré-chauffage
       description: Actions à effectuer avant la période de pointe critique pour

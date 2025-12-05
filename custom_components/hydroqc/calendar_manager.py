@@ -6,6 +6,9 @@ import asyncio
 import logging
 from datetime import datetime
 from typing import TYPE_CHECKING
+from zoneinfo import ZoneInfo
+
+from homeassistant.components.calendar import CalendarEntity
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -81,14 +84,11 @@ async def async_create_peak_event(
     )
 
     # Format description with French datetime strings, metadata, and UID for duplicate detection
-    import datetime
-    from zoneinfo import ZoneInfo
-
     start_str = peak_event.start_date.strftime("%H:%M")
     end_str = peak_event.end_date.strftime("%H:%M")
     # Use local timezone (America/Toronto) for creation timestamp
     local_tz = ZoneInfo("America/Toronto")
-    created_at = datetime.datetime.now(local_tz).strftime("%Y-%m-%d %H:%M:%S %Z")
+    created_at = datetime.now(local_tz).strftime("%Y-%m-%d %H:%M:%S %Z")
     critical_str = "Oui" if peak_event.is_critical else "Non"
 
     description = DESCRIPTION_TEMPLATE.format(
@@ -157,12 +157,9 @@ async def async_get_existing_event_uids(
     Returns:
         Set of UIDs found in existing event descriptions
     """
-    existing_uids = set()
+    existing_uids: set[str] = set()
 
     try:
-        # Get the calendar entity from the entity registry
-        from homeassistant.components.calendar import CalendarEntity
-
         # Try to get the calendar entity directly
         component = hass.data.get("calendar")
         if not component:

@@ -10,6 +10,51 @@
 
 ---
 
+## [0.1.8-beta.1] - 2025-12-05
+
+### Ajouté
+- Intégration complète du calendrier pour les événements de pointe (DPC et DCPC) (#7)
+  - Création automatique d'événements de calendrier pour les pointes critiques et régulières
+  - Support pour les modes Portal et OpenData
+  - Gestion UID d'événements persistante avec stockage HA pour prévenir les doublons
+  - Détection automatique des entités calendrier supprimées (désactivation automatique)
+  - Événements en français uniquement avec métadonnées détaillées
+  - Conservation du fuseau horaire des événements (America/Toronto)
+- Deux blueprints d'automatisation pour les événements de calendrier
+  - `winter-credits-calendar.yaml` : Automatisation complète DCPC avec différenciation critique/régulière
+  - `flex-d-calendar.yaml` : Automatisation DPC pour les pointes critiques
+  - Actions essentielles (pré-chauffage, début/fin pointe) en premier
+  - Actions optionnelles (ancrages, pointes régulières) regroupées et repliables
+  - Exécution parallèle par défaut pour fiabilité
+  - Filtres de tarif et de criticité intégrés
+- Configuration flexible du calendrier dans les options
+  - Activation/désactivation du calendrier
+  - Sélection d'une entité calendrier existante (optionnel)
+  - Configuration des pointes non-critiques (DCPC uniquement)
+- 25 tests complets pour le gestionnaire de calendrier
+  - Tests de création d'événements (DPC/DCPC, critique/régulier)
+  - Tests de gestion UID et prévention de doublons
+  - Tests de transitions DST et fuseaux horaires
+  - Tests de désactivation automatique
+  - Tous les scénarios edge cases couverts
+
+### Modifié
+- Ajout de `calendar` dans `after_dependencies` du manifest
+- Blueprints : Séparation des fins d'ancrage matin/soir pour plus de flexibilité
+
+### Corrigé
+- Correction du format de délai de pré-chauffage dans les blueprints
+  - Changement de sélecteur numérique (minutes) vers sélecteur de durée (HH:MM:SS)
+  - Défaut : `-02:00:00` au lieu de `-120` (correctement interprété comme 2 heures)
+  - Corrige le bug où `-120` était interprété comme 120 secondes au lieu de 120 minutes
+- Correction de la synchronisation calendrier en mode OpenData
+  - Déplacement de la synchronisation avant le retour anticipé OpenData
+  - Les événements de calendrier sont maintenant créés correctement en mode OpenData
+- Correction du timing de dépendance calendrier
+  - Ajout de `calendar` dans `after_dependencies` pour initialisation correcte
+
+---
+
 ## [0.1.6-beta.1] - 2025-12-03
 
 ### Corrigé

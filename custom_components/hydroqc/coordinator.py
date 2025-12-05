@@ -113,7 +113,7 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Track created calendar event UIDs (persisted across restarts)
         self._created_event_uids: set[str] = set()
         # Storage for persisting calendar event UIDs
-        self._calendar_uid_store: Store | None = None
+        self._calendar_uid_store: Store[dict[str, list[str]]] | None = None
         if self._calendar_entity_id:
             # Create unique storage key per contract to avoid conflicts
             storage_key = f"{STORAGE_KEY_CALENDAR_UIDS}.{entry.entry_id}"

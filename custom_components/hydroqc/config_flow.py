@@ -714,9 +714,7 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
                 CONF_PREHEAT_DURATION,
                 default=self.config_entry.options.get(
                     CONF_PREHEAT_DURATION,
-                    self.config_entry.data.get(
-                        CONF_PREHEAT_DURATION, DEFAULT_PREHEAT_DURATION
-                    ),
+                    self.config_entry.data.get(CONF_PREHEAT_DURATION, DEFAULT_PREHEAT_DURATION),
                 ),
             ): NumberSelector(
                 NumberSelectorConfig(

@@ -33,36 +33,24 @@ blueprint:
 
     - trigger.calendar_event.summary : Titre (🔴 Pointe critique / ⚪ Pointe régulière)
 
-
     - trigger.calendar_event.description : Contient Critique: Oui/Non, Tarif: DPC, etc.
 
-
-    **Exemple de condition** pour filtrer uniquement les pointes critiques :
-
-    condition: template / value_template: "{{ ''Critique: Oui'' in trigger.calendar_event.description }}"
 
     ### Création manuelle d'événements
 
     Si l'intégration ne crée pas automatiquement les événements (API indisponible, problème de configuration), vous pouvez créer manuellement des événements dans votre calendrier :
 
-    1. Créez un événement pour la période de pointe critique annoncée par Hydro-Québec
-    2. Titre suggéré : "🔴 Pointe critique"
-    3. Dans la description, ajoutez obligatoirement "Tarif: DPC" (requis pour que le blueprint détecte l'événement)
-    4. Ajoutez "Critique: Oui" (requis pour Flex-D, tous les événements sont critiques)
-    5. Le blueprint se déclenchera automatiquement selon les heures configurées
-    
-    Exemple de description :
+    1. Créez un événement pour la période de pointe critique annoncée par Hydro-Québec dans le calendrier.
+    2. Titre: 🔴 Pointe critique
+    3. Description:
     ```
     Tarif: DPC
     Critique: Oui
     ```
+    5. Le blueprint se déclenchera automatiquement selon les heures configurées
 
+    Vous trouverez plus de détails sur les logiques applicables pour Flex-D dans la [documentation Hydroqc](https://hydroqc.ca/fr/docs/tarification-dynamique/).
 
-    Vous trouverez plus de détails sur les logiques applicables pour Flex-D
-
-    dans la [documentation Hydroqc](https://hydroqc.ca/fr/docs/tarification-dynamique/).
-
-    '
   domain: automation
   input:
     hydroqc_calendar:
@@ -172,4 +160,4 @@ action:
             value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
         sequence: !input critical_peak_end_action
     default:
-      - parallel: []
+      

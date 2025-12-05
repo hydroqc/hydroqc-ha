@@ -22,9 +22,7 @@ blueprint:
     - Pointes du matin (AM, 6h-10h) : Ancrage débute 5h avant, se termine 2h avant la pointe
     - Pointes du soir (PM, 16h-20h) : Ancrage débute 4h avant, se termine 2h avant la pointe
 
-    Ce blueprint utilise des déclencheurs multiples pour capturer toutes les combinaisons possibles.
-    Les valeurs par défaut couvrent les deux cas (matin et soir), déclenchant aux moments appropriés
-    selon l'événement de calendrier.
+    Ce blueprint utilise des déclencheurs multiples pour capturer toutes les combinaisons possibles. Les valeurs par défaut couvrent les deux cas (matin et soir), déclenchant aux moments appropriés selon l'événement de calendrier.
 
     ### Actions
 
@@ -39,14 +37,11 @@ blueprint:
 
     ### Métadonnées disponibles
 
-
     Les événements de calendrier incluent des métadonnées accessibles dans vos actions :
 
     - trigger.calendar_event.summary : Titre (🔴 Pointe critique / ⚪ Pointe régulière)
-    
-
+  
     - trigger.calendar_event.description : Contient Critique: Oui/Non, Tarif: DCPC, etc.
-
 
     **Le blueprint détecte automatiquement** si une pointe est critique en vérifiant
     la présence de "Critique: Oui" dans la description de l''événement.
@@ -57,21 +52,15 @@ blueprint:
 
     1. Créez un événement aux heures de pointe (6h-10h ou 16h-20h)
     2. Titre: "🔴 Pointe critique" ou "⚪ Pointe régulière"
-    3. Dans la description, ajoutez obligatoirement "Tarif: DCPC" (requis pour que le blueprint détecte l'événement)
-    4. Ajoutez "Critique: Oui" pour une pointe critique, ou "Critique: Non" pour une pointe non-critique
-    5. Le blueprint se déclenchera automatiquement selon les heures configurées
-    
-    Exemple de description :
+    3. Description:
     ```
     Tarif: DCPC
     Critique: Oui
     ```
-
-    Vous trouverez plus de détails sur les logiques applicables pour les crédits hivernaux
-
-    dans la [documentation Hydro-Québec](https://hydroqc.ca/fr/docs/tarification-dynamique/).
-
-    '
+    4. Ajoutez "Critique: Oui" pour une pointe critique, ou "Critique: Non" pour une pointe non-critique
+    5. Le blueprint se déclenchera automatiquement selon les heures configurées
+  
+    Vous trouverez plus de détails sur les logiques applicables pour les crédits hivernaux dans la [documentation Hydro-Québec](https://hydroqc.ca/fr/docs/tarification-dynamique/).
   domain: automation
   input:
     hydroqc_calendar:
@@ -125,9 +114,7 @@ blueprint:
       description: |
         Actions pour pointes CRITIQUES - fin pointe (10h/20h). Ex: Rétablissez tous appareils à opération normale.
         
-        **Délai aléatoire par défaut (30 sec - 5 min)** : Évite une surcharge du réseau électrique causée par le redémarrage
-        simultané de milliers d'appareils à la fin de la pointe. Si vous avez plusieurs actions de reprise,
-        ajoutez un délai aléatoire similaire entre chacune pour étaler la consommation.
+        **Délai aléatoire par défaut (30 sec - 5 min)** : Évite une surcharge du réseau électrique causée par le redémarrage simultané de milliers d'appareils à la fin de la pointe. Si vous avez plusieurs actions de reprise, ajoutez un délai aléatoire similaire entre chacune pour étaler la consommation.
       default:
         - delay:
             seconds: "{{ range(30, 300)|random|int }}"

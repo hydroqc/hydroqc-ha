@@ -62,11 +62,11 @@ blueprint:
           multiple: false
     preheat_offset:
       name: Délai de pré-chauffage
-      description: "Temps avant le début de l'événement pour commencer le pré-chauffage (format HH:MM:SS, ex: -02:00:00 pour 2 heures avant)"
+      description: "Temps avant le début de l'événement pour commencer le pré-chauffage (format -HH:MM:SS, ex: -02:00:00 pour 2 heures avant, -01:30:00 pour 1h30 avant)"
       default: "-02:00:00"
       selector:
-        duration:
-          enable_day: false
+        text:
+          type: text
     pre_heat_start_action:
       name: Action de pré-chauffage
       description: Actions à effectuer avant la période de pointe critique pour

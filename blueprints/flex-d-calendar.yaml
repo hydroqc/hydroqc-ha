@@ -47,7 +47,7 @@ blueprint:
     Tarif: DPC
     Critique: Oui
     ```
-    5. Le blueprint se déclenchera automatiquement selon les heures configurées
+  
 
     Vous trouverez plus de détails sur les logiques applicables pour Flex-D dans la [documentation Hydroqc](https://hydroqc.ca/fr/docs/tarification-dynamique/).
 
@@ -106,10 +106,7 @@ blueprint:
         Actions à effectuer à la fin de la période de pointe critique pour
         rétablir votre consommation normale.
         
-        **Délai aléatoire par défaut (30 sec - 5 min)** : Évite une surcharge du réseau électrique causée par le redémarrage
-        simultané de milliers d'appareils à la fin de la pointe. Si vous avez plusieurs actions de reprise,
-        ajoutez un délai aléatoire similaire entre chacune pour étaler la consommation.
-      default:
+        **Délai aléatoire par défaut (30 sec - 5 min)** : Évite une surcharge du réseau électrique causée par le redémarrage simultané de milliers d'appareils à la fin de la pointe. Si vous avez plusieurs actions de reprise, ajoutez un délai aléatoire similaire entre chacune pour étaler la consommation.
         - delay:
             seconds: "{{ range(30, 300)|random|int }}"
           alias: Délai aléatoire 30 sec - 5 minutes

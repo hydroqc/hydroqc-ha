@@ -55,11 +55,9 @@ blueprint:
     3. Description:
     ```
     Tarif: DCPC
-    Critique: Oui
+    Critique: Oui (ou Non)
     ```
-    4. Ajoutez "Critique: Oui" pour une pointe critique, ou "Critique: Non" pour une pointe non-critique
-    5. Le blueprint se déclenchera automatiquement selon les heures configurées
-  
+ 
     Vous trouverez plus de détails sur les logiques applicables pour les crédits hivernaux dans la [documentation Hydro-Québec](https://hydroqc.ca/fr/docs/tarification-dynamique/).
   domain: automation
   input:

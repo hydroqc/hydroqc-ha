@@ -10,6 +10,48 @@
 
 ---
 
+## [0.1.9-beta.1] - 2025-12-05
+
+### Ajouté
+- Flux de récupération des pics critiques 7 jours à l'avance avec filtrage par date
+  - Requête API avec clause `where=datedebut>='YYYY-MM-DD'` pour limiter aux événements futurs
+  - Logs de débogage affichant la plage de dates des pics critiques récupérés
+- Documentation complète des blueprints avec exemples et recommandations
+  - Instructions pour workflows complexes et automatisations séparées
+  - Exemples de titres d'événements (🔴 Pointe critique / ⚪ Pointe régulière)
+  - Instructions de création manuelle d'événements avec exemples de code
+  - Explication des délais aléatoires et actions parallèles
+- Validation des blueprints avec workflow CI dédié
+  - Script Python utilisant les tags Home Assistant pour validation
+  - Workflow GitHub Actions séparé pour validation des blueprints
+- Boutons d'importation My Home Assistant dans le README
+  - Import direct des blueprints depuis l'interface HA
+
+### Modifié
+- Génération du planning DCPC limitée à 2 jours (aujourd'hui/demain) pour les pics non-critiques
+  - Les pics critiques au-delà de demain proviennent des annonces API (fenêtre 7 jours)
+  - Améliore la séparation entre pics réguliers et critiques
+- Décalage de pics critiques configurable (1 minute avant le début)
+  - Permet des actions de préparation de dernière minute
+- Délai aléatoire à la fin des pics (30 sec - 5 min par défaut)
+  - Évite la surcharge réseau avec multiples automatisations simultanées
+- Améliorations des blueprints
+  - Actions parallèles par défaut pour fiabilité accrue
+  - Descriptions plus lisibles dans l'interface HA
+
+### Corrigé
+- Format des descriptions de blueprints pour meilleur rendu dans l'interface HA
+  - Suppression des retours à la ligne forcés en milieu de paragraphes
+  - Flux de texte naturel pour affichage fluide
+  - Espacement de sections avec lignes vides entre en-têtes et contenu
+- Erreurs de parsing YAML dans les blueprints
+  - Format de description corrigé
+  - Définition d'entrée manquante pour critical_peak_offset
+  - Sélecteur de texte pour les valeurs de décalage négatives
+- Nettoyage du justfile (suppression des commandes dupliquées)
+
+---
+
 ## [0.1.8-beta.1] - 2025-12-05
 
 ### Ajouté

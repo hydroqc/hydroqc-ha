@@ -38,6 +38,11 @@ blueprint:
     parallèle. Exemple : au lieu d'une séquence simple, utilisez `parallel:` pour
     grouper vos actions.
 
+    **Workflows complexes** : Si vous avez besoin de logiques conditionnelles
+    complexes ou de nombreuses étapes, il est recommandé d'utiliser ce blueprint
+    pour déclencher des automatisations séparées plutôt que d'inclure toute la
+    logique ici. Cela facilite la maintenance et le débogage.
+
     **Note** : Ce blueprint différencie automatiquement les pointes critiques et
     non-critiques selon les métadonnées de l'événement. Vous pouvez définir des
     actions différentes pour chaque type de pointe.
@@ -57,6 +62,17 @@ blueprint:
     **Le blueprint détecte automatiquement** si une pointe est critique en vérifiant
     la présence de "Critique: Oui" dans la description de l''événement.
 
+    ### Création manuelle d'événements
+
+    Si l'intégration ne crée pas automatiquement les événements (API indisponible,
+    problème de configuration), vous pouvez créer manuellement des événements dans
+    votre calendrier :
+
+    1. Créez un événement aux heures de pointe (6h-10h ou 16h-20h)
+    2. Dans la description, ajoutez obligatoirement "Tarif: DCPC" (requis pour que le blueprint détecte l'événement)
+    3. Ajoutez "Critique: Oui" pour une pointe critique, ou "Critique: Non" pour une pointe non-critique
+    4. Le blueprint se déclenchera automatiquement selon les heures configurées
+    5. Exemple de description : "Tarif: DCPC\nCritique: Oui"
 
     Vous trouverez plus de détails sur les logiques applicables pour les crédits hivernaux
 
@@ -92,22 +108,37 @@ blueprint:
     critical_pre_heat_start_action:
       name: "[Critique] Action pré-chauffage"
       description: 'Actions pour pointes CRITIQUES - avant pointe (défaut 2h). Ex: Maximisez chauffage pour atteindre température élevée.'
-      default: []
+      default:
+        - parallel:
+            - alias: Action 1
+              # Votre action ici
+            - alias: Action 2
+              # Votre action ici
       selector:
         action: {}
     critical_peak_start_action:
       name: "[Critique] Action début pointe"
       description: 'Actions pour pointes CRITIQUES - début pointe (6h/16h). Ex: Réduction agressive - fermez chauffe-eau, minimisez CVAC.'
-      default: []
+      default:
+        - parallel:
+            - alias: Action 1
+              # Votre action ici
+            - alias: Action 2
+              # Votre action ici
       selector:
         action: {}
     critical_peak_end_action:
       name: "[Critique] Action fin pointe"
-      description: 'Actions pour pointes CRITIQUES - fin pointe (10h/20h). Ex: Rétablissez tous appareils à opération normale.'
+      description: |
+        Actions pour pointes CRITIQUES - fin pointe (10h/20h). Ex: Rétablissez tous appareils à opération normale.
+        
+        **Délai aléatoire par défaut (30 sec - 5 min)** : Évite une surcharge du réseau électrique causée par le redémarrage
+        simultané de milliers d'appareils à la fin de la pointe. Si vous avez plusieurs actions de reprise,
+        ajoutez un délai aléatoire similaire entre chacune pour étaler la consommation.
       default:
         - delay:
-            seconds: "{{ range(120, 360)|random|int }}"
-          alias: Délais 2-6 minutes
+            seconds: "{{ range(30, 300)|random|int }}"
+          alias: Délai aléatoire 30 sec - 5 minutes
       selector:
         action: {}
     

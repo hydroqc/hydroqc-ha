@@ -28,6 +28,11 @@ blueprint:
     parallèle. Exemple : au lieu d'une séquence simple, utilisez `parallel:` pour
     grouper vos actions.
 
+    **Workflows complexes** : Si vous avez besoin de logiques conditionnelles
+    complexes ou de nombreuses étapes, il est recommandé d'utiliser ce blueprint
+    pour déclencher des automatisations séparées plutôt que d'inclure toute la
+    logique ici. Cela facilite la maintenance et le débogage.
+
 
     ### Métadonnées disponibles
 
@@ -36,7 +41,6 @@ blueprint:
 
     - trigger.calendar_event.summary : Titre (🔴 Pointe critique / ⚪ Pointe régulière)
 
-    - trigger.calendar_event.location : Tarif (Hydro-Québec DPC)
 
     - trigger.calendar_event.description : Contient Critique: Oui/Non, Tarif: DPC, etc.
 
@@ -44,6 +48,18 @@ blueprint:
     **Exemple de condition** pour filtrer uniquement les pointes critiques :
 
     condition: template / value_template: "{{ ''Critique: Oui'' in trigger.calendar_event.description }}"
+
+    ### Création manuelle d'événements
+
+    Si l'intégration ne crée pas automatiquement les événements (API indisponible,
+    problème de configuration), vous pouvez créer manuellement des événements dans
+    votre calendrier :
+
+    1. Créez un événement pour la période de pointe critique annoncée par Hydro-Québec
+    2. Dans la description, ajoutez obligatoirement "Tarif: DPC" (requis pour que le blueprint détecte l'événement)
+    3. Ajoutez "Critique: Oui" (requis pour Flex-D, tous les événements sont critiques)
+    4. Le blueprint se déclenchera automatiquement selon les heures configurées
+    5. Exemple de description : "Tarif: DPC\nCritique: Oui"
 
 
     Vous trouverez plus de détails sur les logiques applicables pour Flex-D
@@ -80,24 +96,39 @@ blueprint:
       name: Action de pré-chauffage
       description: Actions à effectuer avant la période de pointe critique pour
         pré-chauffer votre résidence.
-      default: []
+      default:
+        - parallel:
+            - alias: Action 1
+              # Votre action ici
+            - alias: Action 2
+              # Votre action ici
       selector:
         action: {}
     critical_peak_start_action:
       name: Action début pointe critique
       description: Actions à effectuer au début de la période de pointe critique pour
         réduire votre consommation électrique.
-      default: []
+      default:
+        - parallel:
+            - alias: Action 1
+              # Votre action ici
+            - alias: Action 2
+              # Votre action ici
       selector:
         action: {}
     critical_peak_end_action:
       name: Action fin pointe critique
-      description: Actions à effectuer à la fin de la période de pointe critique pour
+      description: |
+        Actions à effectuer à la fin de la période de pointe critique pour
         rétablir votre consommation normale.
+        
+        **Délai aléatoire par défaut (30 sec - 5 min)** : Évite une surcharge du réseau électrique causée par le redémarrage
+        simultané de milliers d'appareils à la fin de la pointe. Si vous avez plusieurs actions de reprise,
+        ajoutez un délai aléatoire similaire entre chacune pour étaler la consommation.
       default:
         - delay:
-            seconds: "{{ range(120, 360)|random|int }}"
-          alias: Délais 2-6 minutes
+            seconds: "{{ range(30, 300)|random|int }}"
+          alias: Délai aléatoire 30 sec - 5 minutes
       selector:
         action: {}
   source_url: https://github.com/hydroqc/hydroqc-ha/blob/main/blueprints/flex-d-calendar.yaml

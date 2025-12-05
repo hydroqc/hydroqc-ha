@@ -36,7 +36,7 @@ packages = ["custom_components"]
 
 [dependency-groups]
 dev = [
-    "Hydro-Quebec-API-Wrapper==4.2.4",
+    "Hydro-Quebec-API-Wrapper==4.2.5",
     "ruff>=0.8.0",
     "mypy>=1.13.0",
     "pytest>=8.3.0",

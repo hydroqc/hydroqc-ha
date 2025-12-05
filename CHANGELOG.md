@@ -10,6 +10,16 @@
 
 ---
 
+## [0.1.9-beta.2] - 2025-12-05
+
+### Corrigé
+- Correction de la détection du calendrier lors du démarrage de Home Assistant
+  - Ajout d'une vérification pour s'assurer que le composant calendrier est chargé avant la validation
+  - Évite les faux positifs "calendrier introuvable" lors du redémarrage de HA
+  - Résout les notifications erronées de calendrier manquant sur chaque redémarrage
+
+---
+
 ## [0.1.9-beta.1] - 2025-12-05
 
 ### Ajouté

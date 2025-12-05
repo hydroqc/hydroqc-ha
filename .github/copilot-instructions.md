@@ -515,7 +515,36 @@ Inclure le suffixe `-beta.1`:
 
 **3. Créer une branche de release**
 
-**IMPORTANT**: La branche `main` est protégée - vous ne pouvez pas pousser directement dessus. Toutes les modifications doivent passer par une Pull Request.
+**IMPORTANT**: La branche `main` est protégée - vous ne pouvez pas pousser directement dessus. Toutes les modifications de version doivent passer par une Pull Request.
+
+**Workflow pour releases depuis feature branches**:
+Si la feature branch a déjà été fusionnée à `main` via PR, le processus de release doit se faire depuis `main`:
+
+```bash
+# Checkout main et récupérer les derniers changements
+git checkout main
+git pull origin main
+
+# Créer une branche de release
+git checkout -b release/v0.1.X-beta.1
+
+# Mettre à jour les versions (CHANGELOG.md + manifest.json)
+# ... faire les modifications ...
+
+# Commit et push
+git add custom_components/hydroqc/manifest.json CHANGELOG.md
+git commit -m "chore(release): bump version to 0.1.X-beta.1"
+git push origin release/v0.1.X-beta.1
+
+# Créer la PR vers main
+# Après merge de la PR, créer le tag depuis main
+git checkout main
+git pull origin main
+git tag -a v0.1.X-beta.1 -m "Release v0.1.X-beta.1"
+git push origin v0.1.X-beta.1
+```
+
+**Workflow pour releases depuis `main` directement** (si feature déjà merged):
 
 ```bash
 # Créer une nouvelle branche pour la release

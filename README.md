@@ -20,7 +20,7 @@ Oui! Absolument, c'est la manière la plus sûre de tester. Vous pouvez aussi d�
 
 Les capteurs disponibles sont les mêmes qu'avec le add-on ou hydroqc2mqtt. Assurez-vous de mettre à jour les entités dans les blueprints et vos automatisations au besoin.
 
-De nouveaux blueprints vont être créés spécifiquement pour cette intégration afin d'en simplifier encore plus la configuration.
+De nouveaux blueprints sont maintenant disponibles spécifiquement pour cette intégration utilisant le calendrier intégré. Consultez la section [Blueprints d'automatisation](#blueprints-dautomatisation) pour les importer en un clic.
 
 ## Fonctionnalités
 
@@ -161,6 +161,37 @@ Disponibles même en mode pointes uniquement :
 - Avertissements de pointe critique
 - Notifications de préchauffage
 - Calendriers de pointes à venir
+
+## Blueprints d'automatisation
+
+L'intégration inclut deux blueprints pour automatiser vos réponses aux événements de pointe en utilisant le calendrier intégré :
+
+### Blueprint Crédits hivernaux (DCPC)
+
+Automatisation complète pour les utilisateurs du tarif D avec Crédits hivernaux (CPC). Gère les pointes critiques et régulières, ainsi que les périodes d'ancrage.
+
+[![Ouvrir votre instance Home Assistant et afficher la prévisualisation d'un blueprint à importer.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fhydroqc%2Fhydroqc-ha%2Fblob%2Fmain%2Fblueprints%2Fwinter-credits-calendar.yaml)
+
+**Fonctionnalités** :
+- Actions de pré-chauffage pour pointes critiques (délai configurable)
+- Actions distinctes pour pointes critiques vs régulières
+- Gestion des périodes d'ancrage (matin et soir)
+- Exécution parallèle pour fiabilité
+- Filtres automatiques par tarif et criticité
+
+### Blueprint Flex-D (DPC)
+
+Automatisation pour les utilisateurs du tarif Flex-D (DPC). Toutes les pointes DPC sont critiques par nature.
+
+[![Ouvrir votre instance Home Assistant et afficher la prévisualisation d'un blueprint à importer.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fhydroqc%2Fhydroqc-ha%2Fblob%2Fmain%2Fblueprints%2Fflex-d-calendar.yaml)
+
+**Fonctionnalités** :
+- Actions de pré-chauffage configurables
+- Actions de début et fin de pointe
+- Exécution parallèle pour fiabilité
+- Filtres automatiques pour événements DPC critiques uniquement
+
+> **Note** : Ces blueprints nécessitent l'activation du calendrier dans les options de l'intégration. Les événements sont créés automatiquement à partir des données de pointe.
 
 ## Dépannage
 

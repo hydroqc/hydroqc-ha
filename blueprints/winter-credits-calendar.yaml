@@ -90,10 +90,10 @@ blueprint:
       description: 'Actions pour pointes CRITIQUES - avant pointe (défaut 2h). Ex: Maximisez chauffage pour atteindre température élevée.'
       default:
         - parallel:
-            - alias: Action 1
-              # Votre action ici
-            - alias: Action 2
-              # Votre action ici
+            - action: persistent_notification.create
+              data:
+                title: "🔥 Pré-chauffage Crédits hivernaux"
+                message: "Début du pré-chauffage avant pointe critique. Augmentez le chauffage maintenant."
       selector:
         action: {}
     critical_peak_start_action:
@@ -101,10 +101,10 @@ blueprint:
       description: 'Actions pour pointes CRITIQUES - début pointe (6h/16h). Ex: Réduction agressive - fermez chauffe-eau, minimisez CVAC.'
       default:
         - parallel:
-            - alias: Action 1
-              # Votre action ici
-            - alias: Action 2
-              # Votre action ici
+            - action: persistent_notification.create
+              data:
+                title: "🔴 Pointe critique Crédits hivernaux"
+                message: "Début de la pointe critique. Réduisez votre consommation maintenant."
       selector:
         action: {}
     critical_peak_end_action:
@@ -117,6 +117,11 @@ blueprint:
         - delay:
             seconds: "{{ range(30, 300)|random|int }}"
           alias: Délai aléatoire 30 sec - 5 minutes
+        - parallel:
+            - action: persistent_notification.create
+              data:
+                title: "✅ Fin pointe critique Crédits hivernaux"
+                message: "Fin de la pointe critique. Vous pouvez rétablir votre consommation normale."
       selector:
         action: {}
     

@@ -82,10 +82,10 @@ blueprint:
         pré-chauffer votre résidence.
       default:
         - parallel:
-            - alias: Action 1
-              # Votre action ici
-            - alias: Action 2
-              # Votre action ici
+            - action: persistent_notification.create
+              data:
+                title: "🔥 Pré-chauffage Flex-D"
+                message: "Début du pré-chauffage avant pointe critique. Augmentez le chauffage maintenant."
       selector:
         action: {}
     critical_peak_start_action:
@@ -94,10 +94,10 @@ blueprint:
         réduire votre consommation électrique.
       default:
         - parallel:
-            - alias: Action 1
-              # Votre action ici
-            - alias: Action 2
-              # Votre action ici
+            - action: persistent_notification.create
+              data:
+                title: "🔴 Pointe critique Flex-D"
+                message: "Début de la pointe critique. Réduisez votre consommation maintenant."
       selector:
         action: {}
     critical_peak_end_action:
@@ -107,9 +107,15 @@ blueprint:
         rétablir votre consommation normale.
         
         **Délai aléatoire par défaut (30 sec - 5 min)** : Évite une surcharge du réseau électrique causée par le redémarrage simultané de milliers d'appareils à la fin de la pointe. Si vous avez plusieurs actions de reprise, ajoutez un délai aléatoire similaire entre chacune pour étaler la consommation.
+      default:
         - delay:
             seconds: "{{ range(30, 300)|random|int }}"
           alias: Délai aléatoire 30 sec - 5 minutes
+        - parallel:
+            - action: persistent_notification.create
+              data:
+                title: "✅ Fin pointe critique Flex-D"
+                message: "Fin de la pointe critique. Vous pouvez rétablir votre consommation normale."
       selector:
         action: {}
   source_url: https://github.com/hydroqc/hydroqc-ha/blob/main/blueprints/flex-d-calendar.yaml

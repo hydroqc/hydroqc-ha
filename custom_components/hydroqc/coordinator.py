@@ -361,9 +361,10 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.debug("Successfully fetched authenticated contract data")
 
         except hydroqc.error.HydroQcHTTPError as err:
+            _LOGGER.error("HTTP error fetching Hydro-Québec data: %s", err)
             raise UpdateFailed(f"Error fetching Hydro-Québec data: {err}") from err
         except Exception as err:
-            _LOGGER.exception("Unexpected error fetching data")
+            _LOGGER.error("Unexpected error fetching data: %s", err)
             raise UpdateFailed(f"Unexpected error: {err}") from err
 
         # Update timestamp on successful update

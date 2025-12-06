@@ -10,6 +10,27 @@
 
 ---
 
+## [0.1.10-beta.1] - 2025-12-06
+
+> **⚠️ IMPORTANT pour les utilisateurs existants** : Si vous utilisez la fonctionnalité calendrier :
+> 1. Mettez à jour l'intégration via HACS (Home Assistant vous demandera de redémarrer)
+> 2. Après le redémarrage, **reconfigurer le calendrier** (Paramètres → Appareils et services → Hydro-Québec → Options → Configurer le calendrier)
+> 3. **Recharger l'intégration** (Paramètres → Appareils et services → Hydro-Québec → ⋮ → Recharger)
+
+### Corrigé
+- Faux positifs de validation du calendrier lors du démarrage (#41)
+  - Logique de validation avec 10 tentatives avant désactivation permanente
+  - Validation non-destructive qui vérifie l'existence sans désactiver la fonctionnalité
+  - Journalisation progressive (debug → avertissement → erreur) selon le nombre de tentatives
+  - Gestion gracieuse des problèmes temporaires pendant le démarrage de HA
+- Synchronisation immédiate du calendrier après reconfiguration (#41)
+  - Ajout d'un écouteur de mise à jour des options dans `__init__.py`
+  - Réinitialisation de l'état de validation lors de la reconfiguration
+  - Synchronisation immédiate sans redémarrage de Home Assistant requis
+  - Amélioration de l'expérience utilisateur lors des changements de configuration
+
+---
+
 ## [0.1.9-beta.2] - 2025-12-05
 
 ### Corrigé

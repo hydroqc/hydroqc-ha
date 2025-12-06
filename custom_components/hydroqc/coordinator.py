@@ -278,14 +278,14 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 self._last_peak_update_hour = current_hour
                 _LOGGER.info("[OpenData] Hourly peak data refresh at %02d:00", current_hour)
             except Exception as err:
-                _LOGGER.warning("[OpenData] Failed to fetch public peak data: %s", err)
+                _LOGGER.warning("[OpenData] Failed to fetch public peak data: %s", err, exc_info=True)
         else:
             # Still fetch but don't log as prominently (regular interval update)
             try:
                 await self.public_client.fetch_peak_data()
                 _LOGGER.debug("[OpenData] Public peak data fetched successfully")
             except Exception as err:
-                _LOGGER.warning("[OpenData] Failed to fetch public peak data: %s", err)
+                _LOGGER.warning("[OpenData] Failed to fetch public peak data: %s", err, exc_info=True)
 
         # Sync calendar events if configured and peak data available (for both modes)
         # Only start sync if not already running (prevent duplicate event creation)
@@ -356,9 +356,10 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
                 _LOGGER.debug("Successfully fetched authenticated contract data")
 
         except hydroqc.error.HydroQcHTTPError as err:
+            _LOGGER.error("HTTP error fetching Hydro-Québec data: %s", err, exc_info=True)
             raise UpdateFailed(f"Error fetching Hydro-Québec data: {err}") from err
         except Exception as err:
-            _LOGGER.exception("Unexpected error fetching data")
+            _LOGGER.error("Unexpected error fetching data: %s", err, exc_info=True)
             raise UpdateFailed(f"Unexpected error: {err}") from err
 
         # Update timestamp on successful update

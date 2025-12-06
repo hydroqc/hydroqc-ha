@@ -10,6 +10,18 @@
 
 ---
 
+## [0.1.10-beta.2] - 2025-12-06
+
+### Corrigé
+- Capteurs binaires qui basculent temporairement à 'éteint' lors du rechargement de l'intégration
+  - Implémentation de RestoreEntity pour maintenir l'état des capteurs binaires pendant le rechargement
+  - Les capteurs binaires conservent maintenant leur dernier état au lieu de basculer temporairement à 'off'
+  - Prévient les déclenchements d'automatisations indésirables lors du rechargement
+  - L'état restauré est utilisé jusqu'à ce que le coordinateur récupère de nouvelles données
+  - Évite les fausses fins de pointe qui pourraient déclencher des automatisations de rétablissement
+
+---
+
 ## [0.1.10-beta.1] - 2025-12-06
 
 > **⚠️ IMPORTANT pour les utilisateurs existants** : Si vous utilisez la fonctionnalité calendrier :

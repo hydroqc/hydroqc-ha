@@ -10,6 +10,183 @@
 
 ---
 
+## [0.2.0] - 2025-12-06
+
+**🎉 Première version officielle !**
+
+### ⭐ Fonctionnalité majeure : Intégration calendrier pour événements de pointe
+
+Nous sommes ravis d'introduire une fonctionnalité révolutionnaire qui améliore considérablement la fiabilité de vos automatisations de périodes de pointe : **l'intégration calendrier native**.
+
+#### Pourquoi le calendrier améliore la fiabilité
+
+L'approche "ceinture et bretelles" offre plusieurs niveaux de protection :
+
+1. **Persistance des événements** : Une fois créés dans le calendrier, les événements restent disponibles même si l'API d'Hydro-Québec est temporairement indisponible
+2. **Déclencheurs natifs HA** : Utilise les déclencheurs de calendrier intégrés de Home Assistant, éprouvés et fiables
+3. **Fallback manuel** : En cas de problème avec les API, vous pouvez créer manuellement les événements de pointe dans votre calendrier
+
+#### Configuration du calendrier
+
+**Étape 1 : Créer un calendrier local**
+
+1. Dans Home Assistant, allez à **Paramètres** → **Appareils et services** → **Intégrations**
+2. Cliquez sur **+ Ajouter une intégration**
+3. Recherchez et installez **"Calendrier local"** (Local Calendar)
+4. Créez un nouveau calendrier (ex: "Hydro-Québec Pointes")
+5. Documentation complète : [Home Assistant Calendar Documentation](https://www.home-assistant.io/integrations/local_calendar/)
+
+**Étape 2 : Activer le calendrier dans l'intégration Hydro-Québec**
+
+1. Allez à **Paramètres** → **Appareils et services** → **Hydro-Québec**
+2. Cliquez sur **Options** (⋮) → **Configurer**
+3. Activez **"Synchroniser les événements de pointe vers un calendrier"**
+4. Sélectionnez votre calendrier créé à l'étape 1
+5. Configurez les options (pointes non-critiques pour DCPC, etc.)
+6. Les événements seront créés automatiquement dans le calendrier
+
+**Création manuelle d'événements (fallback)**
+
+Si les API sont indisponibles ou en cas de problème, vous pouvez créer manuellement des événements :
+
+**Exemple d'événement - Crédits hivernaux (DCPC)** :
+```yaml
+Titre: 🔴 Pointe critique
+Date de début: 2025-12-06 16:00
+Date de fin: 2025-12-06 20:00
+Description:
+  Tarif: DCPC
+  Critique: Oui
+```
+
+**Exemple d'événement- Flex-D (DPC)** :
+```yaml
+Titre: 🔴 Pointe critique
+Date de début: 2025-12-06 06:00
+Date de fin: 2025-12-06 10:00
+Description:
+  Tarif: DPC
+  Critique: Oui
+```
+
+L'intégration reconnaîtra ces événements et vos automatisations fonctionneront normalement.
+
+#### Installation des blueprints recommandés
+
+Nous avons créé deux blueprints optimisés pour utiliser le calendrier :
+
+**Blueprint Crédits hivernaux (DCPC)** :
+
+[![Importer le blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fhydroqc%2Fhydroqc-ha%2Fblob%2Fmain%2Fblueprints%2Fwinter-credits-calendar.yaml)
+
+**Blueprint Flex-D (DPC)** :
+
+[![Importer le blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fhydroqc%2Fhydroqc-ha%2Fblob%2Fmain%2Fblueprints%2Fflex-d-calendar.yaml)
+
+> **⚠️ Utilisateurs de blueprints existants** : 
+> - **Venant de hydroqc2mqtt** : Supprimez vos anciens blueprints et remplacez-les par les nouveaux blueprints calendrier (approche plus fiable)
+> - **Utilisant déjà nos blueprints** : Réimportez-les pour bénéficier des dernières améliorations (notifications persistantes par défaut, meilleure gestion des erreurs)
+
+#### Tester vos blueprints
+
+Après configuration, **créez un événement de test** dans votre calendrier pour valider le fonctionnement :
+
+**Exemple d'événement de test - Crédits hivernaux (DCPC)** :
+```yaml
+Titre: 🔴 Pointe critique TEST
+Date de début: 2025-12-06 15:10
+Date de fin: 2025-12-06 15:15
+Description:
+  Tarif: DCPC
+  Critique: Oui
+```
+
+**Exemple d'événement de test - Flex-D (DPC)** :
+```yaml
+Titre: 🔴 Pointe critique TEST
+Date de début: 2025-12-06 15:10
+Date de fin: 2025-12-06 15:15
+Description:
+  Tarif: DPC
+  Critique: Oui
+```
+
+Observez les actions de pré-chauffage (~1 min avant), début et fin de pointe.
+
+#### Comprendre les paramètres des blueprints
+
+**Délai avant début pointe critique (Pre-critical peak start offset)**
+- Par défaut : `-00:01:00` (1 minute avant)
+- Permet à vos appareils de se stabiliser avant le début officiel de la pointe
+- Exemple : Si la pointe commence à 18:00, les actions se déclenchent à 17:59
+- Utile pour les appareils qui prennent du temps à s'ajuster
+
+**Actions en parallèle (Parallel action calls)**
+- Les actions sont exécutées simultanément plutôt que séquentiellement
+- **Avantage** : Si une action échoue, les autres continuent de s'exécuter
+- **Recommandation** : Utilisez toujours `parallel:` pour regrouper vos actions
+- Exemple :
+  ```yaml
+  - parallel:
+      - action: climate.set_temperature
+        target:
+          entity_id: climate.chambre
+        data:
+          temperature: 19
+      - action: switch.turn_off
+        target:
+          entity_id: switch.chauffe_eau
+  ```
+
+**Délai aléatoire en fin de pointe (Random delay on critical peak end)**
+- Par défaut : 30 secondes à 5 minutes
+- **Raison** : Évite une surcharge du réseau électrique causée par des milliers d'appareils redémarrant simultanément
+- **Impact** : Aide à stabiliser le réseau électrique après une pointe
+- **Recommandation** : Conservez ce délai pour être un bon citoyen du réseau
+
+### Améliorations incluses dans cette version
+
+#### Depuis v0.1.10-beta.2
+- ✅ Restauration de l'état des capteurs binaires lors du rechargement (évite les faux déclenchements)
+
+#### Depuis v0.1.10-beta.1
+- ✅ Validation calendrier avec 10 tentatives avant désactivation (élimine les faux positifs au démarrage)
+- ✅ Synchronisation immédiate du calendrier après reconfiguration (pas de redémarrage HA requis)
+- ✅ Blueprints avec notifications persistantes par défaut (actions fonctionnelles dès l'installation)
+
+#### Depuis v0.1.8-beta.1
+- ✅ Intégration complète du calendrier pour événements de pointe (DPC et DCPC)
+- ✅ Création automatique d'événements pour pointes critiques et régulières
+- ✅ Support modes Portal et OpenData
+- ✅ Gestion UID persistante avec stockage HA (prévention des doublons)
+- ✅ Détection automatique des entités calendrier supprimées
+- ✅ Conservation du fuseau horaire America/Toronto
+- ✅ Blueprints d'automatisation optimisés
+- ✅ 25 tests complets pour le gestionnaire de calendrier
+
+### Notes de migration
+
+**Migration depuis hydroqc2mqtt ou le Add-on**
+- Les noms des capteurs sont identiques, seul le préfixe d'entité change
+- Mettez à jour vos automatisations avec les nouveaux IDs d'entité
+- **IMPORTANT** : Remplacez vos anciens blueprints par les nouveaux blueprints calendrier
+  - Les anciens blueprints hydroqc2mqtt utilisaient uniquement les capteurs binaires
+  - Les nouveaux blueprints utilisent le calendrier pour une fiabilité maximale
+  - Supprimez les automatisations basées sur les anciens blueprints
+  - Importez les nouveaux blueprints via les badges "My Home Assistant" (voir section Blueprints)
+- Vous pouvez exécuter les deux systèmes en parallèle pour une transition en douceur
+
+**Utilisateurs de versions beta**
+- Aucune migration requise
+- Si vous utilisez le calendrier, suivez les instructions de reconfiguration ci-dessus
+- Réimportez les blueprints pour bénéficier des dernières améliorations
+
+### Remerciements
+
+Merci à tous les testeurs beta qui ont aidé à identifier et corriger les problèmes avant cette version stable !
+
+---
+
 ## [0.1.10-beta.2] - 2025-12-06
 
 ### Corrigé

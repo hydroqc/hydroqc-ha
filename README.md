@@ -1,238 +1,382 @@
 # Intégration Hydro-Québec pour Home Assistant
 
-[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg)](https://github.com/hacs/integration)
-[![GitHub Release](https://img.shields.io/github/release/hydroqc/hydroqc-ha.svg)](https://github.com/hydroqc/hydroqc-ha/releases)
-[![License](https://img.shields.io/github/license/hydroqc/hydroqc-ha.svg)](LICENSE)
+<p align="center">
+  <img src="https://raw.githubusercontent.com/hydroqc/hydroqc-ha/main/images/logo.png" alt="Hydro-Québec Logo" width="200"/>
+</p>
 
-Composant natif pour Home Assistant permettant de surveiller vos comptes d'électricité Hydro-Québec. Accédez aux données de consommation, informations de facturation, périodes de pointe, crédits hivernaux et notifications de pannes directement dans Home Assistant.
+<p align="center">
+  Surveillez et automatisez votre consommation électrique directement dans Home Assistant
+</p>
 
-## Question fréquentes À LIRE ABSOLUMENT!!!
+<p align="center">
+  <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg" alt="HACS"></a>
+  <a href="https://github.com/hydroqc/hydroqc-ha/releases"><img src="https://img.shields.io/github/release/hydroqc/hydroqc-ha.svg" alt="Release"></a>
+  <a href="https://github.com/hydroqc/hydroqc-ha/blob/main/LICENSE"><img src="https://img.shields.io/github/license/hydroqc/hydroqc-ha.svg" alt="License"></a>
+  <a href="https://github.com/hydroqc/hydroqc-ha/stargazers"><img src="https://img.shields.io/github/stars/hydroqc/hydroqc-ha?style=social" alt="Stars"></a>
+</p>
 
-### ⚠️ Avertissement ⚠️
+**Navigation rapide:** [Installation](#-installation-rapide) • [Configuration](#-configuration) • [Blueprints](#-blueprints) • [Capteurs](#-capteurs-disponibles) • [FAQ](#-faq)
 
-Ce composant est tout nouveau et n'a jamais passé l'épreuve du feu d'un événement de pointe critique hivernal. Prenez pour acquis qu'un bug peut survenir et prévoyez déclencher vos automatisations d'une autre manière au besoin. Soyez assurés que je (@mdallaire) garde l'œil ouvert pour le premier événement et vais faire mon possible pour régler d'éventuels bugs rapidement.
+---
 
-### Est-ce que je peux installer cette intégration en parallèle du Add-on ou hydroqc2mqtt?
+## Qu'est-ce que c'est ?
 
-Oui! Absolument, c'est la manière la plus sûre de tester. Vous pouvez aussi désactiver temporairement le add-on/hydroqc2mqtt si vous êtes satisfait du fonctionnement de l'intégration afin d'éviter les appels en double vers Hydro-Québec.
+Intégration **native** pour Home Assistant qui vous permet de :
+- Surveiller votre consommation électrique en temps réel
+- Suivre vos factures et coûts électriques
+- Recevoir des alertes de périodes de pointe critiques
+- Gérer vos crédits hivernaux (tarif DCPC)
+- Automatiser vos appareils pendant les périodes de pointe
+- Utiliser un calendrier intégré pour une fiabilité maximale
 
-### Comment migrer mes automatisations ou les blueprints vers l'intégration?
+## Pourquoi cette integration ?
 
-Les capteurs disponibles sont les mêmes qu'avec le add-on ou hydroqc2mqtt. Assurez-vous de mettre à jour les entités dans les blueprints et vos automatisations au besoin.
+### Fiabilité avec l'approche "ceinture et bretelles"
 
-De nouveaux blueprints sont maintenant disponibles spécifiquement pour cette intégration utilisant le calendrier intégré. Consultez la section [Blueprints d'automatisation](#blueprints-dautomatisation) pour les importer en un clic.
+L'intégration calendrier offre **plusieurs niveaux de protection** pour vos automatisations :
 
-## Fonctionnalités
+- **Persistance** - Les événements restent même si l'API est indisponible  
+- **Déclencheurs natifs HA** - Utilise le système éprouvé de Home Assistant  
+- **Fallback manuel** - Créez des événements manuellement en cas de problème  
 
-- ✅ **Intégration complète du compte** : Solde, consommation, données de facturation
-- ✅ **Plusieurs tarifs** : D, DT, DPC (Flex-D), M, M-GDP, DCPC (Crédits hivernaux)
-- ✅ **Surveillance des périodes de pointe** : Alertes de pointe critique et notifications de préchauffage en temps réel
-- ✅ **Suivi des crédits hivernaux** : Crédits cumulés et projetés (tarif DCPC)
-- ✅ **Notifications de pannes** : Informations sur les pannes prochaines/actuelles avec détails
-- ✅ **Mode pointes uniquement** : Surveillez les pointes sans identifiants de compte
-- ✅ **Support multi-contrats** : Ajoutez plusieurs contrats (un par entrée de configuration)
+### Fonctionnalités complètes
 
-## Tarifs supportés
+- **Tous les tarifs supportés** : D, DT, DPC (Flex-D), DCPC (Crédits hivernaux)
+- **Mode sans compte** : Surveillez les pointes sans identifiants
+- **Multi-contrats** : Gérez maison, chalet, etc.
+- **Blueprints prêt-à-l'emploi** : Automatisations optimisées incluses
 
-| Tarif | Description | Fonctionnalités |
-|-------|-------------|-----------------|
-| **D** | Tarif résidentiel D | Consommation et facturation standard |
-| **D + CPC** | Tarif D avec Crédits hivernaux | Périodes de pointe, crédits hivernaux, pointes critiques |
-| **DT** | Tarif double énergie | Suivi de la consommation aux prix supérieur/inférieur |
-| **DPC** | Flex-D | Tarification dynamique, gestion des pointes critiques |
+---
 
+## Installation rapide
 
-## Installation
+### Via HACS (Recommande)
 
-### Via HACS (Recommandé)
+**Option 1 : Installation en un clic**
 
-#### Prérequis
+[![Ajouter à HACS](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=hydroqc&repository=hydroqc-ha&category=integration)
 
-Assurez-vous que [HACS](https://hacs.xyz/) est installé dans votre instance Home Assistant. Si ce n'est pas déjà fait :
-
-1. Suivez le [guide d'installation HACS](https://hacs.xyz/docs/setup/download)
-2. Redémarrez Home Assistant après l'installation de HACS
-
-#### Installation de l'intégration
-
-**Option A : Installation en un clic**
-
-[![Ouvrir votre instance Home Assistant et ouvrir le dépôt dans HACS.](https://my.home-assistant.io/badges/hacs_repository.svg)](https://my.home-assistant.io/redirect/hacs_repository/?owner=hydroqc&repository=hydroqc-ha&category=integration)
-
-Cliquez sur le badge ci-dessus pour ajouter automatiquement ce dépôt à HACS, puis :
-
-1. Cliquez sur **"Télécharger"** (ou **"Installer"**)
+Cliquez sur le badge ci-dessus, puis :
+1. Cliquez sur **"Télécharger"**
 2. **Redémarrez Home Assistant**
+3. Ajoutez l'intégration dans **Paramètres** → **Appareils et services**
 
-**Option B : Installation manuelle via HACS**
+**Option 2 : Installation manuelle dans HACS**
+
+<details>
+<summary>Cliquez pour voir les étapes détaillées</summary>
 
 1. Ouvrez **HACS** dans Home Assistant
 2. Cliquez sur **Intégrations**
-3. Cliquez sur les **3 points** dans le coin supérieur droit
-4. Sélectionnez **"Dépôts personnalisés"**
-5. Ajoutez l'URL du dépôt : `https://github.com/hydroqc/hydroqc-ha`
-6. Sélectionnez la catégorie : **Intégration**
-7. Cliquez sur **"Ajouter"**
-8. Recherchez **"Hydro-Québec"** dans la liste des intégrations HACS
-9. Cliquez sur l'intégration **Hydro-Québec**
-10. Cliquez sur **"Télécharger"** (ou **"Installer"**)
-11. **Redémarrez Home Assistant**
+3. Cliquez sur les **3 points** → **"Dépôts personnalisés"**
+4. Ajoutez : `https://github.com/hydroqc/hydroqc-ha` (catégorie: Intégration)
+5. Recherchez **"Hydro-Québec"** et cliquez sur **"Télécharger"**
+6. **Redémarrez Home Assistant**
 
-> **Note** : Après le redémarrage, vous devrez encore configurer l'intégration (voir section Configuration ci-dessous).
+</details>
 
 ### Installation manuelle
 
-1. Téléchargez la dernière version depuis [GitHub Releases](https://github.com/hydroqc/hydroqc-ha/releases)
-2. Extrayez le dossier `hydroqc` dans votre répertoire `custom_components`
+<details>
+<summary>Pour les utilisateurs avancés</summary>
+
+1. Téléchargez depuis [GitHub Releases](https://github.com/hydroqc/hydroqc-ha/releases)
+2. Extrayez dans `custom_components/hydroqc`
 3. Redémarrez Home Assistant
+
+</details>
+
+---
 
 ## Configuration
 
 ### Option 1 : Avec compte Hydro-Québec (Accès complet)
 
-1. Allez dans **Paramètres** → **Appareils et services**
-2. Cliquez sur **+ Ajouter une intégration**
-3. Recherchez **Hydro-Québec**
-4. Sélectionnez **"Se connecter avec un compte Hydro-Québec"**
-5. Entrez vos identifiants :
-   - **Nom d'utilisateur** : Votre courriel Hydro-Québec
-   - **Mot de passe** : Votre mot de passe Hydro-Québec
-   - **Nom du contrat** : Nom convivial (ex: "Maison", "Chalet")
-6. Sélectionnez le contrat à surveiller dans la liste
-7. Terminé ! Les capteurs apparaîtront dans ~60 secondes
+Accès à **toutes les données** : consommation, facturation, pointes, crédits hivernaux
 
-### Option 2 : Données de pointe uniquement (Aucun compte requis)
+1. **Paramètres** → **Appareils et services** → **+ Ajouter une intégration**
+2. Recherchez **"Hydro-Québec"**
+3. Choisissez **"Se connecter avec un compte"**
+4. Entrez vos identifiants Hydro-Québec
+5. Sélectionnez le contrat à surveiller
+6. Terminé ! Les capteurs apparaissent en ~60 secondes
 
-Parfait pour les utilisateurs qui souhaitent uniquement des alertes de période de pointe sans fournir d'identifiants :
+### Option 2 : Données publiques (Sans compte)
 
-1. Suivez les étapes 1-3 ci-dessus
-2. Sélectionnez **"Données de pointe uniquement (aucun compte requis)"**
-3. Configurez :
-   - **Nom du contrat** : Nom convivial
-   - **Tarif** : Votre tarif d'électricité (D, DT, DPC, etc.)
-   - **Option de tarif** : CPC si applicable, ou Aucune
-4. Terminé ! Les capteurs de pointe apparaîtront
+Uniquement les **alertes de pointe** sans identifiants
 
-### Configuration multi-contrats
+1. Suivez les étapes 1-2 ci-dessus
+2. Choisissez **"Données de pointe uniquement"**
+3. Sélectionnez votre tarif
+4. Les alertes de pointe sont actives !
 
-Pour surveiller plusieurs contrats (ex: maison + chalet) :
+### Configuration du calendrier (Recommandé pour fiabilité maximale)
 
-1. Ajoutez l'intégration une fois pour chaque contrat
-2. Chacun apparaîtra comme un appareil séparé
-3. Tous les capteurs groupés sous leurs appareils respectifs
+Le calendrier augmente la fiabilité de vos automatisations :
 
-## Capteurs disponibles
+**Étape 1 : Créer un calendrier local**
 
-### Capteurs de compte (Mode authentifié uniquement)
+1. **Paramètres** → **Intégrations** → **+ Ajouter**
+2. Recherchez **"Calendrier local"** (Local Calendar)
+3. Créez un calendrier (ex: "HQ Pointes")
+4. [Documentation HA](https://www.home-assistant.io/integrations/local_calendar/)
 
-- **Solde** : Solde actuel du compte
-- **Période de facturation** : Jour actuel, durée, facture projetée
-- **Consommation** : Moyenne quotidienne, total, projection
-- **Coût** : Moyenne du coût par kWh, moyenne de la facture quotidienne
-- **Température** : Température moyenne pour la période
-- **Panne** : Panne prochaine/actuelle avec attributs
+**Étape 2 : Activer dans Hydro-Québec**
 
-### Capteurs spécifiques aux tarifs
+1. **Hydro-Québec** → **Options** (⋮) → **Configurer**
+2. Cochez **"Synchroniser vers calendrier"**
+3. Sélectionnez votre calendrier
+4. Les événements sont synchronisés automatiquement !
 
-#### Tarifs DT / DPC
-- Consommation aux prix supérieur/inférieur
-- Économie/perte nette vs Tarif D
+> **Astuce** : Vous pouvez créer des événements manuellement si l'API est indisponible
 
-#### Spécifiques au DPC (Flex-D)
-- Détail de la période DPC actuelle
-- Heures de début/fin de la prochaine pointe
-- Heure de début du préchauffage
-- Nombre d'heures critiques
-- Nombre de jours hivernaux
-- Alertes de pointe critique (aujourd'hui/demain)
+**Création manuelle d'événements** (fallback en cas de problème) :
 
-#### Spécifiques au DCPC (Crédits hivernaux)
-- Crédit hivernal cumulé
-- Crédit hivernal projeté
-- Heures de début/fin de l'ancrage/pointe suivant
-- Performance de pointe d'hier (crédits, consommation)
-- Indicateurs de pointe critique
-- Alertes de préchauffage
+Consultez la section [Tester vos blueprints](#tester-vos-blueprints) pour des exemples d'événements pour DCPC et DPC.
 
-### Capteurs de pointe (Tous les modes)
+---
 
-Disponibles même en mode pointes uniquement :
-- États des périodes de pointe
-- Avertissements de pointe critique
-- Notifications de préchauffage
-- Calendriers de pointes à venir
+## Blueprints
 
-## Blueprints d'automatisation
-
-L'intégration inclut deux blueprints pour automatiser vos réponses aux événements de pointe en utilisant le calendrier intégré :
+Automatisations prêt-à-l'emploi pour gérer les périodes de pointe.
 
 ### Blueprint Crédits hivernaux (DCPC)
 
-Automatisation complète pour les utilisateurs du tarif D avec Crédits hivernaux (CPC). Gère les pointes critiques et régulières, ainsi que les périodes d'ancrage.
+Pour les utilisateurs du tarif D avec Crédits hivernaux (CPC).
 
-[![Ouvrir votre instance Home Assistant et afficher la prévisualisation d'un blueprint à importer.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fhydroqc%2Fhydroqc-ha%2Fblob%2Fmain%2Fblueprints%2Fwinter-credits-calendar.yaml)
+[![Importer le blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fhydroqc%2Fhydroqc-ha%2Fblob%2Fmain%2Fblueprints%2Fwinter-credits-calendar.yaml)
 
 **Fonctionnalités** :
-- Actions de pré-chauffage pour pointes critiques (délai configurable)
-- Actions distinctes pour pointes critiques vs régulières
+- Pré-chauffage avant pointes critiques (délai configurable)
+- Actions distinctes pointes critiques vs régulières
 - Gestion des périodes d'ancrage (matin et soir)
 - Exécution parallèle pour fiabilité
 - Filtres automatiques par tarif et criticité
 
 ### Blueprint Flex-D (DPC)
 
-Automatisation pour les utilisateurs du tarif Flex-D (DPC). Toutes les pointes DPC sont critiques par nature.
+Pour les utilisateurs du tarif Flex-D (DPC).
 
-[![Ouvrir votre instance Home Assistant et afficher la prévisualisation d'un blueprint à importer.](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fhydroqc%2Fhydroqc-ha%2Fblob%2Fmain%2Fblueprints%2Fflex-d-calendar.yaml)
+[![Importer le blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fhydroqc%2Fhydroqc-ha%2Fblob%2Fmain%2Fblueprints%2Fflex-d-calendar.yaml)
 
 **Fonctionnalités** :
-- Actions de pré-chauffage configurables
+- Pré-chauffage configurable
 - Actions de début et fin de pointe
 - Exécution parallèle pour fiabilité
-- Filtres automatiques pour événements DPC critiques uniquement
+- Filtres DPC uniquement
 
-> **Note** : Ces blueprints nécessitent l'activation du calendrier dans les options de l'intégration. Les événements sont créés automatiquement à partir des données de pointe.
+> **Utilisateurs de blueprints existants** : Réimportez vos blueprints pour bénéficier des dernières améliorations (notifications persistantes, meilleure gestion des erreurs).
 
-## Dépannage
+### Tester vos blueprints
 
-### Échec de connexion
-- Vérifiez vos identifiants sur le [site web d'Hydro-Québec](https://session.hydroquebec.com/)
+Après avoir importé un blueprint et créé votre automatisation, **nous recommandons fortement de créer un événement de test** dans votre calendrier pour valider que tout fonctionne correctement.
+
+**Exemple d'événement de test - Crédits hivernaux (DCPC)** :
+```yaml
+Titre: 🔴 Pointe critique TEST
+Date de début: 2025-12-06 15:10
+Date de fin: 2025-12-06 15:15
+Description:
+  Tarif: DCPC
+  Critique: Oui
+```
+
+**Exemple d'événement de test - Flex-D (DPC)** :
+```yaml
+Titre: 🔴 Pointe critique TEST
+Date de début: 2025-12-06 15:10
+Date de fin: 2025-12-06 15:15
+Description:
+  Tarif: DPC
+  Critique: Oui
+```
+
+
+### Comprendre les paramètres des blueprints
+
+#### Délai avant début pointe critique (Pre-critical peak start offset)
+
+- **Par défaut** : `-00:01:00` (1 minute avant)
+- **Utilité** : Permet à vos appareils de se stabiliser avant la pointe
+- **Exemple** : Pointe à 18:00 → actions à 17:59
+
+#### Actions en parallèle (Parallel action calls)
+
+Les actions s'exécutent simultanément plutôt que séquentiellement.
+
+**Avantage** : Si une action échoue, les autres continuent !
+
+```yaml
+- parallel:
+    - action: climate.set_temperature
+      target:
+        entity_id: climate.chambre
+      data:
+        temperature: 19
+    - action: switch.turn_off
+      target:
+        entity_id: switch.chauffe_eau
+```
+
+#### Délai aléatoire en fin de pointe (Random delay on critical peak end)
+
+- **Par défaut** : 30 secondes à 5 minutes
+- **Raison** : Évite une surcharge du réseau électrique
+- **Impact** : Des milliers d'appareils ne redémarrent pas simultanément
+- **Recommandation** : Conservez ce délai pour être un bon citoyen du réseau
+
+---
+
+## Capteurs disponibles
+
+### Capteurs de compte (Mode authentifié uniquement)
+
+| Capteur | Description |
+|---------|-------------|
+| **Solde** | Solde actuel du compte |
+| **Période de facturation** | Jour actuel, durée, facture projetée |
+| **Consommation** | Moyenne quotidienne, total, projection |
+| **Coût** | Moyenne du coût par kWh, facture quotidienne |
+| **Température** | Température moyenne pour la période |
+| **Panne** | Panne prochaine/actuelle avec détails |
+
+### Capteurs spécifiques aux tarifs
+
+<details>
+<summary><strong>Tarif DCPC (Crédits hivernaux)</strong></summary>
+
+- Crédit hivernal cumulé
+- Crédit hivernal projeté
+- Heures de début/fin ancrage/pointe
+- Performance de pointe d'hier
+- Indicateurs de pointe critique
+- Alertes de préchauffage
+
+</details>
+
+<details>
+<summary><strong>Tarif DPC (Flex-D)</strong></summary>
+
+- Détail de la période DPC actuelle
+- Heures de début/fin prochaine pointe
+- Heure de début du préchauffage
+- Nombre d'heures critiques
+- Nombre de jours hivernaux
+- Alertes de pointe critique
+
+</details>
+
+<details>
+<summary><strong>Tarifs DT / DPC</strong></summary>
+
+- Consommation aux prix supérieur/inférieur
+- Économie/perte nette vs Tarif D
+
+</details>
+
+---
+
+## FAQ
+
+<details>
+<summary><strong>Échec de connexion</strong></summary>
+
+- Vérifiez vos identifiants sur [Hydro-Québec](https://session.hydroquebec.com/)
 - Vérifiez les caractères spéciaux dans le mot de passe
 - Assurez-vous que le compte a des contrats actifs
 
-### Aucune donnée n'apparaît
+</details>
+
+<details>
+<summary><strong>Aucune donnée n'apparaît</strong></summary>
+
 - Attendez 60 secondes pour la première mise à jour
-- Vérifiez les journaux de Home Assistant : Paramètres → Système → Journaux
+- Vérifiez les journaux : **Paramètres** → **Système** → **Journaux**
 - Vérifiez que le portail Hydro-Québec est en ligne
 
-### Capteurs indisponibles
-- Certains capteurs ne sont actifs que pendant des saisons spécifiques (crédits hivernaux)
-- Vérifiez si votre plan tarifaire supporte le capteur
-- Vérifiez que le coordinateur se met à jour (consultez les journaux)
+</details>
+
+<details>
+<summary><strong>Capteurs indisponibles</strong></summary>
+
+- Certains capteurs sont saisonniers (crédits hivernaux : déc-mars)
+- Vérifiez si votre tarif supporte le capteur
+- Consultez les journaux du coordinateur
+
+</details>
+
+<details>
+<summary><strong>Calendrier ne se synchronise pas</strong></summary>
+
+- Vérifiez que le calendrier local est installé
+- Vérifiez que le calendrier est sélectionné dans les options
+- Redémarrez l'intégration après configuration
+- Consultez les journaux pour erreurs de validation
+
+</details>
+
+---
+
+## Migration depuis hydroqc2mqtt
+
+Vous utilisez déjà le Add-on ou hydroqc2mqtt ?
+
+- **Installation en parallèle possible** - Testez en toute sécurité  
+- **Noms de capteurs identiques** - Seul le préfixe change  
+- **Nouveaux blueprints calendrier** - Plus fiables que les versions antérieures  
+
+**Étapes de migration** :
+
+1. Installez l'intégration en parallèle
+2. Testez vos automatisations avec les nouveaux capteurs
+3. **Remplacez vos anciens blueprints** par les nouveaux blueprints calendrier de ce dépôt
+   - Les blueprints hydroqc2mqtt utilisaient les capteurs binaires (approche moins fiable)
+   - Les nouveaux blueprints utilisent le calendrier (approche "ceinture et bretelles")
+   - Supprimez vos anciennes automatisations basées sur les anciens blueprints
+   - Importez les nouveaux blueprints (liens d'import dans la section [Blueprints](#blueprints))
+4. Une fois satisfait, désactivez l'ancien système
+
+---
 
 ## Développement
 
-Consultez [CONTRIBUTING.md](CONTRIBUTING.md) pour la configuration du développement, les directives de contribution, et la documentation complète des tests.
+Vous souhaitez contribuer ? Consultez [CONTRIBUTING.md](CONTRIBUTING.md) pour :
 
-## Support
+- Configuration de l'environnement de développement
+- Directives de contribution
+- Documentation des tests
+- Conventions de code
 
-- **Problèmes** : [GitHub Issues](https://github.com/hydroqc/hydroqc-ha/issues)
+---
+
+## Ressources
+
 - **Documentation** : [hydroqc.ca](https://hydroqc.ca)
+- **Problèmes** : [GitHub Issues](https://github.com/hydroqc/hydroqc-ha/issues)
 - **Code source** : [Dépôt GitHub](https://github.com/hydroqc/hydroqc-ha)
+- **Changelog** : [CHANGELOG.md](CHANGELOG.md)
 
 ## Projets connexes
 
 - **hydroqc2mqtt** : Démon MQTT (prédécesseur de cette intégration)
-- **Hydro-Quebec-API-Wrapper** : La bibliothèque Python sous-jacente
-
-## Licence
-
-Ce projet est sous licence AGPL-3.0 - consultez le fichier [LICENSE](LICENSE) pour plus de détails.
-
-## Crédits
-
-Développé par l'[équipe Hydroqc](https://hydroqc.ca)
+- **Hydro-Quebec-API-Wrapper** : [Bibliothèque Python](https://github.com/hydroqc/Hydro-Quebec-API-Wrapper) sous-jacente
 
 ---
 
-**Non affilié ni approuvé par Hydro-Québec**
+## Licence
+
+Ce projet est sous licence **AGPL-3.0** - consultez le fichier [LICENSE](LICENSE) pour plus de détails.
+
+## Crédits
+
+Développé avec passion par l'[équipe Hydroqc](https://hydroqc.ca)
+
+<p align="center">
+  <strong>Non affilié ni approuvé par Hydro-Québec</strong>
+</p>
+
+---
+
+<p align="center">
+  <sub>Si cette intégration vous aide à économiser sur vos factures d'électricité, pensez à mettre une étoile sur GitHub !</sub>
+</p>

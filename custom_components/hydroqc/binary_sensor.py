@@ -64,7 +64,9 @@ async def async_setup_entry(
     _LOGGER.debug("Added %d binary sensor entities", len(entities))
 
 
-class HydroQcBinarySensor(CoordinatorEntity[HydroQcDataCoordinator], RestoreEntity, BinarySensorEntity):
+class HydroQcBinarySensor(
+    CoordinatorEntity[HydroQcDataCoordinator], RestoreEntity, BinarySensorEntity
+):
     """Representation of a Hydro-Québec binary sensor."""
 
     _attr_has_entity_name = True
@@ -107,7 +109,7 @@ class HydroQcBinarySensor(CoordinatorEntity[HydroQcDataCoordinator], RestoreEnti
     async def async_added_to_hass(self) -> None:
         """Restore last state when entity is added to hass."""
         await super().async_added_to_hass()
-        
+
         # Restore previous state to avoid switching off during reload
         if (last_state := await self.async_get_last_state()) is not None:
             self._restored_state = last_state.state == "on"
@@ -129,7 +131,7 @@ class HydroQcBinarySensor(CoordinatorEntity[HydroQcDataCoordinator], RestoreEnti
             return None
 
         value = self.coordinator.get_sensor_value(self._data_source)
-        
+
         # If coordinator hasn't fetched data yet and we have a restored state, use it
         if value is None and self._restored_state is not None:
             _LOGGER.debug(

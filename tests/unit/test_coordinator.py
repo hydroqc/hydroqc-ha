@@ -361,7 +361,7 @@ class TestHydroQcDataCoordinator:
         mock_config_entry: MockConfigEntry,
         mock_webuser: MagicMock,
     ) -> None:
-        """Test calendar sync auto-disables when entity is missing."""
+        """Test calendar sync auto-disables after multiple validation failures."""
         # Register persistent_notification service
         mock_notification_service = AsyncMock()
         hass.services.async_register("persistent_notification", "create", mock_notification_service)
@@ -396,14 +396,21 @@ class TestHydroQcDataCoordinator:
             mock_client.return_value.peak_handler = mock_peak_handler
 
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
-            await coordinator.async_refresh()
+            
+            # Retry 10 times (max_validation_attempts = 10)
+            for i in range(10):
+                await coordinator.async_refresh()
+                if hasattr(coordinator, "_calendar_sync_task") and coordinator._calendar_sync_task:
+                    await coordinator._calendar_sync_task
+                
+                # Should not disable until after 10th attempt
+                if i < 9:
+                    assert coordinator._calendar_entity_id == "calendar.missing"  # Still set
+                    assert coordinator._calendar_validation_attempts == i + 1
 
-            # Wait for calendar sync task
-            if hasattr(coordinator, "_calendar_sync_task") and coordinator._calendar_sync_task:
-                await coordinator._calendar_sync_task
-
-            # Calendar entity ID should be cleared (disabled)
+            # After 10 attempts, calendar entity ID should be cleared (disabled)
             assert coordinator._calendar_entity_id is None
+            assert coordinator._calendar_validation_attempts == 10
             # Notification service should have been called
             assert mock_notification_service.called
 

@@ -110,6 +110,11 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             entry.data.get(CONF_INCLUDE_NON_CRITICAL_PEAKS, DEFAULT_INCLUDE_NON_CRITICAL_PEAKS),
         )
 
+        # Calendar validation state (retry logic to avoid false positives)
+        self._calendar_validation_attempts = 0
+        self._calendar_validation_passed = False
+        self._calendar_max_validation_attempts = 10
+
         # Track created calendar event UIDs (persisted across restarts)
         self._created_event_uids: set[str] = set()
         # Storage for persisting calendar event UIDs
@@ -721,11 +726,73 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
         # Schedule the next hourly update
         self._schedule_hourly_update()
 
+    async def _async_validate_calendar_entity(self) -> bool:
+        """Validate calendar entity exists (non-destructive check).
+
+        Returns True if calendar entity is valid, False otherwise.
+        Does not disable calendar feature - just reports validation status.
+        """
+        if not self._calendar_entity_id:
+            return False
+
+        # Check if calendar component is loaded
+        if "calendar" not in self.hass.config.components:
+            _LOGGER.debug("Calendar component not yet loaded")
+            return False
+
+        # Check if calendar entity exists in state registry
+        calendar_state = self.hass.states.get(self._calendar_entity_id)
+        if not calendar_state:
+            _LOGGER.debug(
+                "Calendar entity %s not found in state registry",
+                self._calendar_entity_id,
+            )
+            return False
+
+        return True
+
+    async def _async_disable_calendar_permanently(self) -> None:
+        """Disable calendar feature permanently after validation failures.
+
+        Only called after multiple validation attempts have failed.
+        """
+        _LOGGER.error(
+            "Calendar entity %s failed validation after %d attempts. Disabling calendar sync for %s.",
+            self._calendar_entity_id,
+            self._calendar_max_validation_attempts,
+            self.contract_name,
+        )
+
+        # Update entry to remove calendar configuration
+        new_data = dict(self.entry.data)
+        new_data.pop(CONF_CALENDAR_ENTITY_ID, None)
+        new_data.pop(CONF_INCLUDE_NON_CRITICAL_PEAKS, None)
+
+        self.hass.config_entries.async_update_entry(self.entry, data=new_data)
+
+        # Create persistent notification
+        await self.hass.services.async_call(
+            "persistent_notification",
+            "create",
+            {
+                "message": (
+                    f"Le calendrier {self._calendar_entity_id} est introuvable après plusieurs tentatives. "
+                    f"La synchronisation des événements de pointe a été désactivée pour {self.contract_name}. "
+                    f"Vérifiez que le calendrier existe et reconfigurer dans les options de l'intégration."
+                ),
+                "title": "Hydro-Québec - Calendrier introuvable",
+                "notification_id": f"hydroqc_calendar_missing_{self.contract_id}",
+            },
+        )
+
+        # Clear calendar config
+        self._calendar_entity_id = None
+
     async def _async_sync_calendar_events(self) -> None:
         """Sync peak events to configured calendar entity.
 
         Only syncs for DPC/DCPC rates when calendar is configured.
-        Validates calendar entity exists and auto-disables if removed.
+        Validates calendar entity with retry logic before disabling.
         """
         if not self._calendar_entity_id:
             _LOGGER.debug(
@@ -743,45 +810,33 @@ class HydroQcDataCoordinator(DataUpdateCoordinator[dict[str, Any]]):
             )
             return
 
-        # Check if calendar component is loaded (avoid false positives during HA startup)
-        if "calendar" not in self.hass.config.components:
-            _LOGGER.debug("Calendar component not yet loaded, skipping calendar sync")
-            return
+        # Validate calendar entity with retry logic
+        if not self._calendar_validation_passed:
+            is_valid = await self._async_validate_calendar_entity()
 
-        # Check if calendar entity exists
-        calendar_state = self.hass.states.get(self._calendar_entity_id)
-        if not calendar_state:
-            _LOGGER.warning(
-                "Calendar entity %s not found, disabling calendar sync for %s",
-                self._calendar_entity_id,
-                self.contract_name,
-            )
+            if is_valid:
+                self._calendar_validation_passed = True
+                _LOGGER.info(
+                    "Calendar entity %s validated successfully for %s",
+                    self._calendar_entity_id,
+                    self.contract_name,
+                )
+            else:
+                self._calendar_validation_attempts += 1
 
-            # Update entry to remove calendar configuration (auto-disable)
-            new_data = dict(self.entry.data)
-            new_data.pop(CONF_CALENDAR_ENTITY_ID, None)
-            new_data.pop(CONF_INCLUDE_NON_CRITICAL_PEAKS, None)
-
-            self.hass.config_entries.async_update_entry(self.entry, data=new_data)
-
-            # Create persistent notification with repair link
-            await self.hass.services.async_call(
-                "persistent_notification",
-                "create",
-                {
-                    "message": (
-                        f"Le calendrier {self._calendar_entity_id} n'existe plus. "
-                        f"La synchronisation des événements de pointe a été désactivée pour {self.contract_name}. "
-                        f"Vous pouvez reconfigurer le calendrier dans les options de l'intégration."
-                    ),
-                    "title": "Hydro-Québec - Calendrier introuvable",
-                    "notification_id": f"hydroqc_calendar_missing_{self.contract_id}",
-                },
-            )
-
-            # Clear calendar config to avoid repeated checks
-            self._calendar_entity_id = None
-            return
+                if self._calendar_validation_attempts >= self._calendar_max_validation_attempts:
+                    # Permanently disable after multiple failures
+                    await self._async_disable_calendar_permanently()
+                    return
+                # Log warning but don't disable yet - will retry on next sync
+                _LOGGER.warning(
+                    "Calendar entity %s validation failed (attempt %d/%d) for %s. Will retry...",
+                    self._calendar_entity_id,
+                    self._calendar_validation_attempts,
+                    self._calendar_max_validation_attempts,
+                    self.contract_name,
+                )
+                return
 
         # Get peak events from public client
         if not self.public_client.peak_handler or not self.public_client.peak_handler._events:

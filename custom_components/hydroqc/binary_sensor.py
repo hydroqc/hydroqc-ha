@@ -10,6 +10,7 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.loader import async_get_integration
 
@@ -63,7 +64,9 @@ async def async_setup_entry(
     _LOGGER.debug("Added %d binary sensor entities", len(entities))
 
 
-class HydroQcBinarySensor(CoordinatorEntity[HydroQcDataCoordinator], BinarySensorEntity):
+class HydroQcBinarySensor(
+    CoordinatorEntity[HydroQcDataCoordinator], RestoreEntity, BinarySensorEntity
+):
     """Representation of a Hydro-Québec binary sensor."""
 
     _attr_has_entity_name = True
@@ -82,6 +85,7 @@ class HydroQcBinarySensor(CoordinatorEntity[HydroQcDataCoordinator], BinarySenso
         self._sensor_key = sensor_key
         self._sensor_config = sensor_config
         self._data_source = sensor_config["data_source"]
+        self._restored_state: bool | None = None
 
         # OpenData mode uses entry_id, Portal mode uses contract info
         contract_name = entry.data.get(CONF_CONTRACT_NAME, "OpenData")
@@ -102,6 +106,19 @@ class HydroQcBinarySensor(CoordinatorEntity[HydroQcDataCoordinator], BinarySenso
             sw_version=version,
         )
 
+    async def async_added_to_hass(self) -> None:
+        """Restore last state when entity is added to hass."""
+        await super().async_added_to_hass()
+
+        # Restore previous state to avoid switching off during reload
+        if (last_state := await self.async_get_last_state()) is not None:
+            self._restored_state = last_state.state == "on"
+            _LOGGER.debug(
+                "Restored binary sensor %s state: %s",
+                self.entity_id,
+                self._restored_state,
+            )
+
     @property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
@@ -114,6 +131,15 @@ class HydroQcBinarySensor(CoordinatorEntity[HydroQcDataCoordinator], BinarySenso
             return None
 
         value = self.coordinator.get_sensor_value(self._data_source)
+
+        # If coordinator hasn't fetched data yet and we have a restored state, use it
+        if value is None and self._restored_state is not None:
+            _LOGGER.debug(
+                "Binary sensor %s using restored state: %s (coordinator data not yet available)",
+                self.entity_id,
+                self._restored_state,
+            )
+            return self._restored_state
         _LOGGER.debug(
             "Binary sensor %s got value: %r from data_source: %s",
             self.entity_id,
@@ -136,8 +162,10 @@ class HydroQcBinarySensor(CoordinatorEntity[HydroQcDataCoordinator], BinarySenso
             )
             return None
 
-        # Convert to boolean
+        # Convert to boolean and clear restored state (we now have real data)
         result = bool(value)
+        if self._restored_state is not None:
+            self._restored_state = None  # Clear restored state once we have real data
         _LOGGER.debug(
             "Binary sensor %s returning %s (converted from %r)",
             self.entity_id,

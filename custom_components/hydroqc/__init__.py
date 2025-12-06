@@ -69,6 +69,36 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Schedule hourly updates for peak sensors to ensure accurate state transitions
     coordinator._schedule_hourly_update()
 
+    # Register options update listener for immediate calendar sync
+    async def _async_options_updated(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
+        """Handle options update - trigger immediate calendar sync if configured."""
+        coord: HydroQcDataCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+
+        # Update coordinator with new calendar settings
+        coord._calendar_entity_id = config_entry.options.get(
+            "calendar_entity_id", config_entry.data.get("calendar_entity_id")
+        )
+        coord._include_non_critical_peaks = config_entry.options.get(
+            "include_non_critical_peaks",
+            config_entry.data.get("include_non_critical_peaks", False),
+        )
+
+        # Reset validation state to re-validate new calendar entity
+        coord._calendar_validation_attempts = 0
+        coord._calendar_validation_passed = False
+
+        # Trigger immediate calendar sync if calendar is configured
+        if coord._calendar_entity_id:
+            _LOGGER.info(
+                "Calendar configuration updated for %s, triggering immediate sync",
+                coord.contract_name,
+            )
+            await coord._async_sync_calendar_events()
+        else:
+            _LOGGER.info("Calendar configuration removed for %s", coord.contract_name)
+
+    entry.async_on_unload(entry.add_update_listener(_async_options_updated))
+
     if coordinator.is_portal_mode and coordinator._contract:
         # Check if this is the first setup (history_days present) or a restart (flag removed)
         # We only import history once after initial setup, not on every restart

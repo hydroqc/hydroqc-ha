@@ -10,9 +10,32 @@
 
 ---
 
+## [0.2.1] - 2025-12-07
+
+> **⚠️ IMPORTANT - Action requise** : Si vous avez installé les blueprints de la version 0.2.0, vous **devez les réimporter** car ils contenaient une erreur qui empêchait leur bon fonctionnement.
+
+### Corrigé
+- Correction critique des blueprints calendrier (Flex-D et Crédits hivernaux)
+  - **Blueprint Flex-D** : Correction du filtre de tarif (utilisait incorrectement `trigger.calendar_event.location` au lieu de `trigger.calendar_event.description`)
+  - **Blueprint Crédits hivernaux** : Ajout du filtre de tarif manquant pour éviter les déclenchements croisés
+  - Les blueprints filtrent maintenant correctement sur `"Tarif: DPC"` et `"Tarif: DCPC"` dans la description de l'événement
+  - Prévient les déclenchements incorrects si plusieurs intégrations Hydro-Québec utilisent le même calendrier
+
+**Comment mettre à jour vos blueprints** :
+1. Allez dans **Paramètres** → **Automatisations et scènes** → **Blueprints**
+2. Trouvez les blueprints Hydro-Québec (Flex-D ou Crédits hivernaux)
+3. Cliquez sur **⋮** → **Réimporter le blueprint**
+4. Vos automatisations existantes continueront de fonctionner avec la version corrigée
+
+Ou réimportez directement via ces liens :
+- [![Blueprint Crédits hivernaux](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fhydroqc%2Fhydroqc-ha%2Fblob%2Fmain%2Fblueprints%2Fwinter-credits-calendar.yaml)
+- [![Blueprint Flex-D](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fhydroqc%2Fhydroqc-ha%2Fblob%2Fmain%2Fblueprints%2Fflex-d-calendar.yaml)
+
+---
+
 ## [0.2.0] - 2025-12-06
 
-**🎉 Première version officielle !**
+**🎉 Première version officielle (v0.2.0) pour l'intégration hydroqc-ha !**
 
 ### ⭐ Fonctionnalité majeure : Intégration calendrier pour événements de pointe
 

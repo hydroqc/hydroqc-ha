@@ -141,7 +141,7 @@ condition:
   - condition: template
     value_template: "{{ 'pointe' in trigger.calendar_event.summary | lower }}"
   - condition: template
-    value_template: "{{ 'DPC' in trigger.calendar_event.location }}"
+    value_template: "{{ 'Tarif: DPC' in trigger.calendar_event.description }}"
 action:
   - choose:
       - conditions:

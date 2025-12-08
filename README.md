@@ -123,7 +123,7 @@ Le calendrier augmente la fiabilité de vos automatisations :
 
 **Étape 2 : Activer dans Hydro-Québec**
 
-1. **Hydro-Québec** → **Options** (⋮) → **Configurer**
+1. **Hydro-Québec** → **Options** (⚙️) → **Configurer**
 2. Cochez **"Synchroniser vers calendrier"**
 3. Sélectionnez votre calendrier
 4. Les événements sont synchronisés automatiquement !
@@ -150,7 +150,6 @@ Pour les utilisateurs du tarif D avec Crédits hivernaux (CPC).
 - Pré-chauffage avant pointes critiques (délai configurable)
 - Actions distinctes pointes critiques vs régulières
 - Gestion des périodes d'ancrage (matin et soir)
-- Exécution parallèle pour fiabilité
 - Filtres automatiques par tarif et criticité
 
 ### Blueprint Flex-D (DPC)
@@ -162,7 +161,6 @@ Pour les utilisateurs du tarif Flex-D (DPC).
 **Fonctionnalités** :
 - Pré-chauffage configurable
 - Actions de début et fin de pointe
-- Exécution parallèle pour fiabilité
 - Filtres DPC uniquement
 
 > **Utilisateurs de blueprints existants** : Réimportez vos blueprints pour bénéficier des dernières améliorations (notifications persistantes, meilleure gestion des erreurs).
@@ -358,7 +356,7 @@ Vous souhaitez contribuer ? Consultez [CONTRIBUTING.md](CONTRIBUTING.md) pour :
 
 ## Projets connexes
 
-- **hydroqc2mqtt** : Démon MQTT (prédécesseur de cette intégration)
+- **hydroqc2mqtt** : [https://gitlab.com/hydroqc/hydroqc2mqtt] Démon MQTT (prédécesseur de cette intégration)
 - **Hydro-Quebec-API-Wrapper** : [Bibliothèque Python](https://github.com/hydroqc/Hydro-Quebec-API-Wrapper) sous-jacente
 
 ---

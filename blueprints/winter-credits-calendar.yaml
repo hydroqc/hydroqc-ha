@@ -71,7 +71,7 @@ blueprint:
     preheat_offset:
       name: Délai de pré-chauffage
       description: "Temps avant le début de l'événement pour commencer le pré-chauffage (format -HH:MM:SS, ex: -02:00:00 pour 2 heures avant, -01:30:00 pour 1h30 avant)"
-      default: "-02:00:00"
+      default: "-01:45:00"
       selector:
         text:
           type: text
@@ -166,13 +166,19 @@ blueprint:
             action: {}
         critical_anchor_end_morning_action:
           name: "[Critique] Fin ancrage matin"
-          description: 'Pointes CRITIQUES - 2h avant pointe matin (4h). Fin ancrage.'
+          description: |
+            Pointes CRITIQUES - 2h avant pointe matin (4h). Fin ancrage.
+            
+            **⚠️ Attention** : Si votre délai de pré-chauffage est <= -02:00:00, il y aura chevauchement avec cette action. La fin d'ancrage se déclenche à 4h pour une pointe à 6h.
           default: []
           selector:
             action: {}
         critical_anchor_end_evening_action:
           name: "[Critique] Fin ancrage soir"
-          description: 'Pointes CRITIQUES - 2h avant pointe soir (14h). Fin ancrage.'
+          description: |
+            Pointes CRITIQUES - 2h avant pointe soir (14h). Fin ancrage.
+            
+            **⚠️ Attention** : Si votre délai de pré-chauffage est <= -02:00:00, il y aura chevauchement avec cette action. La fin d'ancrage se déclenche à 14h pour une pointe à 16h.
           default: []
           selector:
             action: {}

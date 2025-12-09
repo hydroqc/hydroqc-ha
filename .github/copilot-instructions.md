@@ -13,7 +13,14 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
 
 ### Core Components
 
-1. **`coordinator.py`** - `HydroQcDataCoordinator`: Central data fetcher using HA's `DataUpdateCoordinator`
+**IMPORTANT**: The codebase uses a modular package structure for maintainability. See "Modular Code Organization" section below for details.
+
+1. **`coordinator/`** package - `HydroQcDataCoordinator`: Central data fetcher using HA's `DataUpdateCoordinator`
+   - **`coordinator/base.py`**: Core coordinator class and data fetching logic
+   - **`coordinator/calendar_sync.py`**: CalendarSyncMixin for DPC/DCPC calendar event management
+   - **`coordinator/consumption_sync.py`**: ConsumptionSyncMixin for consumption history sync
+   - **`coordinator/sensor_data.py`**: SensorDataMixin for sensor value retrieval
+   - **`coordinator.py`**: Root-level re-export for backward compatibility
    - Manages both Portal mode (`WebUser`/`Customer`/`Account`/`Contract` hierarchy) and OpenData mode (`PublicClient`) 
    - Updates every 60 seconds (configurable via `CONF_UPDATE_INTERVAL`)
    - Uses dot-notation paths (`get_sensor_value()`) to extract nested data: e.g., `"contract.cp_current_bill"` → `coordinator.data["contract"].cp_current_bill`
@@ -22,7 +29,11 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
    - `is_consumption_history_syncing`: Only checks `_csv_import_task` status (not regular sync)
    - **Logging prefixes**: Portal mode logs use `[Portal]` prefix, public API logs use `[OpenData]` prefix
 
-2. **`config_flow.py`** - Multi-step config flow:
+2. **`config_flow/`** package - Multi-step config flow:
+   - **`config_flow/base.py`**: HydroQcConfigFlow class for integration setup
+   - **`config_flow/options.py`**: HydroQcOptionsFlow for options management
+   - **`config_flow/helpers.py`**: API functions and mappings (fetch_available_sectors, fetch_offers_for_sector, SECTOR_MAPPING, RATE_CODE_MAPPING)
+   - **`config_flow.py`**: Root-level re-export for backward compatibility
    - Step 1: Choose `AUTH_MODE_PORTAL` or `AUTH_MODE_OPENDATA`
    - Step 2a (Portal mode): Login → fetch customers → select account → select contract → import history (0-800 days) → create entry
    - Step 2b (OpenData mode): Select sector (Residentiel/Affaires) → select rate and option (with preheat field) → create entry
@@ -41,7 +52,11 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
    - Each sensor: `data_source`, `device_class`, `state_class`, `icon`, `unit`, `rates`, optional `attributes`
    - Data sources use dot notation: `"contract.peak_handler.cumulated_credit"`, `"public_client.peak_handler.current_state"`
 
-5. **`public_data_client.py`** - Public API peak data handler
+5. **`public_data/`** package - Public API peak data handler
+   - **`public_data/models.py`**: Data classes (PreHeatPeriod, AnchorPeriod, PeakEvent)
+   - **`public_data/peak_handler.py`**: PeakHandler class with peak event logic and calculations
+   - **`public_data/client.py`**: PublicDataClient for OpenData API interactions
+   - **`public_data_client.py`**: Root-level re-export for backward compatibility
    - **API endpoint**: `https://donnees.hydroquebec.com/api/explore/v2.1`
    - **Dataset**: `evenements-pointe` (production dataset for peak events)
    - **Query syntax**: Uses `refine` parameter (e.g., `refine=offre:"TPC-DPC"`), not `where` clauses
@@ -52,6 +67,48 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
    - API returns lowercase field names: `datedebut`, `datefin`, `plagehoraire`, `secteurclient`
    - Preheat duration: Configurable per integration (0-240 minutes, default 120)
    - **Logging prefix**: All logs use `[OpenData]` prefix for easy troubleshooting
+
+### Modular Code Organization
+
+The integration uses a modular package structure for better maintainability:
+
+#### Import Patterns
+```python
+# Both patterns work due to re-exports:
+from .coordinator import HydroQcDataCoordinator  # Import from root re-export
+from .coordinator.base import HydroQcDataCoordinator  # Direct import from package
+
+from .config_flow import HydroQcConfigFlow, HydroQcOptionsFlow
+from .config_flow.base import HydroQcConfigFlow  # Direct import
+
+from .public_data_client import PublicDataClient, PeakHandler, PeakEvent
+from .public_data.client import PublicDataClient  # Direct import
+```
+
+#### Package Structure Details
+
+**coordinator/** - Data coordinator with mixins:
+- `base.py`: Core HydroQcDataCoordinator, `_async_update_data()`, properties
+- `calendar_sync.py`: CalendarSyncMixin - `_init_calendar_sync()`, `_sync_calendar_events()`, calendar validation
+- `consumption_sync.py`: ConsumptionSyncMixin - `_init_consumption_sync()`, `_sync_consumption_history()`, CSV import
+- `sensor_data.py`: SensorDataMixin - `get_sensor_value()`, `is_sensor_seasonal()`
+
+**config_flow/** - Configuration flow split by responsibility:
+- `base.py`: HydroQcConfigFlow - main flow steps, authentication, contract selection
+- `options.py`: HydroQcOptionsFlow - options management for existing entries
+- `helpers.py`: Shared functions and constants (API calls, mappings)
+
+**public_data/** - OpenData API client split by layer:
+- `models.py`: Data classes with no business logic (PreHeatPeriod, AnchorPeriod, PeakEvent)
+- `peak_handler.py`: Business logic (PeakHandler - schedule generation, critical peak detection)
+- `client.py`: API client (PublicDataClient - HTTP calls, response parsing)
+
+#### Development Guidelines
+- **Single responsibility**: Each module has one focused purpose
+- **Mixins for cross-cutting concerns**: Calendar sync and consumption sync are optional features added via mixins
+- **Backward compatibility**: Root-level files (coordinator.py, config_flow.py, public_data_client.py) maintain re-exports
+- **Import from root or package**: Both patterns work, use root for simplicity unless you need specific submodules
+- **When adding features**: Place in appropriate module; if a module exceeds ~500 lines, consider splitting further
 
 ### OpenData API Offer Code Mapping
 

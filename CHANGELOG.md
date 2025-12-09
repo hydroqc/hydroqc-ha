@@ -10,6 +10,20 @@
 
 ---
 
+## [0.3.0-beta.1] - 2025-12-09
+
+### Modifié
+- Refactorisation complète du code en structure modulaire pour améliorer la maintenabilité
+  - **coordinator/** : Division en modules (base, calendar_sync, consumption_sync, sensor_data)
+  - **config_flow/** : Séparation en modules (base, options, helpers)
+  - **public_data/** : Organisation en couches (models, peak_handler, client)
+  - Principe de responsabilité unique appliqué à tous les modules
+  - Compatibilité ascendante maintenue via ré-exportations
+  - Aucun changement fonctionnel - refactorisation pure du code
+- Mise à jour de la version minimale de Home Assistant à 2025.9.0
+
+---
+
 ## [0.2.2-beta.1] - 2025-12-09
 
 ### Corrigé

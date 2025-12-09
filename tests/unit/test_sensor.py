@@ -158,6 +158,7 @@ class TestHydroQcSensor:
         mock_webuser: MagicMock,
         mock_contract: MagicMock,
         mock_integration_version: MagicMock,
+        mock_public_client: MagicMock,
     ) -> None:
         """Test sensor returns correct state value."""
         mock_config_entry.add_to_hass(hass)
@@ -167,10 +168,10 @@ class TestHydroQcSensor:
 
         with (
             patch(
-                "custom_components.hydroqc.coordinator.WebUser",
+                "custom_components.hydroqc.coordinator.base.WebUser",
                 return_value=mock_webuser,
             ),
-            patch("custom_components.hydroqc.coordinator.base.PublicDataClient"),
+            patch("custom_components.hydroqc.coordinator.base.PublicDataClient", return_value=mock_public_client),
         ):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
             await coordinator.async_refresh()
@@ -201,6 +202,7 @@ class TestHydroQcSensor:
         mock_webuser: MagicMock,
         mock_contract: MagicMock,
         mock_integration_version: MagicMock,
+        mock_public_client: MagicMock,
     ) -> None:
         """Test sensor includes correct attributes."""
         mock_config_entry.add_to_hass(hass)
@@ -208,10 +210,10 @@ class TestHydroQcSensor:
 
         with (
             patch(
-                "custom_components.hydroqc.coordinator.WebUser",
+                "custom_components.hydroqc.coordinator.base.WebUser",
                 return_value=mock_webuser,
             ),
-            patch("custom_components.hydroqc.coordinator.base.PublicDataClient"),
+            patch("custom_components.hydroqc.coordinator.base.PublicDataClient", return_value=mock_public_client),
         ):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
             await coordinator.async_refresh()

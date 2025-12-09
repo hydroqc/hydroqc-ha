@@ -10,7 +10,7 @@
 
 ---
 
-## [0.3.0-beta.1] - 2025-12-09
+## [0.3.0] - 2025-12-09
 
 ### Modifié
 - Refactorisation complète du code en structure modulaire pour améliorer la maintenabilité
@@ -21,6 +21,11 @@
   - Compatibilité ascendante maintenue via ré-exportations
   - Aucun changement fonctionnel - refactorisation pure du code
 - Mise à jour de la version minimale de Home Assistant à 2025.9.0
+- Mise à jour de Hydro-Quebec-API-Wrapper à la version 4.2.6
+
+### Corrigé
+- Correction des importations de tests suite à la refactorisation modulaire
+- Amélioration des tests avec freezegun pour des tests déterministes basés sur le temps
 
 ---
 

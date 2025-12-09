@@ -1,10 +1,11 @@
 """Unit tests for the HydroQcDataCoordinator."""
 
-from datetime import timedelta
+from datetime import datetime, timedelta
 from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
 import pytest
+from freezegun import freeze_time
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
@@ -308,6 +309,7 @@ class TestHydroQcDataCoordinator:
             assert coordinator.rate == "D"
             assert coordinator.rate_with_option == "DCPC"
 
+    @freeze_time("2025-12-09 10:00:00", tz_offset=-5)  # Freeze time before the test event
     async def test_calendar_sync_with_valid_entity(
         self,
         hass: HomeAssistant,
@@ -339,11 +341,11 @@ class TestHydroQcDataCoordinator:
         hass.states.async_set("calendar.test", "idle")
 
         # Setup peak handler with events for calendar sync
-        from zoneinfo import ZoneInfo
         mock_peak_handler = MagicMock()
         mock_event = MagicMock()
-        mock_event.start_date = datetime(2024, 12, 15, 18, 0, tzinfo=ZoneInfo("America/Toronto"))
-        mock_event.end_date = datetime(2024, 12, 15, 20, 0, tzinfo=ZoneInfo("America/Toronto"))
+        # Use a specific future date for deterministic testing
+        mock_event.start_date = datetime(2025, 12, 15, 18, 0, tzinfo=ZoneInfo("America/Toronto"))
+        mock_event.end_date = datetime(2025, 12, 15, 20, 0, tzinfo=ZoneInfo("America/Toronto"))
         mock_event.is_critical = True
         mock_peak_handler._events = [mock_event]
         mock_public_client.peak_handler = mock_peak_handler
@@ -354,7 +356,7 @@ class TestHydroQcDataCoordinator:
                 return_value=mock_webuser,
             ),
             patch("custom_components.hydroqc.coordinator.base.PublicDataClient", return_value=mock_public_client),
-            patch("custom_components.hydroqc.coordinator.calendar_manager") as mock_cal_mgr,
+            patch("custom_components.hydroqc.coordinator.calendar_sync.calendar_manager") as mock_cal_mgr,
         ):
             mock_cal_mgr.async_sync_events = AsyncMock(return_value={"uid1"})
 

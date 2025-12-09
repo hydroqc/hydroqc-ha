@@ -36,7 +36,7 @@ class TestHydroQcSensor:
                 "custom_components.hydroqc.coordinator.WebUser",
                 return_value=mock_webuser,
             ),
-            patch("custom_components.hydroqc.coordinator.PublicDataClient"),
+            patch("custom_components.hydroqc.coordinator.base.PublicDataClient"),
         ):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
             await coordinator.async_refresh()
@@ -87,7 +87,7 @@ class TestHydroQcSensor:
                 "custom_components.hydroqc.coordinator.WebUser",
                 return_value=mock_webuser,
             ),
-            patch("custom_components.hydroqc.coordinator.PublicDataClient"),
+            patch("custom_components.hydroqc.coordinator.base.PublicDataClient"),
         ):
             coordinator = HydroQcDataCoordinator(hass, dcpc_config)
             await coordinator.async_refresh()
@@ -131,7 +131,7 @@ class TestHydroQcSensor:
                 "custom_components.hydroqc.coordinator.WebUser",
                 return_value=mock_webuser,
             ),
-            patch("custom_components.hydroqc.coordinator.PublicDataClient"),
+            patch("custom_components.hydroqc.coordinator.base.PublicDataClient"),
         ):
             coordinator = HydroQcDataCoordinator(hass, dpc_config)
             await coordinator.async_refresh()
@@ -170,7 +170,7 @@ class TestHydroQcSensor:
                 "custom_components.hydroqc.coordinator.WebUser",
                 return_value=mock_webuser,
             ),
-            patch("custom_components.hydroqc.coordinator.PublicDataClient"),
+            patch("custom_components.hydroqc.coordinator.base.PublicDataClient"),
         ):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
             await coordinator.async_refresh()
@@ -211,7 +211,7 @@ class TestHydroQcSensor:
                 "custom_components.hydroqc.coordinator.WebUser",
                 return_value=mock_webuser,
             ),
-            patch("custom_components.hydroqc.coordinator.PublicDataClient"),
+            patch("custom_components.hydroqc.coordinator.base.PublicDataClient"),
         ):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
             await coordinator.async_refresh()
@@ -254,7 +254,7 @@ class TestHydroQcSensor:
                 "custom_components.hydroqc.coordinator.WebUser",
                 return_value=mock_webuser,
             ),
-            patch("custom_components.hydroqc.coordinator.PublicDataClient"),
+            patch("custom_components.hydroqc.coordinator.base.PublicDataClient"),
         ):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
             await coordinator.async_refresh()
@@ -289,7 +289,7 @@ class TestHydroQcSensor:
                 "custom_components.hydroqc.coordinator.WebUser",
                 return_value=mock_webuser,
             ),
-            patch("custom_components.hydroqc.coordinator.PublicDataClient"),
+            patch("custom_components.hydroqc.coordinator.base.PublicDataClient"),
         ):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
             await coordinator.async_refresh()
@@ -328,7 +328,7 @@ class TestHydroQcSensor:
                 "custom_components.hydroqc.coordinator.WebUser",
                 return_value=mock_webuser,
             ),
-            patch("custom_components.hydroqc.coordinator.PublicDataClient"),
+            patch("custom_components.hydroqc.coordinator.base.PublicDataClient"),
         ):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
             await coordinator.async_refresh()

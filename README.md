@@ -5,7 +5,7 @@
 </p>
 
 <p align="center">
-  Surveillez et automatisez votre consommation électrique directement dans Home Assistant
+  Surveillez et automatisez votre consommation électrique directement dans Home Assistant.
 </p>
 
 <p align="center">
@@ -22,10 +22,10 @@
 ## Qu'est-ce que c'est ?
 
 Intégration **native** pour Home Assistant qui vous permet de :
-- Surveiller votre consommation électrique en temps réel
+- Importez votre historique de consommation horaire et affichez le dans le tableau de bord Énergie d'Home-Assistant
 - Suivre vos factures et coûts électriques
 - Recevoir des alertes de périodes de pointe critiques
-- Gérer vos crédits hivernaux (tarif DCPC)
+- Affichez vos crédits hivernaux (tarif DCPC)
 - Automatiser vos appareils pendant les périodes de pointe
 - Utiliser un calendrier intégré pour une fiabilité maximale
 
@@ -369,9 +369,13 @@ Ce projet est sous licence **AGPL-3.0** - consultez le fichier [LICENSE](LICENSE
 
 Développé avec passion par l'[équipe Hydroqc](https://hydroqc.ca)
 
-<p align="center">
-  <strong>Non affilié ni approuvé par Hydro-Québec</strong>
-</p>
+---
+
+## Avertissement
+
+Cette intégration n'est **pas approuvée, associée ou supportée par Hydro-Québec**. 
+
+Le nom « Hydro-Québec », les logos et toutes les marques de commerce et marques déposées présents dans ce dépôt sont la propriété d'Hydro-Québec. L'utilisation de ces noms, marques de commerce et logos dans ce projet est uniquement à des fins d'identification et n'implique aucune approbation ou affiliation avec Hydro-Québec.
 
 ---
 

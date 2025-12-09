@@ -232,10 +232,24 @@ async def test_sync_events_skips_existing(
     mock_hass: MagicMock, sample_critical_peak: PeakEvent
 ) -> None:
     """Test that sync skips events that are already created."""
+    from homeassistant.components.calendar import CalendarEntity
+
     existing_uid = calendar_manager.generate_event_uid(
         "contract_123", sample_critical_peak.start_date
     )
     stored_uids = {existing_uid}
+
+    # Mock calendar entity with existing critical event
+    mock_event = MagicMock()
+    mock_event.description = f"Test event\nCritique: Oui\nID: {existing_uid}\nOther data"
+
+    mock_calendar_entity = MagicMock(spec=CalendarEntity)
+    mock_calendar_entity.entity_id = "calendar.test"
+    mock_calendar_entity.async_get_events = AsyncMock(return_value=[mock_event])
+
+    mock_calendar_component = MagicMock()
+    mock_calendar_component.entities = [mock_calendar_entity]
+    mock_hass.data = {"calendar": mock_calendar_component}
 
     new_uids = await calendar_manager.async_sync_events(
         mock_hass,
@@ -248,7 +262,7 @@ async def test_sync_events_skips_existing(
         include_non_critical=True,
     )
 
-    # Should not create any events (already exists)
+    # Should not create any events (already exists with same criticality)
     assert mock_hass.services.async_call.call_count == 0
     assert new_uids == stored_uids
 
@@ -385,11 +399,12 @@ async def test_get_existing_event_uids_no_calendar_component(mock_hass: MagicMoc
     start_date = datetime.now(EST)
     end_date = start_date + timedelta(days=7)
 
-    uids = await calendar_manager.async_get_existing_event_uids(
+    events_info = await calendar_manager.async_get_existing_event_uids(
         mock_hass, "calendar.test", start_date, end_date
     )
 
-    assert len(uids) == 0
+    assert len(events_info) == 0
+    assert isinstance(events_info, dict)
 
 
 @pytest.mark.asyncio
@@ -403,11 +418,12 @@ async def test_get_existing_event_uids_no_matching_entity(mock_hass: MagicMock) 
     start_date = datetime.now(EST)
     end_date = start_date + timedelta(days=7)
 
-    uids = await calendar_manager.async_get_existing_event_uids(
+    events_info = await calendar_manager.async_get_existing_event_uids(
         mock_hass, "calendar.test", start_date, end_date
     )
 
-    assert len(uids) == 0
+    assert len(events_info) == 0
+    assert isinstance(events_info, dict)
 
 
 @pytest.mark.asyncio
@@ -415,14 +431,16 @@ async def test_get_existing_event_uids_finds_hydroqc_events(mock_hass: MagicMock
     """Test extracting UIDs from calendar event descriptions."""
     from homeassistant.components.calendar import CalendarEntity
 
-    # Mock calendar entity with events
+    # Mock calendar entity with events (one critical, one non-critical)
     mock_event1 = MagicMock()
     mock_event1.description = (
-        "Test event\nID: hydroqc_contract_123_2025-01-15T06:00:00-05:00\nOther data"
+        "Test event\nCritique: Oui\nID: hydroqc_contract_123_2025-01-15T06:00:00-05:00\nOther data"
     )
 
     mock_event2 = MagicMock()
-    mock_event2.description = "Another event\nID: hydroqc_contract_123_2025-01-15T16:00:00-05:00"
+    mock_event2.description = (
+        "Another event\nCritique: Non\nID: hydroqc_contract_123_2025-01-15T16:00:00-05:00"
+    )
 
     mock_event3 = MagicMock()
     mock_event3.description = "Event without UID"  # Should be ignored
@@ -440,13 +458,17 @@ async def test_get_existing_event_uids_finds_hydroqc_events(mock_hass: MagicMock
     start_date = datetime.now(EST)
     end_date = start_date + timedelta(days=7)
 
-    uids = await calendar_manager.async_get_existing_event_uids(
+    events_info = await calendar_manager.async_get_existing_event_uids(
         mock_hass, "calendar.test", start_date, end_date
     )
 
-    assert len(uids) == 2
-    assert "hydroqc_contract_123_2025-01-15T06:00:00-05:00" in uids
-    assert "hydroqc_contract_123_2025-01-15T16:00:00-05:00" in uids
+    assert len(events_info) == 2
+    assert isinstance(events_info, dict)
+    assert "hydroqc_contract_123_2025-01-15T06:00:00-05:00" in events_info
+    assert "hydroqc_contract_123_2025-01-15T16:00:00-05:00" in events_info
+    # Verify criticality tracking
+    assert events_info["hydroqc_contract_123_2025-01-15T06:00:00-05:00"] is True
+    assert events_info["hydroqc_contract_123_2025-01-15T16:00:00-05:00"] is False
 
 
 @pytest.mark.asyncio
@@ -465,12 +487,13 @@ async def test_get_existing_event_uids_handles_errors(mock_hass: MagicMock) -> N
     start_date = datetime.now(EST)
     end_date = start_date + timedelta(days=7)
 
-    # Should not raise, just return empty set
-    uids = await calendar_manager.async_get_existing_event_uids(
+    # Should not raise, just return empty dict
+    events_info = await calendar_manager.async_get_existing_event_uids(
         mock_hass, "calendar.test", start_date, end_date
     )
 
-    assert len(uids) == 0
+    assert len(events_info) == 0
+    assert isinstance(events_info, dict)
 
 
 @pytest.mark.asyncio
@@ -542,13 +565,16 @@ async def test_sync_events_merges_stored_and_calendar_uids(
     # UID for second peak is in calendar (but not storage)
     uid2 = calendar_manager.generate_event_uid("contract_123", peak2.start_date)
 
-    # Mock calendar entity with second event
-    mock_event = MagicMock()
-    mock_event.description = f"Test event\nID: {uid2}\nOther data"
+    # Mock calendar entity with BOTH events (critical, matching peaks)
+    mock_event1 = MagicMock()
+    mock_event1.description = f"First event\nCritique: Oui\nID: {uid1}\nOther data"
+
+    mock_event2 = MagicMock()
+    mock_event2.description = f"Second event\nCritique: Oui\nID: {uid2}\nOther data"
 
     mock_calendar_entity = MagicMock(spec=CalendarEntity)
     mock_calendar_entity.entity_id = "calendar.test"
-    mock_calendar_entity.async_get_events = AsyncMock(return_value=[mock_event])
+    mock_calendar_entity.async_get_events = AsyncMock(return_value=[mock_event1, mock_event2])
 
     mock_calendar_component = MagicMock()
     mock_calendar_component.entities = [mock_calendar_entity]
@@ -627,3 +653,76 @@ async def test_sync_events_different_contracts_same_calendar(
     assert len(uids2) == 1
     # UIDs should be different even though peaks are at same time
     assert list(uids1)[0] != list(uids2)[0]
+
+
+@pytest.mark.asyncio
+async def test_sync_events_updates_criticality_change(
+    mock_hass: MagicMock,
+) -> None:
+    """Test that events are updated when criticality changes."""
+    from homeassistant.components.calendar import CalendarEntity
+
+    # Create a peak that will change from non-critical to critical
+    start = datetime.now(EST) + timedelta(days=1)
+    start = start.replace(hour=6, minute=0, second=0, microsecond=0)
+    end = start + timedelta(hours=4)
+
+    peak_data = {
+        "offre": "CPC-D",
+        "datedebut": start.isoformat(),
+        "datefin": end.isoformat(),
+        "plagehoraire": "AM",
+        "duree": "PT04H00MS",
+        "secteurclient": "Résidentiel",
+    }
+
+    # First sync: non-critical peak
+    non_critical_peak = PeakEvent(peak_data, preheat_duration=120, force_critical=False)
+    uid = calendar_manager.generate_event_uid("contract_123", non_critical_peak.start_date)
+
+    # Mock calendar entity with existing non-critical event
+    mock_event = MagicMock()
+    mock_event.description = f"Test event\nCritique: Non\nID: {uid}\nOther data"
+
+    mock_calendar_entity = MagicMock(spec=CalendarEntity)
+    mock_calendar_entity.entity_id = "calendar.test"
+    mock_calendar_entity.async_get_events = AsyncMock(return_value=[mock_event])
+
+    mock_calendar_component = MagicMock()
+    mock_calendar_component.entities = [mock_calendar_entity]
+    mock_hass.data = {"calendar": mock_calendar_component}
+
+    # Second sync: same peak but now critical
+    critical_peak = PeakEvent(peak_data, preheat_duration=120, force_critical=True)
+
+    # Track which service was called
+    calls = []
+
+    def track_call(domain, service, **kwargs):
+        calls.append((domain, service))
+        return AsyncMock()
+
+    mock_hass.services.async_call = AsyncMock(side_effect=track_call)
+
+    # Sync with the now-critical peak
+    stored_uids = {uid}  # Event is already tracked
+    await calendar_manager.async_sync_events(
+        mock_hass,
+        "calendar.test",
+        [critical_peak],
+        stored_uids,
+        "contract_123",
+        "Home",
+        "DCPC",
+        include_non_critical=True,
+    )
+
+    # Should have called update_event (not create_event)
+    assert len(calls) == 1
+    assert calls[0] == ("calendar", "update_event")
+
+    # Verify update was called with correct data
+    call_kwargs = mock_hass.services.async_call.call_args
+    assert call_kwargs[1]["service_data"]["uid"] == uid
+    assert "🔴 Pointe critique" in call_kwargs[1]["service_data"]["summary"]
+    assert "Critique: Oui" in call_kwargs[1]["service_data"]["description"]

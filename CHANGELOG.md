@@ -10,6 +10,17 @@
 
 ---
 
+## [0.2.2-beta.1] - 2025-12-09
+
+### Corrigé
+- Mise à jour automatique de la criticité des événements calendrier de pointe existants
+  - Les événements calendrier sont maintenant mis à jour en place lorsque leur criticité change (critique ↔ non-critique)
+  - Évite la suppression et recréation d'événements, préservant les UIDs et l'historique
+  - Mise à jour du titre et de la description pour refléter le nouveau statut de criticité
+  - Améliore l'expérience utilisateur en maintenant la cohérence des événements calendrier
+
+---
+
 ## [0.2.1] - 2025-12-07
 
 > **⚠️ IMPORTANT - Action requise** : Si vous avez installé les blueprints de la version 0.2.0, vous **devez les réimporter** car ils contenaient une erreur qui empêchait leur bon fonctionnement.

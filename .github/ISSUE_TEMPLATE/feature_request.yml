@@ -1,0 +1,92 @@
+name: Demande de fonctionnalité
+description: Suggérer une nouvelle fonctionnalité ou amélioration
+title: "[Fonctionnalité]: "
+labels: ["enhancement", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de suggérer une nouvelle fonctionnalité! Veuillez fournir le plus de détails possible.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Liste de vérification
+      description: Veuillez confirmer ce qui suit avant de soumettre
+      options:
+        - label: J'ai recherché dans les problèmes existants pour m'assurer qu'il ne s'agit pas d'un doublon
+          required: true
+        - label: J'ai consulté la [documentation](https://github.com/hydroqc/hydroqc-ha) pour m'assurer que cette fonctionnalité n'existe pas déjà
+          required: true
+
+  - type: dropdown
+    id: feature-type
+    attributes:
+      label: Type de fonctionnalité
+      description: Quel type de fonctionnalité demandez-vous?
+      options:
+        - Nouveau capteur
+        - Nouveau service
+        - Amélioration de blueprint
+        - Amélioration de l'intégration calendrier
+        - Support d'un nouveau tarif
+        - Option de configuration
+        - Amélioration de la documentation
+        - Autre
+    validations:
+      required: true
+
+  - type: dropdown
+    id: rate-type
+    attributes:
+      label: Type de tarif associé (si applicable)
+      description: À quel tarif cette fonctionnalité est-elle liée?
+      options:
+        - Tous les tarifs
+        - Tarif D (Résidentiel standard)
+        - Tarif D + CPC (Crédits hivernaux / DCPC)
+        - Tarif DPC (Flex-D)
+        - Tarif DT (Biénergie)
+        - Mode OpenData
+        - Non spécifique à un tarif
+
+  - type: textarea
+    id: problem
+    attributes:
+      label: Énoncé du problème
+      description: Votre demande de fonctionnalité est-elle liée à un problème? Veuillez décrire.
+      placeholder: Je suis frustré quand... / J'aimerais...
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: Solution proposée
+      description: Décrivez la solution que vous aimeriez voir
+      placeholder: Une description claire et concise de ce que vous voulez qu'il se passe...
+    validations:
+      required: true
+
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives considérées
+      description: Décrivez toute solution ou fonctionnalité alternative que vous avez envisagée
+      placeholder: Avez-vous pensé à d'autres façons d'atteindre cet objectif?
+
+  - type: textarea
+    id: use-case
+    attributes:
+      label: Cas d'utilisation
+      description: Décrivez votre cas d'utilisation et comment cette fonctionnalité vous serait bénéfique ainsi qu'aux autres
+      placeholder: Je veux utiliser cette fonctionnalité pour...
+    validations:
+      required: true
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Contexte additionnel
+      description: Ajoutez tout autre contexte, maquette ou exemple concernant la demande de fonctionnalité ici
+      placeholder: Toute information supplémentaire...

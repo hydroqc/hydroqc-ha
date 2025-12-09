@@ -258,9 +258,9 @@ trigger:
 # Add condition to filter only peak events (title contains "pointe") and DCPC rate
 condition:
   - condition: template
-    value_template: "{{ 'pointe' in trigger.calendar_event.summary | lower }}"
+    value_template: "{{ 'pointe' in (trigger.calendar_event.summary | lower) if trigger.calendar_event is defined else false }}"
   - condition: template
-    value_template: "{{ 'Tarif: DCPC' in trigger.calendar_event.description }}"
+    value_template: "{{ 'Tarif: DCPC' in trigger.calendar_event.description if trigger.calendar_event is defined else false }}"
 action:
   - choose:
       # Morning anchor start - CRITICAL
@@ -360,5 +360,4 @@ action:
           - condition: template
             value_template: "{{ 'Critique: Non' in trigger.calendar_event.description }}"
         sequence: !input regular_peak_end_action
-    default:
-      - parallel: []
+

@@ -102,10 +102,6 @@ class HydroQcDataCoordinator(
             self._account_id = entry.data[CONF_ACCOUNT_ID]
             self._contract_id = entry.data[CONF_CONTRACT_ID]
 
-        # Initialize mixin attributes
-        self._init_consumption_sync()
-        self._init_calendar_sync()
-
         # Get update interval from options or use default
         update_interval_seconds = entry.options.get(CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL)
 
@@ -116,6 +112,10 @@ class HydroQcDataCoordinator(
             update_interval=datetime.timedelta(seconds=update_interval_seconds),
             config_entry=entry,
         )
+
+        # Initialize mixin attributes (after super().__init__ so self.hass is available)
+        self._init_consumption_sync()
+        self._init_calendar_sync()
 
     @property
     def is_portal_mode(self) -> bool:

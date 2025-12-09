@@ -9,5 +9,6 @@ services:
       - ./custom_components/hydroqc:/config/custom_components/hydroqc:ro
       - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
-    network_mode: host
+    ports:
+      - "8123:8123"
     privileged: true

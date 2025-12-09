@@ -1,0 +1,157 @@
+name: Rapport de bogue
+description: Signaler un bogue ou un problème avec l'intégration Hydro-Québec
+title: "[Bogue]: "
+labels: ["bug", "triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Merci de prendre le temps de signaler un bogue! Veuillez remplir les informations ci-dessous pour nous aider à diagnostiquer et corriger le problème.
+
+  - type: checkboxes
+    id: checklist
+    attributes:
+      label: Liste de vérification
+      description: Veuillez confirmer ce qui suit avant de soumettre
+      options:
+        - label: J'ai recherché dans les problèmes existants pour m'assurer qu'il ne s'agit pas d'un doublon
+          required: true
+        - label: J'utilise la dernière version de l'intégration
+          required: true
+        - label: J'ai consulté la [documentation](https://github.com/hydroqc/hydroqc-ha)
+          required: true
+
+  - type: dropdown
+    id: integration-version
+    attributes:
+      label: Version de l'intégration
+      description: Quelle version de l'intégration Hydro-Québec utilisez-vous?
+      options:
+        - Dernière version (depuis HACS)
+        - Version spécifique (veuillez préciser dans la description)
+        - Version de développement (branche main)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: ha-version
+    attributes:
+      label: Version de Home Assistant
+      description: Quelle version de Home Assistant utilisez-vous?
+      options:
+        - Dernière version stable
+        - 2024.12.x
+        - 2024.11.x
+        - 2024.10.x
+        - 2024.9.x ou antérieure
+        - Version de développement/Beta
+    validations:
+      required: true
+
+  - type: dropdown
+    id: rate-type
+    attributes:
+      label: Type de tarif
+      description: Quel tarif Hydro-Québec utilisez-vous?
+      options:
+        - Tarif D (Résidentiel standard)
+        - Tarif D + CPC (Crédits hivernaux / DCPC)
+        - Tarif DPC (Flex-D / Tarification dynamique)
+        - Tarif DT (Biénergie)
+        - Mode OpenData (sans identifiants)
+    validations:
+      required: true
+
+  - type: dropdown
+    id: installation-method
+    attributes:
+      label: Méthode d'installation
+      description: Comment avez-vous installé l'intégration?
+      options:
+        - HACS
+        - Installation manuelle
+    validations:
+      required: true
+
+  - type: textarea
+    id: description
+    attributes:
+      label: Description du bogue
+      description: Une description claire et concise du bogue
+      placeholder: Décrivez le problème que vous rencontrez...
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: Comportement attendu
+      description: Qu'attendiez-vous qu'il se passe?
+      placeholder: Décrivez ce que vous attendiez...
+    validations:
+      required: true
+
+  - type: textarea
+    id: actual
+    attributes:
+      label: Comportement actuel
+      description: Que s'est-il réellement passé?
+      placeholder: Décrivez ce qui s'est réellement passé...
+    validations:
+      required: true
+
+  - type: textarea
+    id: steps
+    attributes:
+      label: Étapes de reproduction
+      description: Étapes pour reproduire le comportement
+      placeholder: |
+        1. Aller à '...'
+        2. Cliquer sur '...'
+        3. Voir l'erreur
+    validations:
+      required: true
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Journaux pertinents
+      description: |
+        Veuillez copier et coller tout journal pertinent. Activez la journalisation de débogage pour l'intégration:
+        ```yaml
+        logger:
+          default: info
+          logs:
+            custom_components.hydroqc: debug
+        ```
+      render: shell
+      placeholder: Collez vos journaux ici...
+
+  - type: textarea
+    id: config
+    attributes:
+      label: Configuration
+      description: |
+        Veuillez fournir la configuration pertinente (supprimez les informations sensibles comme les mots de passe).
+        Si vous utilisez des blueprints, incluez la configuration du blueprint.
+      render: yaml
+      placeholder: |
+        # Configuration de l'intégration (si pertinent)
+        # Configuration du blueprint (si pertinent)
+
+  - type: textarea
+    id: additional
+    attributes:
+      label: Contexte additionnel
+      description: Ajoutez tout autre contexte sur le problème ici (captures d'écran, etc.)
+      placeholder: Toute information supplémentaire qui pourrait aider...
+
+  - type: textarea
+    id: diagnostics
+    attributes:
+      label: Informations de diagnostic
+      description: |
+        Si disponible, téléchargez les diagnostics depuis la page de l'intégration dans Home Assistant (Paramètres → Appareils et services → Hydro-Québec → ... → Télécharger les diagnostics) et collez le contenu ici ou joignez le fichier.
+        **Important**: Supprimez toute information sensible comme les numéros de compte ou les détails personnels avant de partager.
+      render: json
+      placeholder: Collez le JSON de diagnostic ici (optionnel)...

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 📚 Documentation
+    url: https://github.com/hydroqc/hydroqc-ha/blob/main/README.md
+    about: Lire la documentation de l'intégration
+  - name: 💬 Discussions
+    url: https://github.com/hydroqc/hydroqc-ha/discussions
+    about: Poser des questions et discuter avec la communauté
+  - name: 🌐 Guide de tarification dynamique Hydro-Québec
+    url: https://hydroqc.ca/fr/docs/tarification-dynamique/
+    about: En savoir plus sur les tarifs dynamiques d'Hydro-Québec

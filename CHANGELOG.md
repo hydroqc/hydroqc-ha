@@ -12,6 +12,15 @@
 
 ## [0.3.0] - 2025-12-10
 
+### Note
+
+Ce projet est toujours en phase de développement initial et en constante évolution. Assurez-vous de vérifier les mises à jour fréquemment afin d'obtenir les dernières fonctionnalités et corrections.
+
+- Cette version contient un fix important pour les mise à jour de pointes non-critiques vers critiques dans le calendrier. **⚠️Lors de la prochaine pointe critique, assurez-vous que l'événement calendrier est mis à jour correctement.⚠️**
+- Assurez-vous de réimporter vos blueprints
+
+**Merci de signaler tout problème via les issues GitHub.**
+
 ### Modifié
 - Refactorisation complète du code en structure modulaire pour améliorer la maintenabilité
   - **coordinator/** : Division en modules (base, calendar_sync, consumption_sync, sensor_data)

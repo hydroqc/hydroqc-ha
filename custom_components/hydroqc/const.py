@@ -27,14 +27,12 @@ DEFAULT_UPDATE_INTERVAL: Final = 60  # seconds
 DEFAULT_PREHEAT_DURATION: Final = 120  # minutes
 DEFAULT_INCLUDE_NON_CRITICAL_PEAKS: Final = False
 
-# Supported rates
+# Supported rates (residential only)
 RATE_D: Final = "D"
 RATE_DT: Final = "DT"
 RATE_DPC: Final = "DPC"
-RATE_M: Final = "M"
-RATE_M_GDP: Final = "M-GDP"
 
-RATES: Final = [RATE_D, RATE_DT, RATE_DPC, RATE_M, RATE_M_GDP]
+RATES: Final = [RATE_D, RATE_DT, RATE_DPC]
 
 # Rate options
 RATE_OPTION_CPC: Final = "CPC"
@@ -45,8 +43,6 @@ RATE_OPTIONS: Final = {
     RATE_D: [RATE_OPTION_NONE, RATE_OPTION_CPC],
     RATE_DT: [RATE_OPTION_NONE],
     RATE_DPC: [RATE_OPTION_NONE],
-    RATE_M: [RATE_OPTION_NONE],
-    RATE_M_GDP: [RATE_OPTION_NONE],
 }
 
 # Sensor definitions ported from hydroqc2mqtt

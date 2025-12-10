@@ -79,19 +79,9 @@
           "history_days": "Nombre de jours à importer (0-800). Définissez à 0 pour synchroniser uniquement les 30 derniers jours, ou entrez une valeur pour l'historique plus ancien."
         }
       },
-      "opendata": {
-        "title": "Mode Données Ouvertes - Sélection du secteur",
-        "description": "Configurez la surveillance en utilisant les données publiques (sans connexion requise). Premièrement, sélectionnez votre secteur de clientèle",
-        "data": {
-          "sector": "Secteur de clientèle"
-        },
-        "data_description": {
-          "sector": "Sélectionnez si vous êtes un client résidentiel ou commercial"
-        }
-      },
-      "opendata_offer": {
-        "title": "Mode Données Ouvertes - Sélectionner le tarif",
-        "description": "Sélectionnez votre tarif d'électricité pour les clients {sector}. Les options disponibles sont récupérées depuis l'API publique d'Hydro-Québec",
+      "opendata_rate": {
+        "title": "Mode OpenData - Sélection du tarif",
+        "description": "Sélectionnez votre tarif d'électricité résidentiel. Les options disponibles sont récupérées depuis l'API publique d'Hydro-Québec",
         "data": {
           "contract_name": "Nom du contrat",
           "rate_selection": "Tarif",

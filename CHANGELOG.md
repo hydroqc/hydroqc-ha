@@ -1,12 +1,25 @@
 ## [Non publié]
 
 ### Ajouté
+- Architecture modulaire pour les données ouvertes (OpenData) avec système de processeurs
+  - **public_data/opendata_client.py** : Client de base pour l'API Opendatasoft v2.1
+  - **public_data/processors/** : Système de processeurs pour différents ensembles de données
+  - **public_data/processors/peak_events.py** : Processeur pour les événements de pointe (résidentiel seulement)
+  - Préparation pour l'ajout futur d'autres ensembles de données (ex: demande-electricite-quebec)
 
 ### Modifié
-
-### Corrigé
+- Mode OpenData limité aux tarifs résidentiels seulement (D, DT, DPC, D+CPC)
+- Simplification du flux de configuration : sélection de secteur retirée, directement aux tarifs résidentiels
+- Processeur des événements de pointe filtre maintenant uniquement les événements résidentiels
 
 ### Retiré
+- ⚠️ **CHANGEMENT MAJEUR** : Support des tarifs commerciaux/industriels retiré du mode OpenData
+  - Tarifs retirés : M, M-GDP, M-CPC, M-GPC, M-ENG, M-OEA
+  - Raison : Focus sur les utilisateurs résidentiels de Home Assistant
+  - Les configurations existantes avec tarifs commerciaux doivent être supprimées et reconfigurées
+  - Les tarifs commerciaux restent disponibles dans la librairie hydroqc upstream
+- Étape de sélection de secteur (Résidentiel/Commercial) dans le flux de configuration
+- Remerciements à HD Energy pour le développement initial du support commercial
 
 ---
 

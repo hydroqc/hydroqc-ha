@@ -260,13 +260,13 @@ All PRs automatically run:
 
 When adding or modifying rate-specific code:
 
-### Supported Rates
+### Supported Rates (Residential Only)
 - **D**: Standard residential rate
 - **D+CPC**: Rate D with Winter Credits
 - **DT**: Dual tariff rate
 - **DPC**: Flex-D dynamic pricing
-- **M**: Small/medium power rate
-- **M-GDP**: Large power rate
+
+**Note**: Commercial/industrial rates (M, M-GDP, etc.) are no longer supported in the integration. Focus is on residential Home Assistant users.
 
 ### Adding New Sensors
 

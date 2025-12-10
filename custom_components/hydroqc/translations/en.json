@@ -79,19 +79,9 @@
           "history_days": "Number of days to import (0-800). Set to 0 to sync only the last 30 days, or enter a value for older history."
         }
       },
-      "opendata": {
-        "title": "OpenData Mode - Select Sector",
-        "description": "Configure monitoring using public data (no login required). First, select your customer sector",
-        "data": {
-          "sector": "Customer Sector"
-        },
-        "data_description": {
-          "sector": "Select whether you are a residential or commercial customer"
-        }
-      },
-      "opendata_offer": {
+      "opendata_rate": {
         "title": "OpenData Mode - Select Rate",
-        "description": "Select your electricity rate plan for {sector} customers. Available options are fetched from Hydro-Québec's public API",
+        "description": "Select your residential electricity rate plan. Available options are fetched from Hydro-Québec's public API",
         "data": {
           "contract_name": "Contract Name",
           "rate_selection": "Rate Plan",

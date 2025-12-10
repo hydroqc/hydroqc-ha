@@ -43,7 +43,7 @@ from ..const import (
     DEFAULT_PREHEAT_DURATION,
     DOMAIN,
 )
-from .helpers import SECTOR_MAPPING, fetch_available_sectors, fetch_offers_for_sector
+from .helpers import RATE_CODE_MAPPING, fetch_offers_for_residential
 from .options import HydroQcOptionsFlow
 
 _LOGGER = logging.getLogger(__name__)
@@ -350,51 +350,19 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def async_step_opendata(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Handle opendata mode setup - select sector."""
-        errors: dict[str, str] = {}
-
-        # Fetch available sectors from API if not already done
-        if not self._available_sectors:
-            self._available_sectors = await fetch_available_sectors()
-
-        if user_input is not None:
-            # Store selected sector and move to offer selection
-            self._selected_sector = user_input["sector"]
-            return await self.async_step_opendata_rate()
-
-        # Build sector selection dropdown
-        sector_options = [
-            {"value": sector, "label": SECTOR_MAPPING.get(sector, sector)}
-            for sector in self._available_sectors
-        ]
-
-        return self.async_show_form(
-            step_id="opendata",
-            data_schema=vol.Schema(
-                {
-                    vol.Required("sector"): SelectSelector(
-                        SelectSelectorConfig(
-                            options=cast(list[SelectOptionDict], sector_options),
-                            mode=SelectSelectorMode.DROPDOWN,
-                        )
-                    ),
-                }
-            ),
-            errors=errors,
-        )
+        """Handle opendata mode setup - select residential rate (skip sector selection)."""
+        # Residential only - go directly to rate selection
+        return await self.async_step_opendata_rate()
 
     async def async_step_opendata_rate(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
-        """Handle opendata mode setup - select offer for chosen sector."""
-        if self._selected_sector is None:
-            return self.async_abort(reason="missing_sector")
-
+        """Handle opendata mode setup - select residential rate offer."""
         errors: dict[str, str] = {}
 
-        # Fetch offers for selected sector
+        # Fetch residential offers
         if not self._available_rates:
-            self._available_rates = await fetch_offers_for_sector(self._selected_sector)
+            self._available_rates = await fetch_offers_for_residential()
 
         if user_input is not None:
             contract_name = user_input[CONF_CONTRACT_NAME]
@@ -411,19 +379,10 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             self._selected_contract["rate"] = rate
             self._selected_contract["rate_option"] = rate_option
-            self._selected_contract["sector"] = self._selected_sector
 
-            # Only save preheat duration for rates that use it (DPC, D+CPC, and commercial peak rates)
+            # Only save preheat duration for rates that use it (DPC, D+CPC)
             preheat_duration = DEFAULT_PREHEAT_DURATION
-            if rate_with_option in [
-                "DPC",
-                "DCPC",
-                "M-GDP",
-                "M-CPC",
-                "M-GPC",
-                "M-ENG",
-                "M-OEA",
-            ]:
+            if rate_with_option in ["DPC", "DCPC"]:
                 preheat_duration = user_input.get(CONF_PREHEAT_DURATION, DEFAULT_PREHEAT_DURATION)
 
             self._selected_contract["preheat_duration"] = preheat_duration
@@ -436,13 +395,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await self.async_set_unique_id(f"opendata_{contract_name.lower().replace(' ', '_')}")
             self._abort_if_unique_id_configured()
 
-            sector_label = (
-                SECTOR_MAPPING.get(self._selected_sector, self._selected_sector)
-                if self._selected_sector
-                else "Unknown"
-            )
             return self.async_create_entry(
-                title=f"{contract_name} ({sector_label} - {rate}{rate_option})",
+                title=f"{contract_name} (Residential - {rate}{rate_option})",
                 data={
                     CONF_AUTH_MODE: AUTH_MODE_OPENDATA,
                     CONF_CONTRACT_NAME: contract_name,
@@ -455,11 +409,6 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Build rate selection dropdown from API data
         rate_options = [{"value": r["value"], "label": r["label"]} for r in self._available_rates]
 
-        sector_label = (
-            SECTOR_MAPPING.get(self._selected_sector, self._selected_sector)
-            if self._selected_sector
-            else "Unknown"
-        )
         return self.async_show_form(
             step_id="opendata_rate",
             data_schema=vol.Schema(
@@ -485,7 +434,6 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
-            description_placeholders={"sector": sector_label},
         )
 
     async def async_step_calendar_opendata(
@@ -522,14 +470,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_INCLUDE_NON_CRITICAL_PEAKS, DEFAULT_INCLUDE_NON_CRITICAL_PEAKS
                 )
 
-            sector_label = (
-                SECTOR_MAPPING.get(self._selected_sector, self._selected_sector)
-                if self._selected_sector
-                else "Unknown"
-            )
-
             return self.async_create_entry(
-                title=f"{self._contract_name} ({sector_label} - {self._selected_contract['rate']}{self._selected_contract['rate_option']})",
+                title=f"{self._contract_name} (Residential - {self._selected_contract['rate']}{self._selected_contract['rate_option']})",
                 data=entry_data,
             )
 

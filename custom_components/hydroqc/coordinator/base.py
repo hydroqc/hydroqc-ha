@@ -68,6 +68,14 @@ class HydroQcDataCoordinator(
         self._preheat_duration = entry.data.get(CONF_PREHEAT_DURATION, 120)
         self._default_include_non_critical_peaks = DEFAULT_INCLUDE_NON_CRITICAL_PEAKS
 
+        # Validate rate: commercial rates are no longer supported
+        if self._auth_mode == AUTH_MODE_OPENDATA and self._rate.startswith("M"):
+            raise ValueError(
+                f"Commercial rates (M, M-GDP, etc.) are no longer supported in OpenData mode. "
+                f"Rate '{self._rate}' is invalid. Please delete this integration entry and "
+                f"reconfigure with a residential rate (D, DT, DPC, or D+CPC)."
+            )
+
         # Portal mode attributes (requires login)
         self._webuser: WebUser | None = None
         self._customer: Customer | None = None

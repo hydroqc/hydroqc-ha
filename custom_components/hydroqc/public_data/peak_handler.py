@@ -11,15 +11,10 @@ from .models import AnchorPeriod, PeakEvent
 
 _LOGGER = logging.getLogger(__name__)
 
-# Rate mapping from HQ codes to internal codes
+# Rate mapping from HQ codes to internal codes (residential only)
 RATE_CODE_MAPPING = {
     "CPC-D": "DCPC",  # Rate D + Winter Credits
     "TPC-DPC": "DPC",  # Flex-D (dynamic pricing)
-    "GDP-Affaires": "M-GDP",  # Commercial GDP
-    "CPC-G": "M-CPC",  # Commercial CPC
-    "TPC-GPC": "M-GPC",  # Commercial GPC
-    "ENG01": "M-ENG",  # Commercial ENG01
-    "OEA": "M-OEA",  # Commercial OEA
 }
 
 

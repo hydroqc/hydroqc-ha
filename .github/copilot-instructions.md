@@ -32,15 +32,17 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
 2. **`config_flow/`** package - Multi-step config flow:
    - **`config_flow/base.py`**: HydroQcConfigFlow class for integration setup
    - **`config_flow/options.py`**: HydroQcOptionsFlow for options management
-   - **`config_flow/helpers.py`**: API functions and mappings (fetch_available_sectors, fetch_offers_for_sector, SECTOR_MAPPING, RATE_CODE_MAPPING)
+   - **`config_flow/helpers.py`**: API functions and mappings (fetch_offers_for_residential, RATE_CODE_MAPPING - residential only)
    - **`config_flow.py`**: Root-level re-export for backward compatibility
    - Step 1: Choose `AUTH_MODE_PORTAL` or `AUTH_MODE_OPENDATA`
    - Step 2a (Portal mode): Login → fetch customers → select account → select contract → import history (0-800 days) → create entry
-   - Step 2b (OpenData mode): Select sector (Residentiel/Affaires) → select rate and option (with preheat field) → create entry
+   - Step 2b (OpenData mode - residential only): Select residential rate (D, DT, DPC, D+CPC) with preheat field → create entry
+     - Sector selection removed - only residential rates supported
+     - Commercial rates (M, M-GDP, etc.) no longer available
    - **History import** (Portal mode only): `NumberSelector` for 0-800 days of consumption history
      - 0-30 days: Regular sync only (efficient for recent data)
      - >30 days: CSV import triggered automatically on integration setup
-   - **Preheat configuration**: Only shown for rates with peak events (DPC, DCPC in Portal mode; all peak rates in OpenData mode)
+   - **Preheat configuration**: Only shown for rates with peak events (DPC, DCPC)
    - Uses `NumberSelector` for preheat duration input (0-240 minutes, default 120)
 
 3. **`sensor.py` / `binary_sensor.py`** - Entity implementations
@@ -98,10 +100,14 @@ from .public_data.client import PublicDataClient  # Direct import
 - `options.py`: HydroQcOptionsFlow - options management for existing entries
 - `helpers.py`: Shared functions and constants (API calls, mappings)
 
-**public_data/** - OpenData API client split by layer:
+**public_data/** - OpenData API client with processor architecture (residential only):
 - `models.py`: Data classes with no business logic (PreHeatPeriod, AnchorPeriod, PeakEvent)
 - `peak_handler.py`: Business logic (PeakHandler - schedule generation, critical peak detection)
-- `client.py`: API client (PublicDataClient - HTTP calls, response parsing)
+- `opendata_client.py`: Base OpenData API client for Opendatasoft v2.1 (generic dataset access)
+- `client.py`: PublicDataClient wrapper using processor pattern
+- `processors/base.py`: Abstract DatasetProcessor interface
+- `processors/peak_events.py`: PeakEventsProcessor for evenements-pointe dataset (residential filtering)
+- `processors/__init__.py`: Processor exports
 
 #### Development Guidelines
 - **Single responsibility**: Each module has one focused purpose
@@ -110,14 +116,16 @@ from .public_data.client import PublicDataClient  # Direct import
 - **Import from root or package**: Both patterns work, use root for simplicity unless you need specific submodules
 - **When adding features**: Place in appropriate module; if a module exceeds ~500 lines, consider splitting further
 
-### OpenData API Offer Code Mapping
+### OpenData API Offer Code Mapping (Residential Only)
 
-**CRITICAL**: The OpenData API returns peak event data with specific "offre" codes. The mapping is:
+**CRITICAL**: The OpenData API returns peak event data with specific "offre" codes. Only residential rates are supported:
 
-| OpenData "offre" | Portal Rate | Portal Rate Option | Internal Rate Code | Common Names |
-|------------------|-------------|--------------------|--------------------|------------------------------------------|
-| TPC-DPC          | DPC         | None/Empty         | DPC                | Flex-D, DPC                              |
-| CPC-D            | D           | CPC                | DCPC               | Winter Credits, Crédits hivernaux, D+CPC |
+| OpenData "offre" | Portal Rate | Portal Rate Option | Internal Rate Code | Common Names | Sector |
+|------------------|-------------|--------------------|--------------------|------------------------------------------|-------------|
+| TPC-DPC          | DPC         | None/Empty         | DPC                | Flex-D, DPC                              | Résidentiel |
+| CPC-D            | D           | CPC                | DCPC               | Winter Credits, Crédits hivernaux, D+CPC | Résidentiel |
+
+**Commercial rates no longer supported**: M, M-GDP, M-CPC, M-GPC, M-ENG, M-OEA were removed in v0.4.0. PeakEventsProcessor filters for `secteurclient == "Résidentiel"` only.
 
 **Understanding OpenData API and Peak Generation:**
 
@@ -162,7 +170,6 @@ from .public_data.client import PublicDataClient  # Direct import
   - Uses TPC-DPC offer code from OpenData API
   - All peaks are critical (no regular schedule, only API announcements)
   - Preheat periods configurable (0-240 minutes before peak)
-- **M/M-GDP**: Commercial rates → standard consumption tracking
 
 **Key Pattern**: Sensor availability is controlled by `rates` list in `const.py`. Winter credit sensors (`wc_*`) only appear for rate `"DCPC"`, FlexD sensors (`dpc_*`) only for rate `"DPC"`.
 ### Setup (use devcontainer for consistency)

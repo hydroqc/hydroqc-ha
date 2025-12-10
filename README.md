@@ -10,12 +10,30 @@
 
 <p align="center">
   <a href="https://github.com/hacs/integration"><img src="https://img.shields.io/badge/HACS-Custom-41BDF5.svg" alt="HACS"></a>
-  <a href="https://github.com/hydroqc/hydroqc-ha/releases"><img src="https://img.shields.io/github/release/hydroqc/hydroqc-ha.svg" alt="Release"></a>
+  <a href="https://github.com/hydroqc/hydroqc-ha/releases"><img src="https://img.shields.io/github/v/release/hydroqc/hydroqc-ha" alt="Release"></a>
+  <a href="https://github.com/hydroqc/hydroqc-ha/releases/latest"><img src="https://img.shields.io/github/downloads/hydroqc/hydroqc-ha/latest/total?label=latest%20downloads" alt="Release Downloads"></a>
   <a href="https://github.com/hydroqc/hydroqc-ha/blob/main/LICENSE"><img src="https://img.shields.io/github/license/hydroqc/hydroqc-ha.svg" alt="License"></a>
+  <br/>
+  <a href="https://github.com/hydroqc/hydroqc-ha/releases"><img src="https://img.shields.io/github/downloads/hydroqc/hydroqc-ha/total?label=total%20downloads" alt="Total Downloads"></a>
+  <a href="https://discord.gg/JaRfRJEByz"><img src="https://img.shields.io/discord/931570222475907083?label=discord&logo=discord" alt="Discord"></a>
+  <a href="https://github.com/hydroqc/hydroqc-ha/commits/main"><img src="https://img.shields.io/github/last-commit/hydroqc/hydroqc-ha" alt="Last Commit"></a>
   <a href="https://github.com/hydroqc/hydroqc-ha/stargazers"><img src="https://img.shields.io/github/stars/hydroqc/hydroqc-ha?style=social" alt="Stars"></a>
 </p>
 
 **Navigation rapide:** [Installation](#-installation-rapide) • [Configuration](#-configuration) • [Blueprints](#-blueprints) • [Capteurs](#-capteurs-disponibles) • [FAQ](#-faq)
+
+---
+
+> **⚠️ IMPORTANT - Support et problèmes**
+> 
+> Cette intégration est développée de façon **indépendante** et n'est **pas supportée par Hydro-Québec**.
+> 
+> **NE CONTACTEZ PAS** le service client d'Hydro-Québec pour des problèmes avec cette intégration.
+> 
+> Pour toute question ou problème :
+> - 📝 [Ouvrir un ticket sur GitHub](https://github.com/hydroqc/hydroqc-ha/issues)
+> - 💬 [Rejoindre notre Discord](https://discord.gg/5zEpJjppgr)
+> - 📖 [Consulter la documentation](https://hydroqc.ca)
 
 ---
 
@@ -162,8 +180,6 @@ Pour les utilisateurs du tarif Flex-D (DPC).
 - Pré-chauffage configurable
 - Actions de début et fin de pointe
 - Filtres DPC uniquement
-
-> **Utilisateurs de blueprints existants** : Réimportez vos blueprints pour bénéficier des dernières améliorations (notifications persistantes, meilleure gestion des erreurs).
 
 ### Tester vos blueprints
 

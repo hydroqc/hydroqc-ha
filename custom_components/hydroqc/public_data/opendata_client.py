@@ -15,7 +15,7 @@ OPENDATA_API_BASE = "https://donnees.hydroquebec.com/api/explore/v2.1"
 
 class OpenDataClient:
     """Base client for accessing Hydro-Québec Open Data API.
-    
+
     This client provides generic access to any dataset on the Opendatasoft v2.1 API.
     Dataset-specific logic is handled by processor classes.
     """
@@ -37,10 +37,10 @@ class OpenDataClient:
 
     def build_dataset_url(self, dataset_name: str) -> str:
         """Build dataset URL for a given dataset name.
-        
+
         Args:
             dataset_name: Name of the dataset (e.g., "evenements-pointe", "demande-electricite-quebec")
-            
+
         Returns:
             Full URL to the dataset records endpoint
         """
@@ -50,14 +50,14 @@ class OpenDataClient:
         self, dataset_name: str, params: dict[str, Any]
     ) -> dict[str, Any]:
         """Fetch data from a specific dataset.
-        
+
         Args:
             dataset_name: Name of the dataset to fetch from
             params: Query parameters for the API request
-            
+
         Returns:
             JSON response from the API
-            
+
         Raises:
             aiohttp.ClientError: If the HTTP request fails
         """
@@ -72,13 +72,13 @@ class OpenDataClient:
             url, params=params, timeout=aiohttp.ClientTimeout(total=30)
         ) as response:
             response.raise_for_status()
-            data = await response.json()
-            
+            data: dict[str, Any] = await response.json()
+
             results_count = len(data.get("results", []))
             _LOGGER.debug(
                 "[OpenData] Received %d results from dataset '%s'",
                 results_count,
                 dataset_name,
             )
-            
+
             return data

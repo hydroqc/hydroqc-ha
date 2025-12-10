@@ -43,7 +43,7 @@ from ..const import (
     DEFAULT_PREHEAT_DURATION,
     DOMAIN,
 )
-from .helpers import RATE_CODE_MAPPING, fetch_offers_for_residential
+from .helpers import fetch_offers_for_residential
 from .options import HydroQcOptionsFlow
 
 _LOGGER = logging.getLogger(__name__)
@@ -347,9 +347,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
         )
 
-    async def async_step_opendata(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
+    async def async_step_opendata(self, _: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle opendata mode setup - select residential rate (skip sector selection)."""
         # Residential only - go directly to rate selection
         return await self.async_step_opendata_rate()

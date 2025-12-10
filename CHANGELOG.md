@@ -19,7 +19,6 @@
   - Les configurations existantes avec tarifs commerciaux doivent être supprimées et reconfigurées
   - Les tarifs commerciaux restent disponibles dans la librairie hydroqc upstream
 - Étape de sélection de secteur (Résidentiel/Commercial) dans le flux de configuration
-- Remerciements à HD Energy pour le développement initial du support commercial
 
 ---
 

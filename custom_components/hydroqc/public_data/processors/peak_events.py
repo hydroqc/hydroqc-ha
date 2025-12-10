@@ -15,14 +15,14 @@ _LOGGER = logging.getLogger(__name__)
 
 class PeakEventsProcessor(DatasetProcessor):
     """Processor for winter peak events dataset (residential customers only).
-    
+
     Fetches critical peak announcements from Hydro-Québec's open data API
     and filters for residential sector only. Commercial events are ignored.
     """
 
     def __init__(self, peak_handler: PeakHandler) -> None:
         """Initialize peak events processor.
-        
+
         Args:
             peak_handler: PeakHandler instance to load events into
         """
@@ -34,7 +34,7 @@ class PeakEventsProcessor(DatasetProcessor):
 
     def build_fetch_params(self) -> dict[str, Any]:
         """Build query parameters for fetching peak events.
-        
+
         Returns residential-only peak events from today onwards.
         """
         # Get HQ offer codes for current rate
@@ -75,9 +75,9 @@ class PeakEventsProcessor(DatasetProcessor):
 
     async def process_response(self, data: dict[str, Any]) -> None:
         """Process peak events API response and load into peak handler.
-        
+
         Filters for residential sector only - commercial events are ignored.
-        
+
         Args:
             data: Raw JSON response from the OpenData API
         """
@@ -92,7 +92,7 @@ class PeakEventsProcessor(DatasetProcessor):
         events = []
         for record in results:
             sector = record.get("secteurclient", "")
-            
+
             # Filter for residential sector only
             if sector != "Résidentiel":
                 _LOGGER.debug(
@@ -101,7 +101,7 @@ class PeakEventsProcessor(DatasetProcessor):
                     record.get("offre", ""),
                 )
                 continue
-            
+
             events.append({
                 "offre": record.get("offre", ""),
                 "dateDebut": record.get("datedebut", ""),

@@ -100,7 +100,7 @@ from .public_data.client import PublicDataClient  # Direct import
 - `options.py`: HydroQcOptionsFlow - options management for existing entries
 - `helpers.py`: Shared functions and constants (API calls, mappings)
 
-**public_data/** - OpenData API client with processor architecture (residential only):
+**public_data/** - OpenData API client with processor architecture:
 - `models.py`: Data classes with no business logic (PreHeatPeriod, AnchorPeriod, PeakEvent)
 - `peak_handler.py`: Business logic (PeakHandler - schedule generation, critical peak detection)
 - `opendata_client.py`: Base OpenData API client for Opendatasoft v2.1 (generic dataset access)

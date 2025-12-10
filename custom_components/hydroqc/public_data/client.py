@@ -15,7 +15,7 @@ _LOGGER = logging.getLogger(__name__)
 
 class PublicDataClient:
     """Client for Hydro-Québec public open data API (residential rates only).
-    
+
     This client uses a processor pattern to handle different datasets.
     By default, it uses PeakEventsProcessor for winter peak events.
     """
@@ -37,7 +37,7 @@ class PublicDataClient:
         self.peak_handler = PeakHandler(rate_code, preheat_duration)
         self._opendata_client = OpenDataClient()
         self._last_fetch: datetime.datetime | None = None
-        
+
         # Use provided processor or default to peak events
         self._processor = processor or PeakEventsProcessor(self.peak_handler)
 

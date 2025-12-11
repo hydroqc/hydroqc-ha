@@ -4,25 +4,23 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import csv
 import datetime
 import logging
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-import pytz  # type: ignore[import-untyped]
+import zoneinfo
+
 from homeassistant.components.recorder import get_instance, statistics  # type: ignore[attr-defined]
 from homeassistant.core import HomeAssistant
-from pytz import timezone as pytz_timezone
-
-from hydroqc.contract.common import Contract
 
 if TYPE_CHECKING:
     from .statistics_manager import StatisticsManager
 
 _LOGGER = logging.getLogger(__name__)
-
 # Create timezone once at module level to avoid blocking I/O in event loop
-_TIMEZONE_TORONTO = pytz_timezone("America/Toronto")
+_TIMEZONE_TORONTO = zoneinfo.ZoneInfo("America/Toronto")
 
 
 class ConsumptionHistoryImporter:
@@ -123,23 +121,26 @@ class ConsumptionHistoryImporter:
                         (today - current_start_date).days,
                     )
 
-                    csv_data_raw = await self._contract.get_hourly_energy(current_start_date, today)
+                    csv_data_raw = await self._contract.get_hourly_energy(
+                        current_start_date, today
+                    )
                     csv_data = list(csv_data_raw)
+
+
 
                     if len(csv_data) <= 1:  # Only header or empty
                         _LOGGER.warning(
-                            "[PORTAL RESPONSE] Iteration %d: No data returned (requested from %s), "
-                            "advancing start date by 30 days",
+                            "[PORTAL RESPONSE] Iteration %d: No data (from %s), advancing 30 days",
                             iteration,
                             current_start_date,
                         )
                         # Increment start date by 30 days and try again
-                        current_start_date = current_start_date + datetime.timedelta(days=30)
+                        current_start_date += datetime.timedelta(days=30)
 
                         # Safety check: don't go past yesterday
                         if current_start_date > yesterday:
                             _LOGGER.warning(
-                                "[PORTAL RESPONSE] No data available in entire date range, giving up"
+                                "[PORTAL RESPONSE] No data in range, giving up"
                             )
                             break
 
@@ -160,7 +161,7 @@ class ConsumptionHistoryImporter:
                     )
 
                     _LOGGER.info(
-                        "[PORTAL RESPONSE] Iteration %d: Received %d data rows (first: %s, last: %s)",
+                        "[PORTAL RESPONSE] Iteration %d: Got %d rows (first: %s, last: %s)",
                         iteration,
                         data_rows,
                         first_date_str,
@@ -175,7 +176,9 @@ class ConsumptionHistoryImporter:
                         ", ".join(consumption_types),
                     )
 
-                    stats_by_type = self._parse_csv_data(csv_data, consumption_types)  # type: ignore[arg-type]
+                    stats_by_type = self._parse_csv_data(
+                        csv_data, consumption_types  # type: ignore[arg-type]
+                    )
 
                     _LOGGER.debug(
                         "[RECORDER IMPORT] Iteration %d: Importing to Home Assistant recorder",
@@ -228,7 +231,9 @@ class ConsumptionHistoryImporter:
                                 break
 
                             # Set next iteration's start_date to day after newest date in CSV
-                            current_start_date = newest_date_in_csv + datetime.timedelta(days=1)
+                            current_start_date = newest_date_in_csv + datetime.timedelta(
+                                days=1
+                            )
 
                         except ValueError as e:
                             _LOGGER.error("CSV import: Could not parse dates in CSV: %s", e)
@@ -260,7 +265,9 @@ class ConsumptionHistoryImporter:
             _LOGGER.info("CSV consumption history import cancelled")
             raise
         except Exception as err:
-            _LOGGER.error("Error importing CSV consumption history: %s", err, exc_info=True)
+            _LOGGER.error(
+                "Error importing CSV consumption history: %s", err, exc_info=True
+            )
 
     def _parse_csv_data(
         self, csv_data: list[list[Any]], consumption_types: list[str]
@@ -307,35 +314,12 @@ class ConsumptionHistoryImporter:
                     rows_skipped_invalid_format += 1
                     continue
 
-                # Use pytz.localize() to properly handle DST transitions
-                try:
-                    hour_datetime_tz = tz.localize(naive_dt)
-                except pytz.exceptions.AmbiguousTimeError:
-                    # During fall DST: 1 AM hour repeats - use the second occurrence (DST=False)
-                    hour_datetime_tz = tz.localize(naive_dt, is_dst=False)
-                    _LOGGER.debug(
-                        "CSV row %d: Handling ambiguous DST time: %s (using is_dst=False)",
-                        rows_processed,
-                        datetime_str,
-                    )
-                except pytz.exceptions.NonExistentTimeError:
-                    # During spring DST: 2 AM hour doesn't exist - skip it
-                    _LOGGER.debug(
-                        "CSV row %d: Skipping non-existent DST time: %s",
-                        rows_processed,
-                        datetime_str,
-                    )
-                    rows_skipped_dst += 1
-                    continue
-                except Exception as e:
-                    _LOGGER.warning(
-                        "CSV row %d: Error localizing datetime %s: %s",
-                        rows_processed,
-                        datetime_str,
-                        e,
-                    )
-                    rows_skipped_invalid_format += 1
-                    continue
+                # Attach timezone information.
+                # zoneinfo handles DST transitions gracefully. For ambiguous times during a
+                # fall-back transition, it defaults to the first occurrence (fold=0).
+                # For non-existent times during a spring-forward transition, it adjusts
+                # the time, which is the desired behavior for cumulative statistics.
+                hour_datetime_tz = naive_dt.replace(tzinfo=tz)
 
                 # Log every 100th hour being processed
                 if rows_added % 100 == 0:
@@ -505,7 +489,9 @@ class ConsumptionHistoryImporter:
                 statistic_id,
                 consumption_type,
             )
-            yesterday = start_date - datetime.timedelta(days=1)
+            # Base the continuity on the first actual data point we have
+            first_stat_date = stats_list[0]["start"].date()
+            yesterday = first_stat_date - datetime.timedelta(days=1)
             base_sum = await self._statistics_manager.get_base_sum(consumption_type, yesterday)
 
             # Add cumulative sums

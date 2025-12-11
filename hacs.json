@@ -1,5 +1,6 @@
 {
   "name": "Hydro-Québec",
+  "country": ["CA"],
   "content_in_root": false,
   "filename": "hydroqc.zip",
   "render_readme": true,

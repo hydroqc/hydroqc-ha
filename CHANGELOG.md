@@ -10,6 +10,13 @@
 
 ---
 
+## [0.3.1] - 2025-12-11
+
+### Modifié
+- Ajout du champ `country` à la configuration HACS pour indiquer que l'intégration est spécifique au Canada
+
+---
+
 ## [0.3.0] - 2025-12-10
 
 ### Note

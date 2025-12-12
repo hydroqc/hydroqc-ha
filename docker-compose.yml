@@ -7,6 +7,7 @@ services:
     volumes:
       - ./.ha-test-config:/config
       - ./custom_components/hydroqc:/config/custom_components/hydroqc:ro
+      - ./blueprints:/config/blueprints/automation/hydroqc:ro
       - /etc/localtime:/etc/localtime:ro
     restart: unless-stopped
     ports:

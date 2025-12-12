@@ -15,7 +15,7 @@ blueprint:
 
     ### Période de pré-chauffage
 
-    Définissez combien de temps avant le début de l'événement vous souhaitez commencer le pré-chauffage de votre résidence (en minutes).
+    Définissez combien de temps avant le début de chaque pointe (matin et soir) vous souhaitez commencer le pré-chauffage de votre résidence. Vous pouvez configurer des délais différents pour le matin et le soir selon vos besoins de chauffage.
 
     ### Actions
 
@@ -60,9 +60,16 @@ blueprint:
         entity:
           domain: calendar
           multiple: false
-    preheat_offset:
-      name: Délai de pré-chauffage
-      description: "Temps avant le début de l'événement pour commencer le pré-chauffage (format -HH:MM:SS, ex: -02:00:00 pour 2 heures avant, -01:30:00 pour 1h30 avant)"
+    preheat_offset_morning:
+      name: Délai de pré-chauffage (matin)
+      description: "Temps avant le début de la pointe du matin pour commencer le pré-chauffage (format -HH:MM:SS, ex: -02:00:00 pour 2 heures avant, -01:30:00 pour 1h30 avant)"
+      default: "-02:00:00"
+      selector:
+        text:
+          type: text
+    preheat_offset_evening:
+      name: Délai de pré-chauffage (soir)
+      description: "Temps avant le début de la pointe du soir pour commencer le pré-chauffage (format -HH:MM:SS, ex: -02:00:00 pour 2 heures avant, -01:30:00 pour 1h30 avant)"
       default: "-02:00:00"
       selector:
         text:
@@ -76,16 +83,28 @@ blueprint:
           type: text
     
     # ===== ACTIONS =====
-    pre_heat_start_action:
-      name: Action de pré-chauffage
-      description: Actions à effectuer avant la période de pointe critique pour
+    pre_heat_start_morning_action:
+      name: Action de pré-chauffage (matin)
+      description: Actions à effectuer avant la période de pointe critique du matin pour
         pré-chauffer votre résidence.
       default:
         - parallel:
             - action: persistent_notification.create
               data:
-                title: "🔥 Pré-chauffage Flex-D"
-                message: "Début du pré-chauffage avant pointe critique. Augmentez le chauffage maintenant."
+                title: "🔥 Pré-chauffage Flex-D (matin)"
+                message: "Début du pré-chauffage avant pointe critique du matin. Augmentez le chauffage maintenant."
+      selector:
+        action: {}
+    pre_heat_start_evening_action:
+      name: Action de pré-chauffage (soir)
+      description: Actions à effectuer avant la période de pointe critique du soir pour
+        pré-chauffer votre résidence.
+      default:
+        - parallel:
+            - action: persistent_notification.create
+              data:
+                title: "🔥 Pré-chauffage Flex-D (soir)"
+                message: "Début du pré-chauffage avant pointe critique du soir. Augmentez le chauffage maintenant."
       selector:
         action: {}
     critical_peak_start_action:
@@ -121,11 +140,18 @@ blueprint:
   source_url: https://github.com/hydroqc/hydroqc-ha/blob/main/blueprints/flex-d-calendar.yaml
 mode: parallel
 trigger:
+  # Pre-heat start morning: configurable offset before morning peak
   - platform: calendar
     entity_id: !input hydroqc_calendar
     event: start
-    offset: !input preheat_offset
-    id: pre_heat_trigger
+    offset: !input preheat_offset_morning
+    id: pre_heat_morning_trigger
+  # Pre-heat start evening: configurable offset before evening peak
+  - platform: calendar
+    entity_id: !input hydroqc_calendar
+    event: start
+    offset: !input preheat_offset_evening
+    id: pre_heat_evening_trigger
   # Critical peak start: configurable offset before official peak start (default 1min before)
   - platform: calendar
     entity_id: !input hydroqc_calendar
@@ -144,12 +170,24 @@ condition:
     value_template: "{{ 'Tarif: DPC' in trigger.calendar_event.description }}"
 action:
   - choose:
+      # Pre-heat morning - CRITICAL ONLY
       - conditions:
           - condition: trigger
-            id: pre_heat_trigger
+            id: pre_heat_morning_trigger
+          - condition: template
+            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int < 12 }}"
           - condition: template
             value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
-        sequence: !input pre_heat_start_action
+        sequence: !input pre_heat_start_morning_action
+      # Pre-heat evening - CRITICAL ONLY
+      - conditions:
+          - condition: trigger
+            id: pre_heat_evening_trigger
+          - condition: template
+            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int >= 12 }}"
+          - condition: template
+            value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
+        sequence: !input pre_heat_start_evening_action
       - conditions:
           - condition: trigger
             id: peak_start_trigger

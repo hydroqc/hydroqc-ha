@@ -323,12 +323,12 @@ class StatisticsManager:
         # Try to find last stat, looking back up to 30 days
         for i in range(30):
             current_date = reference_date - datetime.timedelta(days=i)
-            start_datetime = datetime.datetime.combine(
-                current_date, datetime.time.min
-            ).replace(tzinfo=tz)
-            end_datetime = datetime.datetime.combine(
-                current_date, datetime.time.max
-            ).replace(tzinfo=tz)
+            start_datetime = datetime.datetime.combine(current_date, datetime.time.min).replace(
+                tzinfo=tz
+            )
+            end_datetime = datetime.datetime.combine(current_date, datetime.time.max).replace(
+                tzinfo=tz
+            )
 
             try:
                 last_stats = await get_instance(self.hass).async_add_executor_job(

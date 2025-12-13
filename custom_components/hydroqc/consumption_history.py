@@ -4,18 +4,18 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
-import csv
 import datetime
 import logging
-from collections.abc import Callable
-from typing import TYPE_CHECKING, Any
-
 import zoneinfo
+from collections.abc import Callable, Sequence
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.recorder import get_instance, statistics  # type: ignore[attr-defined]
 from homeassistant.core import HomeAssistant
 
 if TYPE_CHECKING:
+    from hydroqc.contract.common import Contract
+
     from .statistics_manager import StatisticsManager
 
 _LOGGER = logging.getLogger(__name__)
@@ -121,12 +121,8 @@ class ConsumptionHistoryImporter:
                         (today - current_start_date).days,
                     )
 
-                    csv_data_raw = await self._contract.get_hourly_energy(
-                        current_start_date, today
-                    )
+                    csv_data_raw = await self._contract.get_hourly_energy(current_start_date, today)
                     csv_data = list(csv_data_raw)
-
-
 
                     if len(csv_data) <= 1:  # Only header or empty
                         _LOGGER.warning(
@@ -139,9 +135,7 @@ class ConsumptionHistoryImporter:
 
                         # Safety check: don't go past yesterday
                         if current_start_date > yesterday:
-                            _LOGGER.warning(
-                                "[PORTAL RESPONSE] No data in range, giving up"
-                            )
+                            _LOGGER.warning("[PORTAL RESPONSE] No data in range, giving up")
                             break
 
                         # Continue to next iteration
@@ -177,7 +171,8 @@ class ConsumptionHistoryImporter:
                     )
 
                     stats_by_type = self._parse_csv_data(
-                        csv_data, consumption_types  # type: ignore[arg-type]
+                        csv_data,
+                        consumption_types,
                     )
 
                     _LOGGER.debug(
@@ -231,9 +226,7 @@ class ConsumptionHistoryImporter:
                                 break
 
                             # Set next iteration's start_date to day after newest date in CSV
-                            current_start_date = newest_date_in_csv + datetime.timedelta(
-                                days=1
-                            )
+                            current_start_date = newest_date_in_csv + datetime.timedelta(days=1)
 
                         except ValueError as e:
                             _LOGGER.error("CSV import: Could not parse dates in CSV: %s", e)
@@ -265,12 +258,10 @@ class ConsumptionHistoryImporter:
             _LOGGER.info("CSV consumption history import cancelled")
             raise
         except Exception as err:
-            _LOGGER.error(
-                "Error importing CSV consumption history: %s", err, exc_info=True
-            )
+            _LOGGER.error("Error importing CSV consumption history: %s", err, exc_info=True)
 
     def _parse_csv_data(
-        self, csv_data: list[list[Any]], consumption_types: list[str]
+        self, csv_data: list[Sequence[Any]], consumption_types: list[str]
     ) -> dict[str, list[dict[str, Any]]]:
         """Parse CSV data and build statistics per consumption type.
 
@@ -351,7 +342,7 @@ class ConsumptionHistoryImporter:
     def _add_consumption_stats(
         self,
         stats_by_type: dict[str, list[dict[str, Any]]],
-        row: list[Any],
+        row: Sequence[Any],
         hour_datetime_tz: datetime.datetime,
     ) -> None:
         """Add consumption statistics for a single hour.

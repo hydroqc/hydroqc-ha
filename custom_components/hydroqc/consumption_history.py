@@ -395,6 +395,15 @@ class ConsumptionHistoryImporter:
                 )
                 return
 
+            if reg_kwh < 0 or haut_kwh < 0:
+                _LOGGER.warning(
+                    "Skipping hour %s: negative consumption value (reg=%s, haut=%s)",
+                    hour_datetime_tz,
+                    reg_kwh,
+                    haut_kwh,
+                )
+                return
+
             total_kwh = reg_kwh + haut_kwh
 
             stats_by_type["reg"].append(
@@ -420,7 +429,7 @@ class ConsumptionHistoryImporter:
             # Handle French decimal format (comma separator) and N.D. (non-disponible)
             total_kwh_value = safe_float_convert(row[2]) if len(row) > 2 else None
 
-            # Skip this hour if data is not available
+            # Skip this hour if data is not available or negative
             if total_kwh_value is None:
                 _LOGGER.debug(
                     "Skipping hour %s: data not available (total=%s)",
@@ -428,6 +437,15 @@ class ConsumptionHistoryImporter:
                     row[2] if len(row) > 2 else "missing",
                 )
                 return
+
+            if total_kwh_value < 0:
+                _LOGGER.warning(
+                    "Skipping hour %s: negative consumption value (total=%s)",
+                    hour_datetime_tz,
+                    total_kwh_value,
+                )
+                return
+
             stats_by_type["total"].append(
                 {
                     "start": hour_datetime_tz,

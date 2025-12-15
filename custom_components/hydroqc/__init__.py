@@ -78,10 +78,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         coord._calendar_entity_id = config_entry.options.get(
             "calendar_entity_id", config_entry.data.get("calendar_entity_id")
         )
-        coord._include_non_critical_peaks = config_entry.options.get(
-            "include_non_critical_peaks",
-            config_entry.data.get("include_non_critical_peaks", False),
-        )
 
         # Reset validation state to re-validate new calendar entity
         coord._calendar_validation_attempts = 0

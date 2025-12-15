@@ -8,7 +8,6 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.helpers.selector import (
-    BooleanSelector,
     EntitySelector,
     EntitySelectorConfig,
     NumberSelector,
@@ -18,12 +17,10 @@ from homeassistant.helpers.selector import (
 
 from ..const import (
     CONF_CALENDAR_ENTITY_ID,
-    CONF_INCLUDE_NON_CRITICAL_PEAKS,
     CONF_PREHEAT_DURATION,
     CONF_RATE,
     CONF_RATE_OPTION,
     CONF_UPDATE_INTERVAL,
-    DEFAULT_INCLUDE_NON_CRITICAL_PEAKS,
     DEFAULT_PREHEAT_DURATION,
     DEFAULT_UPDATE_INTERVAL,
 )
@@ -83,17 +80,6 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
             schema_dict[vol.Optional(CONF_CALENDAR_ENTITY_ID, default=current_calendar)] = (
                 EntitySelector(EntitySelectorConfig(domain="calendar"))
             )
-            schema_dict[
-                vol.Required(
-                    CONF_INCLUDE_NON_CRITICAL_PEAKS,
-                    default=self.config_entry.options.get(
-                        CONF_INCLUDE_NON_CRITICAL_PEAKS,
-                        self.config_entry.data.get(
-                            CONF_INCLUDE_NON_CRITICAL_PEAKS, DEFAULT_INCLUDE_NON_CRITICAL_PEAKS
-                        ),
-                    ),
-                )
-            ] = BooleanSelector()
 
         return self.async_show_form(
             step_id="init",

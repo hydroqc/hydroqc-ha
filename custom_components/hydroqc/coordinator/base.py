@@ -38,7 +38,6 @@ from ..const import (
     CONF_RATE,
     CONF_RATE_OPTION,
     CONF_UPDATE_INTERVAL,
-    DEFAULT_INCLUDE_NON_CRITICAL_PEAKS,
     DEFAULT_UPDATE_INTERVAL,
     DOMAIN,
 )
@@ -66,7 +65,6 @@ class HydroQcDataCoordinator(
         self._rate = entry.data[CONF_RATE]
         self._rate_option = entry.data.get(CONF_RATE_OPTION, "")
         self._preheat_duration = entry.data.get(CONF_PREHEAT_DURATION, 120)
-        self._default_include_non_critical_peaks = DEFAULT_INCLUDE_NON_CRITICAL_PEAKS
 
         # Portal mode attributes (requires login)
         self._webuser: WebUser | None = None

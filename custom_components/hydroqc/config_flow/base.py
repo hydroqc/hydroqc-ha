@@ -10,7 +10,6 @@ from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.helpers.selector import (
-    BooleanSelector,
     EntitySelector,
     EntitySelectorConfig,
     NumberSelector,
@@ -35,11 +34,9 @@ from ..const import (
     CONF_CONTRACT_NAME,
     CONF_CUSTOMER_ID,
     CONF_HISTORY_DAYS,
-    CONF_INCLUDE_NON_CRITICAL_PEAKS,
     CONF_PREHEAT_DURATION,
     CONF_RATE,
     CONF_RATE_OPTION,
-    DEFAULT_INCLUDE_NON_CRITICAL_PEAKS,
     DEFAULT_PREHEAT_DURATION,
     DOMAIN,
 )
@@ -262,9 +259,6 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             calendar_entity_id = user_input.get(CONF_CALENDAR_ENTITY_ID, "").strip()
             if calendar_entity_id:
                 self._selected_contract["calendar_entity_id"] = calendar_entity_id
-                self._selected_contract["include_non_critical_peaks"] = user_input.get(
-                    CONF_INCLUDE_NON_CRITICAL_PEAKS, DEFAULT_INCLUDE_NON_CRITICAL_PEAKS
-                )
 
             # Proceed to import history step
             return await self.async_step_import_history()
@@ -277,10 +271,6 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(CONF_CALENDAR_ENTITY_ID): EntitySelector(
                         EntitySelectorConfig(domain="calendar")
                     ),
-                    vol.Required(
-                        CONF_INCLUDE_NON_CRITICAL_PEAKS,
-                        default=DEFAULT_INCLUDE_NON_CRITICAL_PEAKS,
-                    ): BooleanSelector(),
                 }
             ),
             description_placeholders={"contract_name": self._contract_name or "Contract"},
@@ -303,9 +293,6 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 "preheat_duration", DEFAULT_PREHEAT_DURATION
             )
             calendar_entity_id = self._selected_contract.get("calendar_entity_id", "")
-            include_non_critical_peaks = self._selected_contract.get(
-                "include_non_critical_peaks", DEFAULT_INCLUDE_NON_CRITICAL_PEAKS
-            )
 
             entry_data: dict[str, Any] = {
                 CONF_AUTH_MODE: AUTH_MODE_PORTAL,
@@ -324,7 +311,6 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Add calendar configuration if provided
             if calendar_entity_id:
                 entry_data[CONF_CALENDAR_ENTITY_ID] = calendar_entity_id
-                entry_data[CONF_INCLUDE_NON_CRITICAL_PEAKS] = include_non_critical_peaks
 
             return self.async_create_entry(
                 title=f"{self._contract_name} ({self._selected_contract['rate']}{self._selected_contract['rate_option']})",
@@ -518,9 +504,6 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Add calendar configuration if provided
             if calendar_entity_id:
                 entry_data[CONF_CALENDAR_ENTITY_ID] = calendar_entity_id
-                entry_data[CONF_INCLUDE_NON_CRITICAL_PEAKS] = user_input.get(
-                    CONF_INCLUDE_NON_CRITICAL_PEAKS, DEFAULT_INCLUDE_NON_CRITICAL_PEAKS
-                )
 
             sector_label = (
                 SECTOR_MAPPING.get(self._selected_sector, self._selected_sector)
@@ -541,10 +524,6 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     vol.Optional(CONF_CALENDAR_ENTITY_ID): EntitySelector(
                         EntitySelectorConfig(domain="calendar")
                     ),
-                    vol.Required(
-                        CONF_INCLUDE_NON_CRITICAL_PEAKS,
-                        default=DEFAULT_INCLUDE_NON_CRITICAL_PEAKS,
-                    ): BooleanSelector(),
                 }
             ),
             description_placeholders={"contract_name": self._contract_name or "Contract"},

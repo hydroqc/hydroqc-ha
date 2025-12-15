@@ -16,7 +16,6 @@ from hydroqc.contract import ContractDCPC
 from .. import calendar_manager
 from ..const import (
     CONF_CALENDAR_ENTITY_ID,
-    CONF_INCLUDE_NON_CRITICAL_PEAKS,
 )
 
 if TYPE_CHECKING:
@@ -37,13 +36,6 @@ class CalendarSyncMixin:
         # Calendar configuration (for DPC/DCPC rates)
         self._calendar_entity_id = self.entry.options.get(
             CONF_CALENDAR_ENTITY_ID, self.entry.data.get(CONF_CALENDAR_ENTITY_ID)
-        )
-        self._include_non_critical_peaks = self.entry.options.get(
-            CONF_INCLUDE_NON_CRITICAL_PEAKS,
-            self.entry.data.get(
-                CONF_INCLUDE_NON_CRITICAL_PEAKS,
-                getattr(self, "_default_include_non_critical_peaks", True),
-            ),
         )
 
         # Calendar validation state (retry logic to avoid false positives)
@@ -169,7 +161,6 @@ class CalendarSyncMixin:
         # Update entry to remove calendar configuration
         new_data = dict(self.entry.data)
         new_data.pop(CONF_CALENDAR_ENTITY_ID, None)
-        new_data.pop(CONF_INCLUDE_NON_CRITICAL_PEAKS, None)
 
         self.hass.config_entries.async_update_entry(self.entry, data=new_data)
 
@@ -256,7 +247,7 @@ class CalendarSyncMixin:
                 self.contract_name,
             )
 
-            # Sync events using calendar manager
+            # Sync events using calendar manager (critical peaks only)
             new_uids = await calendar_manager.async_sync_events(
                 self.hass,
                 self._calendar_entity_id,
@@ -265,7 +256,6 @@ class CalendarSyncMixin:
                 self.contract_id,
                 self.contract_name,
                 self.rate_with_option,
-                self._include_non_critical_peaks or False,
             )
 
             # Update stored UIDs and persist to storage

@@ -17,9 +17,8 @@ if TYPE_CHECKING:
 
 _LOGGER = logging.getLogger(__name__)
 
-# French-only event templates (standardized for blueprint compatibility)
+# French-only event template (standardized for blueprint compatibility)
 TITLE_CRITICAL = "🔴 Pointe critique"
-TITLE_REGULAR = "⚪ Pointe régulière"
 
 DESCRIPTION_TEMPLATE = (
     "Réduisez votre consommation d'électricité pendant cette période.\n\n"
@@ -76,12 +75,8 @@ async def async_create_peak_event(
     # Generate stable UID
     uid = generate_event_uid(contract_id, peak_event.start_date)
 
-    # Choose title based on criticality
-    title = (
-        TITLE_CRITICAL.format(contract_name=contract_name)
-        if peak_event.is_critical
-        else TITLE_REGULAR.format(contract_name=contract_name)
-    )
+    # All events are critical peaks
+    title = TITLE_CRITICAL
 
     # Format description with French datetime strings, metadata, and UID for duplicate detection
     start_str = peak_event.start_date.strftime("%H:%M")
@@ -134,98 +129,6 @@ async def async_create_peak_event(
     except Exception as err:
         _LOGGER.error(
             "Failed to create calendar event %s: %s",
-            uid,
-            err,
-        )
-        raise
-
-
-async def async_update_peak_event(
-    hass: HomeAssistant,
-    calendar_id: str,
-    peak_event: PeakEvent,
-    contract_id: str,
-    contract_name: str,
-    rate: str,
-) -> str:
-    """Update an existing calendar event for a peak period.
-
-    Updates the event title and description to reflect the new criticality status.
-
-    Args:
-        hass: Home Assistant instance
-        calendar_id: Entity ID of the target calendar
-        peak_event: Peak event data from PeakHandler
-        contract_id: Contract identifier for UID generation
-        contract_name: Human-readable contract name for event title
-        rate: Rate code (DPC or DCPC)
-
-    Returns:
-        The UID of the updated event
-
-    Raises:
-        Exception: If calendar service call fails
-    """
-    # Generate stable UID
-    uid = generate_event_uid(contract_id, peak_event.start_date)
-
-    # Choose title based on NEW criticality
-    title = (
-        TITLE_CRITICAL.format(contract_name=contract_name)
-        if peak_event.is_critical
-        else TITLE_REGULAR.format(contract_name=contract_name)
-    )
-
-    # Format description with NEW criticality status
-    start_str = peak_event.start_date.strftime("%H:%M")
-    end_str = peak_event.end_date.strftime("%H:%M")
-    local_tz = ZoneInfo("America/Toronto")
-    created_at = datetime.now(local_tz).strftime("%Y-%m-%d %H:%M:%S %Z")
-    critical_str = "Oui" if peak_event.is_critical else "Non"
-
-    description = DESCRIPTION_TEMPLATE.format(
-        start=start_str,
-        end=end_str,
-        created_at=created_at,
-        rate=rate,
-        critical=critical_str,
-        uid=uid,
-    )
-
-    # Prepare service data for update
-    service_data = {
-        "summary": title,
-        "description": description,
-        "start_date_time": peak_event.start_date.isoformat(),
-        "end_date_time": peak_event.end_date.isoformat(),
-        "location": f"Hydro-Québec {rate}",
-        "uid": uid,  # UID is required to identify which event to update
-    }
-
-    _LOGGER.debug(
-        "Updating calendar event: %s (%s to %s, critical=%s)",
-        title,
-        start_str,
-        end_str,
-        peak_event.is_critical,
-    )
-
-    try:
-        # Call calendar.update_event service
-        await hass.services.async_call(
-            "calendar",
-            "update_event",
-            service_data=service_data,
-            target={"entity_id": calendar_id},
-            blocking=True,
-        )
-
-        _LOGGER.info("Updated calendar event %s for %s", uid, contract_name)
-        return uid
-
-    except Exception as err:
-        _LOGGER.error(
-            "Failed to update calendar event %s: %s",
             uid,
             err,
         )
@@ -306,9 +209,10 @@ async def async_sync_events(
     contract_id: str,
     contract_name: str,
     rate: str,
-    include_non_critical: bool,
 ) -> set[str]:
     """Sync peak events to a calendar entity.
+
+    Only syncs critical peak events. Non-critical peaks are not created.
 
     Args:
         hass: Home Assistant instance
@@ -318,7 +222,6 @@ async def async_sync_events(
         contract_id: Contract identifier for UID generation
         contract_name: Human-readable contract name for event titles
         rate: Rate code (DPC or DCPC)
-        include_non_critical: Whether to include non-critical peak events
 
     Returns:
         Updated set of event UIDs (including newly created ones)
@@ -326,12 +229,12 @@ async def async_sync_events(
     Raises:
         Exception: If calendar validation or event creation fails
     """
-    # Filter peaks by criticality if needed
-    filtered_peaks = peaks if include_non_critical else [p for p in peaks if p.is_critical]
+    # Filter to critical peaks only
+    critical_peaks = [p for p in peaks if p.is_critical]
 
     # Filter to future peaks only (skip past events)
     now = datetime.now(peaks[0].start_date.tzinfo if peaks else None)
-    future_peaks = [p for p in filtered_peaks if p.end_date > now]
+    future_peaks = [p for p in critical_peaks if p.end_date > now]
 
     if not future_peaks:
         _LOGGER.debug("No future peaks to sync for %s", contract_name)
@@ -359,49 +262,24 @@ async def async_sync_events(
         all_existing_uids = stored_uids
 
     _LOGGER.info(
-        "Syncing %d peak events to calendar %s (include_non_critical=%s)",
+        "Syncing %d critical peak events to calendar %s",
         len(future_peaks),
         calendar_id,
-        include_non_critical,
     )
 
-    # Create/update events sequentially with delay
+    # Create events sequentially with delay (skip duplicates)
     new_uids = set(all_existing_uids)
     events_created = 0
-    events_updated = 0
 
     for peak in future_peaks:
         uid = generate_event_uid(contract_id, peak.start_date)
 
-        # Check if event exists and if criticality changed
+        # Skip if event already exists (avoid duplicates)
         if uid in existing_events_info:
-            existing_criticality = existing_events_info[uid]
-            if existing_criticality != peak.is_critical:
-                # Criticality changed - update the event
-                _LOGGER.info(
-                    "Event %s criticality changed (%s → %s), updating",
-                    uid,
-                    "critical" if existing_criticality else "non-critical",
-                    "critical" if peak.is_critical else "non-critical",
-                )
-                try:
-                    await async_update_peak_event(
-                        hass, calendar_id, peak, contract_id, contract_name, rate
-                    )
-                    events_updated += 1
-                    new_uids.add(uid)
-                except Exception as err:
-                    _LOGGER.warning(
-                        "Failed to update event %s, will retry next sync: %s",
-                        uid,
-                        err,
-                    )
-            else:
-                # Event exists with same criticality - skip
-                _LOGGER.debug("Skipping existing event %s (no changes)", uid)
+            _LOGGER.debug("Event %s already exists, skipping", uid)
             continue
 
-        # Event doesn't exist in calendar or needs to be created
+        # Recreate if tracked but not in calendar
         if uid in stored_uids and uid not in existing_events_info:
             _LOGGER.debug("Event %s tracked but not in calendar, recreating", uid)
 
@@ -426,9 +304,8 @@ async def async_sync_events(
             # Continue with other events even if one fails
 
     _LOGGER.info(
-        "Calendar sync complete: %d created, %d updated (criticality changed), %d total",
+        "Calendar sync complete: %d created, %d total",
         events_created,
-        events_updated,
         len(new_uids),
     )
 

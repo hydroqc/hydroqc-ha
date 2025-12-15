@@ -49,24 +49,20 @@
         "title": "Calendar Integration (Optional)",
         "description": "Automatically create calendar events for critical peak periods for {contract_name}. Events will use standardized French titles for blueprint compatibility.",
         "data": {
-          "calendar_entity_id": "Calendar Entity (optional)",
-          "include_non_critical_peaks": "Include non-critical peaks"
+          "calendar_entity_id": "Calendar Entity (optional)"
         },
         "data_description": {
-          "calendar_entity_id": "Select a calendar entity to create peak events. Leave empty to skip calendar integration.",
-          "include_non_critical_peaks": "Also create events for non-critical peak periods (default schedule without API announcements)"
+          "calendar_entity_id": "Select a calendar entity to create peak events. Leave empty to skip calendar integration."
         }
       },
       "calendar_opendata": {
         "title": "Calendar Integration (Optional)",
         "description": "Automatically create calendar events for critical peak periods for {contract_name}. Events will use standardized French titles for blueprint compatibility.",
         "data": {
-          "calendar_entity_id": "Calendar Entity (optional)",
-          "include_non_critical_peaks": "Include non-critical peaks"
+          "calendar_entity_id": "Calendar Entity (optional)"
         },
         "data_description": {
-          "calendar_entity_id": "Select a calendar entity to create peak events. Leave empty to skip calendar integration.",
-          "include_non_critical_peaks": "Also create events for non-critical peak periods (default schedule without API announcements)"
+          "calendar_entity_id": "Select a calendar entity to create peak events. Leave empty to skip calendar integration."
         }
       },
       "import_history": {
@@ -122,14 +118,12 @@
         "data": {
           "update_interval": "Update Interval (seconds)",
           "preheat_duration_minutes": "Pre-heat Duration (minutes)",
-          "calendar_entity_id": "Calendar Entity (optional)",
-          "include_non_critical_peaks": "Include non-critical peaks"
+          "calendar_entity_id": "Calendar Entity (optional)"
         },
         "data_description": {
           "update_interval": "How often to fetch data from Hydro-Québec (30-600 seconds)",
           "preheat_duration_minutes": "Duration before critical peak events to trigger pre-heating (0-240 minutes)",
-          "calendar_entity_id": "Calendar entity for peak events (DPC/DCPC rates only). Leave empty to disable.",
-          "include_non_critical_peaks": "Also create events for non-critical peak periods (default schedule)"
+          "calendar_entity_id": "Calendar entity for peak events (DPC/DCPC rates only). Leave empty to disable."
         }
       }
     }

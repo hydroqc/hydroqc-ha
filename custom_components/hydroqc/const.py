@@ -16,7 +16,6 @@ CONF_PREHEAT_DURATION: Final = "preheat_duration_minutes"
 CONF_UPDATE_INTERVAL: Final = "update_interval"
 CONF_HISTORY_DAYS: Final = "history_days"
 CONF_CALENDAR_ENTITY_ID: Final = "calendar_entity_id"
-CONF_INCLUDE_NON_CRITICAL_PEAKS: Final = "include_non_critical_peaks"
 
 # Auth modes
 AUTH_MODE_PORTAL: Final = "portal"
@@ -25,7 +24,6 @@ AUTH_MODE_OPENDATA: Final = "opendata"
 # Defaults
 DEFAULT_UPDATE_INTERVAL: Final = 60  # seconds
 DEFAULT_PREHEAT_DURATION: Final = 120  # minutes
-DEFAULT_INCLUDE_NON_CRITICAL_PEAKS: Final = False
 
 # Supported rates
 RATE_D: Final = "D"

@@ -266,10 +266,6 @@ class PeakHandler:
         if not ((now.month, now.day) >= (12, 1) or (now.month, now.day) <= (3, 31)):
             return "off_season"
 
-        # In season but no events, state is normal
-        if not self._events:
-            return "normal"
-
         # Check if currently in a peak
         current = self.current_peak
         if current:
@@ -283,6 +279,7 @@ class PeakHandler:
                     if anchor.start_date <= now < anchor.end_date:
                         return "critical_anchor" if anchor.is_critical else "anchor"
 
+        # In season but no events, state is normal
         return "normal"
 
     @property

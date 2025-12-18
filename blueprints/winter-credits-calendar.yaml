@@ -145,14 +145,26 @@ blueprint:
       input:
         regular_peak_start_action:
           name: "[Régulière] Début pointe"
-          description: 'Pointes RÉGULIÈRES - début pointe (6h/16h).'
-          default: []
+          description: 'Pointes RÉGULIÈRES - début pointe (6h/16h). Notification désactivée par défaut - retirez le mode `enabled: false` pour activer.'
+          default:
+            - enabled: false
+              parallel:
+                - action: persistent_notification.create
+                  data:
+                    title: "⚪ Pointe régulière Crédits hivernaux"
+                    message: "Début de la pointe régulière. Réduction optionnelle de consommation."
           selector:
             action: {}
         regular_peak_end_action:
           name: "[Régulière] Fin pointe"
-          description: 'Pointes RÉGULIÈRES - fin pointe (10h/20h).'
-          default: []
+          description: 'Pointes RÉGULIÈRES - fin pointe (10h/20h). Notification désactivée par défaut - retirez le mode `enabled: false` pour activer.'
+          default:
+            - enabled: false
+              parallel:
+                - action: persistent_notification.create
+                  data:
+                    title: "✅ Fin pointe régulière Crédits hivernaux"
+                    message: "Fin de la pointe régulière."
           selector:
             action: {}
     
@@ -165,14 +177,26 @@ blueprint:
       input:
         critical_anchor_start_morning_action:
           name: "[Critique] Début ancrage matin"
-          description: 'Pointes CRITIQUES - 5h avant pointe matin (1h).'
-          default: []
+          description: 'Pointes CRITIQUES - 5h avant pointe matin (1h). Notification désactivée par défaut - retirez le mode `enabled: false` pour activer.'
+          default:
+            - enabled: false
+              parallel:
+                - action: persistent_notification.create
+                  data:
+                    title: "🔴 Ancrage critique matin Crédits hivernaux"
+                    message: "Début de l'ancrage critique du matin. Maintenez votre consommation normale pour établir une référence."
           selector:
             action: {}
         critical_anchor_start_evening_action:
           name: "[Critique] Début ancrage soir"
-          description: 'Pointes CRITIQUES - 4h avant pointe soir (12h).'
-          default: []
+          description: 'Pointes CRITIQUES - 4h avant pointe soir (12h). Notification désactivée par défaut - retirez le mode `enabled: false` pour activer.'
+          default:
+            - enabled: false
+              parallel:
+                - action: persistent_notification.create
+                  data:
+                    title: "🔴 Ancrage critique soir Crédits hivernaux"
+                    message: "Début de l'ancrage critique du soir. Maintenez votre consommation normale pour établir une référence."
           selector:
             action: {}
         critical_anchor_end_morning_action:
@@ -181,7 +205,15 @@ blueprint:
             Pointes CRITIQUES - 2h avant pointe matin (4h). Fin ancrage.
             
             **⚠️ Attention** : Si votre délai de pré-chauffage est <= -02:00:00, il y aura chevauchement avec cette action. La fin d'ancrage se déclenche à 4h pour une pointe à 6h.
-          default: []
+            
+            Notification désactivée par défaut - retirez le mode `enabled: false` pour activer.
+          default:
+            - enabled: false
+              parallel:
+                - action: persistent_notification.create
+                  data:
+                    title: "✅ Fin ancrage critique matin Crédits hivernaux"
+                    message: "Fin de l'ancrage critique du matin. Préparez-vous pour le pré-chauffage."
           selector:
             action: {}
         critical_anchor_end_evening_action:
@@ -190,34 +222,66 @@ blueprint:
             Pointes CRITIQUES - 2h avant pointe soir (14h). Fin ancrage.
             
             **⚠️ Attention** : Si votre délai de pré-chauffage est <= -02:00:00, il y aura chevauchement avec cette action. La fin d'ancrage se déclenche à 14h pour une pointe à 16h.
-          default: []
+            
+            Notification désactivée par défaut - retirez le mode `enabled: false` pour activer.
+          default:
+            - enabled: false
+              parallel:
+                - action: persistent_notification.create
+                  data:
+                    title: "✅ Fin ancrage critique soir Crédits hivernaux"
+                    message: "Fin de l'ancrage critique du soir. Préparez-vous pour le pré-chauffage."
           selector:
             action: {}
         regular_anchor_start_morning_action:
           name: "[Régulière] Début ancrage matin"
-          description: 'Pointes RÉGULIÈRES - 5h avant pointe matin (1h).'
-          default: []
+          description: 'Pointes RÉGULIÈRES - 5h avant pointe matin (1h). Notification désactivée par défaut - retirez le mode `enabled: false` pour activer.'
+          default:
+            - enabled: false
+              parallel:
+                - action: persistent_notification.create
+                  data:
+                    title: "⚙️ Ancrage matin Crédits hivernaux"
+                    message: "Début de l'ancrage du matin. Maintenez votre consommation normale."
           selector:
             action: {}
         regular_anchor_start_evening_action:
           name: "[Régulière] Début ancrage soir"
-          description: 'Pointes RÉGULIÈRES - 4h avant pointe soir (12h).'
-          default: []
+          description: 'Pointes RÉGULIÈRES - 4h avant pointe soir (12h). Notification désactivée par défaut - retirez le mode `enabled: false` pour activer.'
+          default:
+            - enabled: false
+              parallel:
+                - action: persistent_notification.create
+                  data:
+                    title: "⚙️ Ancrage soir Crédits hivernaux"
+                    message: "Début de l'ancrage du soir. Maintenez votre consommation normale."
           selector:
             action: {}
         regular_anchor_end_morning_action:
           name: "[Régulière] Fin ancrage matin"
-          description: 'Pointes RÉGULIÈRES - 2h avant pointe matin (4h).'
-          default: []
+          description: 'Pointes RÉGULIÈRES - 2h avant pointe matin (4h). Notification désactivée par défaut - retirez le mode `enabled: false` pour activer.'
+          default:
+            - enabled: false
+              parallel:
+                - action: persistent_notification.create
+                  data:
+                    title: "✅ Fin ancrage matin Crédits hivernaux"
+                    message: "Fin de l'ancrage du matin."
           selector:
             action: {}
         regular_anchor_end_evening_action:
           name: "[Régulière] Fin ancrage soir"
-          description: 'Pointes RÉGULIÈRES - 2h avant pointe soir (14h).'
-          default: []
+          description: 'Pointes RÉGULIÈRES - 2h avant pointe soir (14h). Notification désactivée par défaut - retirez le mode `enabled: false` pour activer.'
+          default:
+            - enabled: false
+              parallel:
+                - action: persistent_notification.create
+                  data:
+                    title: "✅ Fin ancrage soir Crédits hivernaux"
+                    message: "Fin de l'ancrage du soir."
           selector:
             action: {}
-source_url: https://github.com/hydroqc/hydroqc-ha/blob/main/blueprints/winter-credits-calendar.yaml
+  source_url: https://github.com/hydroqc/hydroqc-ha/blob/main/blueprints/winter-credits-calendar.yaml
 mode: single
 max_exceeded: silent
 trigger:

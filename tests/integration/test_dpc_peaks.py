@@ -82,8 +82,8 @@ class TestDPCPeakBehavior:
         assert dpc_handler.today_morning_peak is None
         assert dpc_handler.today_evening_peak is None
         assert dpc_handler.next_peak is None
-        # No events = "off_season" (matches hydroqc2mqtt behavior)
-        assert dpc_handler.current_state == "off_season"
+        # No events = "normal" (matches hydroqc2mqtt behavior)
+        assert dpc_handler.current_state == "normal"
 
     # ========================================================================
     # BEGINNING OF WINTER - WITH CRITICAL PEAKS

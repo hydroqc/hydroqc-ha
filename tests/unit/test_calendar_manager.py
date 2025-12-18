@@ -127,10 +127,10 @@ async def test_create_peak_event_critical(
 
 
 @pytest.mark.asyncio
-async def test_create_peak_event_regular(
+async def test_create_peak_event_non_critical_still_uses_critical_title(
     mock_hass: MagicMock, sample_regular_peak: PeakEvent
 ) -> None:
-    """Test creating a regular (non-critical) peak event."""
+    """Test that non-critical peaks still use critical title (all events are critical now)."""
     calendar_id = "calendar.test_calendar"
     contract_id = "contract_123"
     contract_name = "Cottage"
@@ -142,7 +142,7 @@ async def test_create_peak_event_regular(
     call_args = mock_hass.services.async_call.call_args
     service_data = call_args.kwargs["service_data"]
 
-    assert service_data["summary"] == "⚪ Pointe régulière"
+    assert service_data["summary"] == "🔴 Pointe critique"
     assert "16:00" in service_data["description"]
     assert "20:00" in service_data["description"]
     assert uid in service_data["description"]  # UID is in description
@@ -195,19 +195,18 @@ async def test_sync_events_creates_future_events_only(
         "contract_123",
         "Home",
         "DCPC",
-        include_non_critical=True,
     )
 
-    # Should create 2 events (future ones)
-    assert mock_hass.services.async_call.call_count == 2
-    assert len(new_uids) == 2
+    # Should create only 1 event (future critical one, non-critical and past filtered)
+    assert mock_hass.services.async_call.call_count == 1
+    assert len(new_uids) == 1
 
 
 @pytest.mark.asyncio
 async def test_sync_events_filters_by_criticality(
     mock_hass: MagicMock, sample_critical_peak: PeakEvent, sample_regular_peak: PeakEvent
 ) -> None:
-    """Test that sync filters by criticality when include_non_critical=False."""
+    """Test that sync only creates critical peaks (non-critical peaks are filtered out)."""
     peaks = [sample_critical_peak, sample_regular_peak]
 
     # Only critical peaks
@@ -219,10 +218,9 @@ async def test_sync_events_filters_by_criticality(
         "contract_123",
         "Home",
         "DCPC",
-        include_non_critical=False,
     )
 
-    # Should create 1 event (critical one)
+    # Should create only 1 event (critical one, non-critical filtered out)
     assert mock_hass.services.async_call.call_count == 1
     assert len(new_uids) == 1
 
@@ -259,7 +257,6 @@ async def test_sync_events_skips_existing(
         "contract_123",
         "Home",
         "DCPC",
-        include_non_critical=True,
     )
 
     # Should not create any events (already exists with same criticality)
@@ -283,11 +280,10 @@ async def test_sync_events_sequential_with_delay(
             "contract_123",
             "Home",
             "DCPC",
-            include_non_critical=True,
         )
 
-        # Should sleep once (between two events, not after the last)
-        mock_sleep.assert_called_once_with(0.1)
+        # Should not sleep (only one critical event created)
+        mock_sleep.assert_not_called()
 
 
 @pytest.mark.asyncio
@@ -311,13 +307,12 @@ async def test_sync_events_continues_on_individual_failure(
         "contract_123",
         "Home",
         "DCPC",
-        include_non_critical=True,
     )
 
-    # Should attempt to create both events
-    assert mock_hass.services.async_call.call_count == 2
-    # Should only track the successful one
-    assert len(new_uids) == 1
+    # Should attempt to create only 1 event (critical one)
+    assert mock_hass.services.async_call.call_count == 1
+    # Non-critical peaks are filtered, so no attempts for them
+    assert len(new_uids) == 0  # The one attempt failed
 
 
 @pytest.mark.asyncio
@@ -331,7 +326,6 @@ async def test_sync_events_empty_list(mock_hass: MagicMock) -> None:
         "contract_123",
         "Home",
         "DCPC",
-        include_non_critical=True,
     )
 
     mock_hass.services.async_call.assert_not_called()
@@ -342,7 +336,7 @@ async def test_sync_events_empty_list(mock_hass: MagicMock) -> None:
 async def test_sync_events_includes_all_when_flag_true(
     mock_hass: MagicMock, sample_critical_peak: PeakEvent, sample_regular_peak: PeakEvent
 ) -> None:
-    """Test that all events are included when include_non_critical=True."""
+    """Test that only critical events are created (non-critical events are always filtered)."""
     peaks = [sample_critical_peak, sample_regular_peak]
 
     new_uids = await calendar_manager.async_sync_events(
@@ -353,21 +347,13 @@ async def test_sync_events_includes_all_when_flag_true(
         "contract_123",
         "Home",
         "DCPC",
-        include_non_critical=True,
     )
 
-    # Should create both events
-    assert mock_hass.services.async_call.call_count == 2
-    assert len(new_uids) == 2
+    # Should create only 1 event (critical only, non-critical filtered)
+    assert mock_hass.services.async_call.call_count == 1
+    assert len(new_uids) == 1
 
 
-def test_event_title_templates() -> None:
-    """Test French-only event title templates."""
-    critical_title = calendar_manager.TITLE_CRITICAL
-    regular_title = calendar_manager.TITLE_REGULAR
-
-    assert critical_title == "🔴 Pointe critique"
-    assert regular_title == "⚪ Pointe régulière"
 
 
 def test_event_description_template() -> None:
@@ -528,8 +514,7 @@ async def test_sync_events_dpc_only_critical(
         set(),
         "contract_dpc",
         "Home",
-        "DPC",
-        include_non_critical=False,  # Default setting
+        "DPC",  # Default setting
     )
 
     # Should create 1 event (critical DPC peak)
@@ -590,7 +575,6 @@ async def test_sync_events_merges_stored_and_calendar_uids(
         "contract_123",
         "Home",
         "DCPC",
-        include_non_critical=True,
     )
 
     # Should not create any events (both already exist - one in storage, one in calendar)
@@ -632,7 +616,6 @@ async def test_sync_events_different_contracts_same_calendar(
         "contract_home",
         "Home",
         "DCPC",
-        include_non_critical=True,
     )
 
     # Second contract syncs (same calendar, different contract ID)
@@ -644,7 +627,6 @@ async def test_sync_events_different_contracts_same_calendar(
         "contract_cottage",
         "Cottage",
         "DCPC",
-        include_non_critical=True,
     )
 
     # Each contract should create its own event (different UIDs due to different contract IDs)
@@ -655,74 +637,6 @@ async def test_sync_events_different_contracts_same_calendar(
     assert list(uids1)[0] != list(uids2)[0]
 
 
-@pytest.mark.asyncio
-async def test_sync_events_updates_criticality_change(
-    mock_hass: MagicMock,
-) -> None:
-    """Test that events are updated when criticality changes."""
-    from homeassistant.components.calendar import CalendarEntity
-
-    # Create a peak that will change from non-critical to critical
-    start = datetime.now(EST) + timedelta(days=1)
-    start = start.replace(hour=6, minute=0, second=0, microsecond=0)
-    end = start + timedelta(hours=4)
-
-    peak_data = {
-        "offre": "CPC-D",
-        "datedebut": start.isoformat(),
-        "datefin": end.isoformat(),
-        "plagehoraire": "AM",
-        "duree": "PT04H00MS",
-        "secteurclient": "Résidentiel",
-    }
-
-    # First sync: non-critical peak
-    non_critical_peak = PeakEvent(peak_data, preheat_duration=120, force_critical=False)
-    uid = calendar_manager.generate_event_uid("contract_123", non_critical_peak.start_date)
-
-    # Mock calendar entity with existing non-critical event
-    mock_event = MagicMock()
-    mock_event.description = f"Test event\nCritique: Non\nID: {uid}\nOther data"
-
-    mock_calendar_entity = MagicMock(spec=CalendarEntity)
-    mock_calendar_entity.entity_id = "calendar.test"
-    mock_calendar_entity.async_get_events = AsyncMock(return_value=[mock_event])
-
-    mock_calendar_component = MagicMock()
-    mock_calendar_component.entities = [mock_calendar_entity]
-    mock_hass.data = {"calendar": mock_calendar_component}
-
-    # Second sync: same peak but now critical
-    critical_peak = PeakEvent(peak_data, preheat_duration=120, force_critical=True)
-
-    # Track which service was called
-    calls = []
-
-    def track_call(domain, service, **kwargs):
-        calls.append((domain, service))
-        return AsyncMock()
-
-    mock_hass.services.async_call = AsyncMock(side_effect=track_call)
-
-    # Sync with the now-critical peak
-    stored_uids = {uid}  # Event is already tracked
-    await calendar_manager.async_sync_events(
-        mock_hass,
-        "calendar.test",
-        [critical_peak],
-        stored_uids,
-        "contract_123",
-        "Home",
-        "DCPC",
-        include_non_critical=True,
-    )
-
-    # Should have called update_event (not create_event)
-    assert len(calls) == 1
-    assert calls[0] == ("calendar", "update_event")
-
-    # Verify update was called with correct data
-    call_kwargs = mock_hass.services.async_call.call_args
-    assert call_kwargs[1]["service_data"]["uid"] == uid
-    assert "🔴 Pointe critique" in call_kwargs[1]["service_data"]["summary"]
-    assert "Critique: Oui" in call_kwargs[1]["service_data"]["description"]
+# Test removed: test_sync_events_updates_criticality_change
+# This test is no longer relevant after removing non-critical peak support.
+# The calendar now only creates critical peaks, and update event functionality was removed.

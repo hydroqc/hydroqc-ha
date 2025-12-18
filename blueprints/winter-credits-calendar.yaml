@@ -177,13 +177,19 @@ blueprint:
             action: {}
         critical_anchor_end_morning_action:
           name: "[Critique] Fin ancrage matin"
-          description: 'Pointes CRITIQUES - 2h avant pointe matin (4h).'
+          description: |
+            Pointes CRITIQUES - 2h avant pointe matin (4h). Fin ancrage.
+            
+            **⚠️ Attention** : Si votre délai de pré-chauffage est <= -02:00:00, il y aura chevauchement avec cette action. La fin d'ancrage se déclenche à 4h pour une pointe à 6h.
           default: []
           selector:
             action: {}
         critical_anchor_end_evening_action:
           name: "[Critique] Fin ancrage soir"
-          description: 'Pointes CRITIQUES - 2h avant pointe soir (14h).'
+          description: |
+            Pointes CRITIQUES - 2h avant pointe soir (14h). Fin ancrage.
+            
+            **⚠️ Attention** : Si votre délai de pré-chauffage est <= -02:00:00, il y aura chevauchement avec cette action. La fin d'ancrage se déclenche à 14h pour une pointe à 16h.
           default: []
           selector:
             action: {}

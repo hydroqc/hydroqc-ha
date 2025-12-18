@@ -5,6 +5,12 @@
 ### Modifié
 
 ### Corrigé
+- Correction de l'état `current_state` pour DPC - retourne maintenant "normal" au lieu de "off_season" lorsqu'il n'y a pas d'événements pendant la saison hivernale (PR #70, merci @lit-af)
+- Migration de `pytz` vers `zoneinfo` (bibliothèque standard) pour la gestion des fuseaux horaires (PR #66, merci @jf-navica)
+- Correction du calcul de la somme cumulative pour éviter les réinitialisations lors de lacunes dans les données (PR #66, merci @jf-navica)
+  - La fonction `get_base_sum()` regarde maintenant jusqu'à 30 jours en arrière pour trouver la dernière somme connue
+  - Base la continuité sur le premier point de données réel au lieu de la date de début demandée
+- Blocage des valeurs de consommation négatives lors de l'importation CSV (PR #66, merci @jf-navica)
 
 ### Retiré
 

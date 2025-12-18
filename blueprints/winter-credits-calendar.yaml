@@ -1,9 +1,16 @@
 blueprint:
   name: Hydro-Québec Crédits Hivernaux (Événements de calendrier)
   description: |
-    # Gestion des événements de crédit hivernal via calendrier.
+    # Gestion automatisée des Crédits Hivernaux (D+CPC).
 
-    Ce blueprint utilise les événements de calendrier créés automatiquement par l'intégration Hydro-Québec pour déclencher vos automatisations lors des périodes de pointe critique et non-critique (si configuré).
+    Ce blueprint déclenche des automatisations à heures fixes pour les périodes de pointe et d'ancrage, puis vérifie le calendrier Hydro-Québec pour déterminer si c'est une pointe critique ou régulière et exécute les actions appropriées.
+
+    **Fonctionnement** : 
+    - Déclencheurs à heures fixes pour ancrage et pointes (01h, 04h, 06h, 10h, 12h, 14h, 16h, 20h)
+    - Déclencheurs calendrier avec offset pour pré-chauffage (par défaut -01:45:00 avant pointes critiques)
+    - Vérifie automatiquement si un événement critique existe dans le calendrier
+    - Exécute les actions critiques (si événement calendrier) ou régulières (horaire quotidien)
+    - Le pré-chauffage se déclenche automatiquement via les événements calendrier (pointes critiques uniquement)
 
     **Prérequis** : Vous devez avoir configuré un calendrier dans les options de votre intégration Hydro-Québec D+CPC (Crédits Hivernaux).
 
@@ -11,54 +18,43 @@ blueprint:
 
     ### Sélection du calendrier
 
-    Sélectionnez le calendrier que vous avez configuré dans l'intégration Hydro-Québec pour recevoir les événements de pointe.
+    Sélectionnez le calendrier configuré dans l'intégration Hydro-Québec. Le calendrier contient uniquement les pointes **critiques** annoncées par Hydro-Québec.
 
-    ### Période de pré-chauffage
+    ### Pré-chauffage (pointes critiques seulement)
 
-    Définissez combien de temps avant le début de chaque pointe (matin et soir) vous souhaitez commencer le pré-chauffage de votre résidence. Vous pouvez configurer des délais différents pour le matin et le soir selon vos besoins de chauffage.
+    Configurez le délai avant les pointes critiques pour commencer le pré-chauffage. Utilise les événements du calendrier avec un offset.
+    - Par défaut : -01:45:00 (1h45 avant le début de la pointe critique)
+    - Le pré-chauffage se déclenche automatiquement UNIQUEMENT pour les événements critiques dans le calendrier
 
-    ### Périodes d'ancrage
-    Les périodes d'ancrage sont des périodes de notification avant les pointes :
-    - Pointes du matin (AM, 6h-10h) : Ancrage débute 5h avant, se termine 2h avant la pointe
-    - Pointes du soir (PM, 16h-20h) : Ancrage débute 4h avant, se termine 2h avant la pointe
+    ### Horaire quotidien (pointes régulières)
 
-    Ce blueprint utilise des déclencheurs multiples pour capturer toutes les combinaisons possibles. Les valeurs par défaut couvrent les deux cas (matin et soir), déclenchant aux moments appropriés selon l'événement de calendrier.
+    Les pointes régulières suivent un horaire fixe pendant la saison hivernale (1er décembre au 31 mars) :
+    - **Ancrage matin** : 01h-04h (établit consommation de référence)
+    - **Pointe matin** : 06h-10h
+    - **Ancrage soir** : 12h-14h (établit consommation de référence)
+    - **Pointe soir** : 16h-20h
+
+    ### Pointes critiques
+
+    Hydro-Québec annonce les pointes critiques vers midi la veille. Ces événements apparaissent dans votre calendrier et remplacent les actions régulières pour cette journée.
 
     ### Actions
 
-    Définition des actions à effectuer dans Home-Assistant lors de chaque début et fin de périodes.
+    Définissez vos actions pour chaque période. Le blueprint choisit automatiquement entre actions critiques et régulières selon la présence d'un événement calendrier.
 
-    **Important** : Pour éviter qu'une erreur dans une action empêche l'exécution des actions suivantes, il est recommandé d'utiliser des appels d'actions en parallèle. Exemple : au lieu d'une séquence simple, utilisez `parallel:` pour grouper vos actions.
+    **Important** : Pour éviter qu'une erreur bloque l'exécution, utilisez des actions en parallèle (`parallel:`).
 
-    **Workflows complexes** : Si vous avez besoin de logiques conditionnelles complexes ou de nombreuses étapes, il est recommandé d'utiliser ce blueprint pour déclencher des automatisations séparées plutôt que d'inclure toute la logique ici. Cela facilite la maintenance et le débogage.
-
-    **Note** : Ce blueprint différencie automatiquement les pointes critiques et non-critiques selon les métadonnées de l'événement. Vous pouvez définir des actions différentes pour chaque type de pointe.
-
-
-    ### Métadonnées disponibles
-
-    Les événements de calendrier incluent des métadonnées accessibles dans vos actions :
-
-    - trigger.calendar_event.summary : Titre (🔴 Pointe critique / ⚪ Pointe régulière)
-  
-    - trigger.calendar_event.description : Contient Critique: Oui/Non, Tarif: DCPC, etc.
-
-    **Le blueprint détecte automatiquement** si une pointe est critique en vérifiant
-    la présence de "Critique: Oui" dans la description de l''événement.
+    **Pré-chauffage** : Pour pré-chauffer avant les pointes critiques, ajoutez la logique dans l'action "début pointe critique" ou créez une automatisation séparée.
 
     ### Création manuelle d'événements
 
-    Si l'intégration ne crée pas automatiquement les événements (API indisponible, problème de configuration), vous pouvez créer manuellement des événements dans votre calendrier :
+    Si l'intégration ne crée pas automatiquement les événements, vous pouvez les créer manuellement :
 
-    1. Créez un événement aux heures de pointe (6h-10h ou 16h-20h)
-    2. Titre: "🔴 Pointe critique" ou "⚪ Pointe régulière"
-    3. Description:
-    ```
-    Tarif: DCPC
-    Critique: Oui (ou Non)
-    ```
+    1. Créez un événement le jour de la pointe critique (6h-10h ou 16h-20h)
+    2. Titre: contient "pointe" (ex: "🔴 Pointe critique")
+    3. Description (optionnel): `Tarif: DCPC` et `Critique: Oui`
  
-    Vous trouverez plus de détails sur les logiques applicables pour les crédits hivernaux dans la [documentation Hydro-Québec](https://hydroqc.ca/fr/docs/tarification-dynamique/).
+    Plus de détails sur les [crédits hivernaux](https://hydroqc.ca/fr/docs/tarification-dynamique/).
   domain: automation
   input:
     hydroqc_calendar:
@@ -68,33 +64,28 @@ blueprint:
         entity:
           domain: calendar
           multiple: false
+    
     preheat_offset_morning:
       name: Délai de pré-chauffage (matin)
-      description: "Temps avant le début de la pointe du matin (6h) pour commencer le pré-chauffage (format -HH:MM:SS, ex: -02:00:00 pour 2 heures avant, -01:30:00 pour 1h30 avant)"
+      description: "Temps avant le début de la pointe du matin pour commencer le pré-chauffage (format -HH:MM:SS, ex: -02:00:00 pour 2 heures avant, -01:45:00 pour 1h45 avant)"
       default: "-01:45:00"
       selector:
         text:
           type: text
+    
     preheat_offset_evening:
       name: Délai de pré-chauffage (soir)
-      description: "Temps avant le début de la pointe du soir (16h) pour commencer le pré-chauffage (format -HH:MM:SS, ex: -02:00:00 pour 2 heures avant, -01:30:00 pour 1h30 avant)"
+      description: "Temps avant le début de la pointe du soir pour commencer le pré-chauffage (format -HH:MM:SS, ex: -02:00:00 pour 2 heures avant, -01:45:00 pour 1h45 avant)"
       default: "-01:45:00"
-      selector:
-        text:
-          type: text
-    critical_peak_offset:
-      name: Délai avant début pointe critique
-      description: "Temps avant le début officiel de la pointe pour déclencher les actions (permet aux appareils de se stabiliser avant la pointe). Format -HH:MM:SS, ex: -00:01:00 pour 1 minute avant"
-      default: "-00:01:00"
       selector:
         text:
           type: text
     
     # ===== ACTIONS ESSENTIELLES =====
     # Actions pour les pointes CRITIQUES (prioritaires)
-    critical_pre_heat_start_morning_action:
+    critical_preheat_morning_action:
       name: "[Critique] Action pré-chauffage (matin)"
-      description: 'Actions pour pointes CRITIQUES du matin - avant pointe. Ex: Maximisez chauffage pour atteindre température élevée.'
+      description: 'Actions pour pointes CRITIQUES - pré-chauffage avant pointe matin. Ex: Maximisez chauffage pour atteindre température élevée. Ne se déclenche QUE si un événement critique existe dans le calendrier pour aujourd''hui.'
       default:
         - parallel:
             - action: persistent_notification.create
@@ -103,9 +94,10 @@ blueprint:
                 message: "Début du pré-chauffage avant pointe critique du matin. Augmentez le chauffage maintenant."
       selector:
         action: {}
-    critical_pre_heat_start_evening_action:
+    
+    critical_preheat_evening_action:
       name: "[Critique] Action pré-chauffage (soir)"
-      description: 'Actions pour pointes CRITIQUES du soir - avant pointe. Ex: Maximisez chauffage pour atteindre température élevée.'
+      description: 'Actions pour pointes CRITIQUES - pré-chauffage avant pointe soir. Ex: Maximisez chauffage pour atteindre température élevée. Ne se déclenche QUE si un événement critique existe dans le calendrier pour aujourd''hui.'
       default:
         - parallel:
             - action: persistent_notification.create
@@ -114,9 +106,10 @@ blueprint:
                 message: "Début du pré-chauffage avant pointe critique du soir. Augmentez le chauffage maintenant."
       selector:
         action: {}
+    
     critical_peak_start_action:
       name: "[Critique] Action début pointe"
-      description: 'Actions pour pointes CRITIQUES - début pointe (6h/16h). Ex: Réduction agressive - fermez chauffe-eau, minimisez CVAC.'
+      description: 'Actions pour pointes CRITIQUES - début pointe (6h/16h). Ex: Réduction agressive - fermez chauffe-eau, minimisez CVAC. Le pré-chauffage est géré séparément via les actions de pré-chauffage configurables.'
       default:
         - parallel:
             - action: persistent_notification.create
@@ -146,19 +139,19 @@ blueprint:
     # ===== ACTIONS OPTIONNELLES =====
     # Actions pour les pointes RÉGULIÈRES (non-critiques)
     regular_peak_actions:
-      name: "⚪ Actions pointes régulières (optionnel)"
-      description: "Actions pour les pointes non-critiques. Ces pointes font partie de l'horaire régulier (tous les jours en hiver) et ne sont généralement pas annoncées par Hydro-Québec."
+      name: "⚪ Actions pointes régulières"
+      description: "Actions exécutées lors des pointes quotidiennes RÉGULIÈRES (6h-10h et 16h-20h) quand AUCUN événement critique n'est présent dans le calendrier. Ces actions s'exécutent automatiquement selon l'horaire fixe hivernal."
       collapsed: true
       input:
         regular_peak_start_action:
           name: "[Régulière] Début pointe"
-          description: 'Pointes RÉGULIÈRES - début pointe (6h/16h). Ex: Réduction légère - baisse temp, reportez charges non-essentielles.'
+          description: 'Pointes RÉGULIÈRES - début pointe (6h/16h).'
           default: []
           selector:
             action: {}
         regular_peak_end_action:
           name: "[Régulière] Fin pointe"
-          description: 'Pointes RÉGULIÈRES - fin pointe (10h/20h). Ex: Rétablissez réglages normaux.'
+          description: 'Pointes RÉGULIÈRES - fin pointe (10h/20h).'
           default: []
           selector:
             action: {}
@@ -172,243 +165,284 @@ blueprint:
       input:
         critical_anchor_start_morning_action:
           name: "[Critique] Début ancrage matin"
-          description: 'Pointes CRITIQUES - 5h avant pointe matin (1h). Maintenez consommation normale.'
+          description: 'Pointes CRITIQUES - 5h avant pointe matin (1h).'
           default: []
           selector:
             action: {}
         critical_anchor_start_evening_action:
           name: "[Critique] Début ancrage soir"
-          description: 'Pointes CRITIQUES - 4h avant pointe soir (12h). Maintenez consommation normale.'
+          description: 'Pointes CRITIQUES - 4h avant pointe soir (12h).'
           default: []
           selector:
             action: {}
         critical_anchor_end_morning_action:
           name: "[Critique] Fin ancrage matin"
-          description: |
-            Pointes CRITIQUES - 2h avant pointe matin (4h). Fin ancrage.
-            
-            **⚠️ Attention** : Si votre délai de pré-chauffage est <= -02:00:00, il y aura chevauchement avec cette action. La fin d'ancrage se déclenche à 4h pour une pointe à 6h.
+          description: 'Pointes CRITIQUES - 2h avant pointe matin (4h).'
           default: []
           selector:
             action: {}
         critical_anchor_end_evening_action:
           name: "[Critique] Fin ancrage soir"
-          description: |
-            Pointes CRITIQUES - 2h avant pointe soir (14h). Fin ancrage.
-            
-            **⚠️ Attention** : Si votre délai de pré-chauffage est <= -02:00:00, il y aura chevauchement avec cette action. La fin d'ancrage se déclenche à 14h pour une pointe à 16h.
+          description: 'Pointes CRITIQUES - 2h avant pointe soir (14h).'
           default: []
           selector:
             action: {}
         regular_anchor_start_morning_action:
           name: "[Régulière] Début ancrage matin"
-          description: 'Pointes RÉGULIÈRES - 5h avant pointe matin (1h). Maintenez normal.'
+          description: 'Pointes RÉGULIÈRES - 5h avant pointe matin (1h).'
           default: []
           selector:
             action: {}
         regular_anchor_start_evening_action:
           name: "[Régulière] Début ancrage soir"
-          description: 'Pointes RÉGULIÈRES - 4h avant pointe soir (12h). Maintenez normal.'
+          description: 'Pointes RÉGULIÈRES - 4h avant pointe soir (12h).'
           default: []
           selector:
             action: {}
         regular_anchor_end_morning_action:
           name: "[Régulière] Fin ancrage matin"
-          description: 'Pointes RÉGULIÈRES - 2h avant pointe matin (4h). Fin ancrage.'
+          description: 'Pointes RÉGULIÈRES - 2h avant pointe matin (4h).'
           default: []
           selector:
             action: {}
         regular_anchor_end_evening_action:
           name: "[Régulière] Fin ancrage soir"
-          description: 'Pointes RÉGULIÈRES - 2h avant pointe soir (14h). Fin ancrage.'
+          description: 'Pointes RÉGULIÈRES - 2h avant pointe soir (14h).'
           default: []
           selector:
             action: {}
-  source_url: https://github.com/hydroqc/hydroqc-ha/blob/main/blueprints/winter-credits-calendar.yaml
-mode: parallel
+source_url: https://github.com/hydroqc/hydroqc-ha/blob/main/blueprints/winter-credits-calendar.yaml
+mode: single
+max_exceeded: silent
 trigger:
-  # Morning anchor start: 5 hours before (for AM peaks, e.g., 1h for 6h peak)
-  - platform: calendar
-    entity_id: !input hydroqc_calendar
-    event: start
-    offset: "-5:00:00"
-    id: anchor_start_morning_trigger
-  # Evening anchor start: 4 hours before (for PM peaks, e.g., 12h for 16h peak)
-  - platform: calendar
-    entity_id: !input hydroqc_calendar
-    event: start
-    offset: "-4:00:00"
-    id: anchor_start_evening_trigger
-  # Morning anchor end: 2 hours before AM peak (e.g., 4h for 6h peak)
-  - platform: calendar
-    entity_id: !input hydroqc_calendar
-    event: start
-    offset: "-2:00:00"
-    id: anchor_end_morning_trigger
-  # Evening anchor end: 2 hours before PM peak (e.g., 14h for 16h peak)
-  - platform: calendar
-    entity_id: !input hydroqc_calendar
-    event: start
-    offset: "-2:00:00"
-    id: anchor_end_evening_trigger
-  # Pre-heat start morning: configurable offset before morning peak
+  # === CALENDAR TRIGGERS (Critical peaks only - with offsets) ===
+  # Morning preheat (configurable offset before morning peak)
   - platform: calendar
     entity_id: !input hydroqc_calendar
     event: start
     offset: !input preheat_offset_morning
-    id: pre_heat_morning_trigger
-  # Pre-heat start evening: configurable offset before evening peak
+    id: preheat_morning
+  # Evening preheat (configurable offset before evening peak)
   - platform: calendar
     entity_id: !input hydroqc_calendar
     event: start
     offset: !input preheat_offset_evening
-    id: pre_heat_evening_trigger
-  # Critical peak start: configurable offset before official peak start (default 1min before)
-  - platform: calendar
-    entity_id: !input hydroqc_calendar
-    event: start
-    offset: !input critical_peak_offset
-    id: critical_peak_start_trigger
-  # Regular peak start (no offset)
-  - platform: calendar
-    entity_id: !input hydroqc_calendar
-    event: start
-    id: regular_peak_start_trigger
-  # Peak end
-  - platform: calendar
-    entity_id: !input hydroqc_calendar
-    event: end
-    id: peak_end_trigger
-# Add condition to filter only peak events (title contains "pointe") and DCPC rate
+    id: preheat_evening
+  
+  # === TIME TRIGGERS (Fixed daily schedule) ===
+  # Morning anchor start (1h)
+  - platform: time
+    at: "01:00:00"
+    id: anchor_start_morning
+  # Morning anchor end (4h)
+  - platform: time
+    at: "04:00:00"
+    id: anchor_end_morning
+  # Morning peak start (6h)
+  - platform: time
+    at: "06:00:00"
+    id: peak_start_morning
+  # Morning peak end (10h)
+  - platform: time
+    at: "10:00:00"
+    id: peak_end_morning
+  # Evening anchor start (12h)
+  - platform: time
+    at: "12:00:00"
+    id: anchor_start_evening
+  # Evening anchor end (14h)
+  - platform: time
+    at: "14:00:00"
+    id: anchor_end_evening
+  # Evening peak start (16h)
+  - platform: time
+    at: "16:00:00"
+    id: peak_start_evening
+  # Evening peak end (20h)
+  - platform: time
+    at: "20:00:00"
+    id: peak_end_evening
+
+# Season condition: only run during winter (Dec 1 - Mar 31)
+# Calendar events: filter for DCPC peak events only (for multi-tariff calendars)
 condition:
   - condition: template
-    value_template: "{{ 'pointe' in trigger.calendar_event.summary | lower }}"
-  - condition: template
-    value_template: "{{ 'Tarif: DCPC' in trigger.calendar_event.description }}"
+    value_template: "{{ now().month == 12 or now().month <= 3 }}"
+  - condition: or
+    conditions:
+      # Allow time-based triggers (non-calendar)
+      - condition: template
+        value_template: "{{ trigger.platform != 'calendar' }}"
+      # For calendar triggers: validate DCPC tariff and peak event
+      - condition: and
+        conditions:
+          - condition: template
+            value_template: "{{ 'pointe' in trigger.calendar_event.summary | lower }}"
+          - condition: template
+            value_template: "{{ 'Tarif: DCPC' in trigger.calendar_event.description }}"
+variables:
+  calendar_entity: !input hydroqc_calendar
+  current_hour: "{{ now().hour }}"
+  # Check if a critical peak event exists for the NEXT peak period
+  # Before 10h: check for morning peak (6h-10h)
+  # From 10h onwards: check for evening peak (16h-20h)
+  # Filters for DCPC tariff to handle multi-tariff calendars
+  next_peak_critical: >
+    {% set events = state_attr(calendar_entity, 'events') | default([]) %}
+    {% set today = now().date() | string %}
+    {% set current_hour = now().hour %}
+    {% set critical_events = events | selectattr('start', 'search', today) | selectattr('summary', 'search', '[Pp]ointe') | selectattr('description', 'search', 'Tarif: DCPC') | list %}
+    {% if current_hour < 10 %}
+      {# Check for morning peak (events starting at 6h) #}
+      {{ critical_events | selectattr('start', 'search', today + 'T06:') | list | length > 0 }}
+    {% else %}
+      {# Check for evening peak (events starting at 16h) #}
+      {{ critical_events | selectattr('start', 'search', today + 'T16:') | list | length > 0 }}
+    {% endif %}
+
 action:
   - choose:
-      # Morning anchor start - CRITICAL
+      # ============================================
+      # MORNING ANCHOR START (01:00)
+      # ============================================
       - conditions:
           - condition: trigger
-            id: anchor_start_morning_trigger
+            id: anchor_start_morning
           - condition: template
-            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int < 12 }}"
-          - condition: template
-            value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
+            value_template: "{{ next_peak_critical }}"
         sequence: !input critical_anchor_start_morning_action
-      # Morning anchor start - REGULAR
       - conditions:
           - condition: trigger
-            id: anchor_start_morning_trigger
+            id: anchor_start_morning
           - condition: template
-            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int < 12 }}"
-          - condition: template
-            value_template: "{{ 'Critique: Non' in trigger.calendar_event.description }}"
+            value_template: "{{ not next_peak_critical }}"
         sequence: !input regular_anchor_start_morning_action
       
-      # Evening anchor start - CRITICAL
+      # ============================================
+      # MORNING ANCHOR END (04:00)
+      # ============================================
       - conditions:
           - condition: trigger
-            id: anchor_start_evening_trigger
+            id: anchor_end_morning
           - condition: template
-            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int >= 12 }}"
-          - condition: template
-            value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
-        sequence: !input critical_anchor_start_evening_action
-      # Evening anchor start - REGULAR
-      - conditions:
-          - condition: trigger
-            id: anchor_start_evening_trigger
-          - condition: template
-            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int >= 12 }}"
-          - condition: template
-            value_template: "{{ 'Critique: Non' in trigger.calendar_event.description }}"
-        sequence: !input regular_anchor_start_evening_action
-      
-      # Morning anchor end - CRITICAL
-      - conditions:
-          - condition: trigger
-            id: anchor_end_morning_trigger
-          - condition: template
-            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int < 12 }}"
-          - condition: template
-            value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
+            value_template: "{{ next_peak_critical }}"
         sequence: !input critical_anchor_end_morning_action
-      # Morning anchor end - REGULAR
       - conditions:
           - condition: trigger
-            id: anchor_end_morning_trigger
+            id: anchor_end_morning
           - condition: template
-            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int < 12 }}"
-          - condition: template
-            value_template: "{{ 'Critique: Non' in trigger.calendar_event.description }}"
+            value_template: "{{ not next_peak_critical }}"
         sequence: !input regular_anchor_end_morning_action
       
-      # Evening anchor end - CRITICAL
+      # ============================================
+      # MORNING PREHEAT (calendar trigger with offset, critical only)
+      # ============================================
       - conditions:
           - condition: trigger
-            id: anchor_end_evening_trigger
-          - condition: template
-            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int >= 12 }}"
-          - condition: template
-            value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
-        sequence: !input critical_anchor_end_evening_action
-      # Evening anchor end - REGULAR
-      - conditions:
-          - condition: trigger
-            id: anchor_end_evening_trigger
-          - condition: template
-            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int >= 12 }}"
-          - condition: template
-            value_template: "{{ 'Critique: Non' in trigger.calendar_event.description }}"
-        sequence: !input regular_anchor_end_evening_action
+            id: preheat_morning
+        sequence: !input critical_preheat_morning_action
       
-      # Pre-heat morning - CRITICAL ONLY (regular peaks don't have preheat)
+      # ============================================
+      # MORNING PEAK START (06:00)
+      # ============================================
       - conditions:
           - condition: trigger
-            id: pre_heat_morning_trigger
+            id: peak_start_morning
           - condition: template
-            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int < 12 }}"
-          - condition: template
-            value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
-        sequence: !input critical_pre_heat_start_morning_action
-      # Pre-heat evening - CRITICAL ONLY (regular peaks don't have preheat)
-      - conditions:
-          - condition: trigger
-            id: pre_heat_evening_trigger
-          - condition: template
-            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int >= 12 }}"
-          - condition: template
-            value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
-        sequence: !input critical_pre_heat_start_evening_action
-      
-      # Peak start - CRITICAL (with offset before official start)
-      - conditions:
-          - condition: trigger
-            id: critical_peak_start_trigger
-          - condition: template
-            value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
+            value_template: "{{ next_peak_critical }}"
         sequence: !input critical_peak_start_action
-      # Peak start - REGULAR (at official start time)
       - conditions:
           - condition: trigger
-            id: regular_peak_start_trigger
+            id: peak_start_morning
           - condition: template
-            value_template: "{{ 'Critique: Non' in trigger.calendar_event.description }}"
+            value_template: "{{ not next_peak_critical }}"
         sequence: !input regular_peak_start_action
       
-      # Peak end - CRITICAL
+      # ============================================
+      # MORNING PEAK END (10:00)
+      # ============================================
       - conditions:
           - condition: trigger
-            id: peak_end_trigger
+            id: peak_end_morning
           - condition: template
-            value_template: "{{ 'Critique: Oui' in trigger.calendar_event.description }}"
+            value_template: "{{ next_peak_critical }}"
         sequence: !input critical_peak_end_action
-      # Peak end - REGULAR
       - conditions:
           - condition: trigger
-            id: peak_end_trigger
+            id: peak_end_morning
           - condition: template
-            value_template: "{{ 'Critique: Non' in trigger.calendar_event.description }}"
+            value_template: "{{ not next_peak_critical }}"
+        sequence: !input regular_peak_end_action
+      
+      # ============================================
+      # EVENING ANCHOR START (12:00)
+      # ============================================
+      - conditions:
+          - condition: trigger
+            id: anchor_start_evening
+          - condition: template
+            value_template: "{{ next_peak_critical }}"
+        sequence: !input critical_anchor_start_evening_action
+      - conditions:
+          - condition: trigger
+            id: anchor_start_evening
+          - condition: template
+            value_template: "{{ not next_peak_critical }}"
+        sequence: !input regular_anchor_start_evening_action
+      
+      # ============================================
+      # EVENING ANCHOR END (14:00)
+      # ============================================
+      - conditions:
+          - condition: trigger
+            id: anchor_end_evening
+          - condition: template
+            value_template: "{{ next_peak_critical }}"
+        sequence: !input critical_anchor_end_evening_action
+      - conditions:
+          - condition: trigger
+            id: anchor_end_evening
+          - condition: template
+            value_template: "{{ not next_peak_critical }}"
+        sequence: !input regular_anchor_end_evening_action
+      
+      # ============================================
+      # EVENING PREHEAT (calendar trigger with offset, critical only)
+      # ============================================
+      - conditions:
+          - condition: trigger
+            id: preheat_evening
+        sequence: !input critical_preheat_evening_action
+      
+      # ============================================
+      # EVENING PEAK START (16:00)
+      # ============================================
+      - conditions:
+          - condition: trigger
+            id: peak_start_evening
+          - condition: template
+            value_template: "{{ next_peak_critical }}"
+        sequence: !input critical_peak_start_action
+      - conditions:
+          - condition: trigger
+            id: peak_start_evening
+          - condition: template
+            value_template: "{{ not next_peak_critical }}"
+        sequence: !input regular_peak_start_action
+      
+      # ============================================
+      # EVENING PEAK END (20:00)
+      # ============================================
+      - conditions:
+          - condition: trigger
+            id: peak_end_evening
+          - condition: template
+            value_template: "{{ next_peak_critical }}"
+        sequence: !input critical_peak_end_action
+      - conditions:
+          - condition: trigger
+            id: peak_end_evening
+          - condition: template
+            value_template: "{{ not next_peak_critical }}"
         sequence: !input regular_peak_end_action
 

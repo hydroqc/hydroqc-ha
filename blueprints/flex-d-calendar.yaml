@@ -31,9 +31,9 @@ blueprint:
 
     Les événements de calendrier incluent des métadonnées accessibles dans vos actions :
 
-    - trigger.calendar_event.summary : Titre (🔴 Pointe critique / ⚪ Pointe régulière)
+    - trigger.calendar_event.summary : Titre (🔴 Pointe critique)
 
-    - trigger.calendar_event.description : Contient Critique: Oui/Non, Tarif: DPC, etc.
+    - trigger.calendar_event.description : Contient Critique: Oui, Tarif: DPC, etc.
 
 
     ### Création manuelle d'événements

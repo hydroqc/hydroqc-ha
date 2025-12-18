@@ -10,6 +10,42 @@
 
 ---
 
+## [0.4.0-beta.1] - 2025-12-18
+
+### Note
+
+**⚠️ Changement important** : Les événements de pointe non-critiques ne sont plus créés dans le calendrier pour les tarifs DCPC (Crédits Hivernaux). Seules les pointes critiques annoncées par Hydro-Québec apparaissent maintenant dans le calendrier.
+
+**Migration requise** : Si vous utilisez le blueprint Crédits Hivernaux :
+1. Réimportez le nouveau blueprint depuis HACS ou GitHub
+2. Le blueprint utilise maintenant des déclencheurs à heures fixes combinés avec des vérifications du calendrier
+3. Les anciennes automatisations continueront de fonctionner mais ne recevront plus d'événements non-critiques
+
+### Modifié
+- **Architecture des blueprints** : Refonte complète du blueprint Crédits Hivernaux (winter-credits-calendar.yaml)
+  - Déclencheurs à heures fixes (01h, 04h, 06h, 10h, 12h, 14h, 16h, 20h) pour l'horaire quotidien
+  - Déclencheurs calendrier avec offset pour le pré-chauffage des pointes critiques uniquement
+  - Variable `next_peak_critical` pour déterminer si la prochaine pointe est critique
+  - Validation du tarif DCPC pour éviter les conflits avec calendriers multi-tarifs
+  - Mode `single` avec `max_exceeded: silent` pour éviter les exécutions multiples
+  - Inspiration du patron de templating du blueprint Flex-D pour une meilleure cohérence
+- **Simplification du calendrier DCPC** : Le calendrier ne crée plus d'événements pour les pointes non-critiques
+  - Réduit la charge sur le calendrier Home Assistant
+  - Élimine la mise à jour quotidienne des événements non-critiques
+  - Améliore les performances et la fiabilité
+- Mise à jour de la documentation des blueprints pour refléter les nouveaux comportements
+
+### Retiré
+- **Option de configuration** : Retrait de l'option "Inclure les pointes non-critiques" pour DCPC
+  - Supprimé de `CONF_INCLUDE_NON_CRITICAL_PEAKS` de la configuration
+  - Retiré du flux de configuration et des options
+- **Gestion des événements non-critiques** : Retrait de la logique de création/mise à jour des événements non-critiques dans `calendar_manager.py`
+  - Fonction `async_update_peak_event()` supprimée
+  - Constante `TITLE_REGULAR` supprimée
+  - Paramètre `include_non_critical` retiré de `_create_or_update_peak_events()`
+
+---
+
 ## [0.3.1] - 2025-12-11
 
 ### Modifié

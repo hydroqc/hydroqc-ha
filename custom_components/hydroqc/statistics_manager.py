@@ -308,6 +308,7 @@ class StatisticsManager:
 
         Queries statistics for the reference date and returns the last known sum.
         This maintains continuity when importing new statistics.
+        If no data is found on reference_date, it will look back up to 30 days.
 
         Args:
             consumption_type: Type of consumption (total, reg, haut)
@@ -319,42 +320,53 @@ class StatisticsManager:
         statistic_id = self._get_statistic_id(consumption_type)
         tz = zoneinfo.ZoneInfo("America/Toronto")
 
-        start_datetime = datetime.datetime.combine(reference_date, datetime.time.min).replace(
-            tzinfo=tz
-        )
-        end_datetime = datetime.datetime.combine(reference_date, datetime.time.max).replace(
-            tzinfo=tz
-        )
-
-        try:
-            last_stats = await get_instance(self.hass).async_add_executor_job(
-                statistics.statistics_during_period,
-                self.hass,
-                start_datetime,
-                end_datetime,
-                {statistic_id},
-                "hour",
-                None,
-                {"sum"},
+        # Try to find last stat, looking back up to 30 days
+        for i in range(30):
+            current_date = reference_date - datetime.timedelta(days=i)
+            start_datetime = datetime.datetime.combine(current_date, datetime.time.min).replace(
+                tzinfo=tz
+            )
+            end_datetime = datetime.datetime.combine(current_date, datetime.time.max).replace(
+                tzinfo=tz
             )
 
-            if last_stats and statistic_id in last_stats and last_stats[statistic_id]:
-                base_sum = last_stats[statistic_id][-1]["sum"]
-                _LOGGER.debug(
-                    "Found base sum %.2f kWh for %s from %s",
-                    base_sum,
-                    consumption_type,
-                    reference_date,
+            try:
+                last_stats = await get_instance(self.hass).async_add_executor_job(
+                    statistics.statistics_during_period,
+                    self.hass,
+                    start_datetime,
+                    end_datetime,
+                    {statistic_id},
+                    "hour",
+                    None,
+                    {"sum"},
                 )
-                return float(base_sum) if base_sum is not None else 0.0
-        except Exception as err:
-            _LOGGER.debug(
-                "No previous statistics found for %s on %s: %s",
-                consumption_type,
-                reference_date,
-                err,
-            )
 
+                if last_stats and statistic_id in last_stats and last_stats[statistic_id]:
+                    stats_for_id = last_stats[statistic_id]
+                    if stats_for_id:
+                        base_sum = stats_for_id[-1]["sum"]
+                        _LOGGER.debug(
+                            "Found base sum %.2f kWh for %s from %s (looked back %d days)",
+                            base_sum,
+                            consumption_type,
+                            current_date,
+                            i,
+                        )
+                        return float(base_sum) if base_sum is not None else 0.0
+            except Exception as err:
+                _LOGGER.debug(
+                    "No previous statistics found for %s on %s: %s",
+                    consumption_type,
+                    current_date,
+                    err,
+                )
+
+        _LOGGER.warning(
+            "Could not find any statistics for %s in the last 30 days (from %s). Starting sum at 0.",
+            consumption_type,
+            reference_date,
+        )
         return 0.0
 
     async def _process_day_consumption(

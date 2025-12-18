@@ -352,25 +352,34 @@ condition:
             value_template: "{{ 'Tarif: DCPC' in trigger.calendar_event.description }}"
 variables:
   calendar_entity: !input hydroqc_calendar
-  current_hour: "{{ now().hour }}"
-  # Check if a critical peak event exists for the NEXT peak period
-  # Before 10h: check for morning peak (6h-10h)
-  # From 10h onwards: check for evening peak (16h-20h)
-  # Filters for DCPC tariff to handle multi-tariff calendars
-  next_peak_critical: >
-    {% set events = state_attr(calendar_entity, 'events') | default([]) %}
-    {% set today = now().date() | string %}
-    {% set current_hour = now().hour %}
-    {% set critical_events = events | selectattr('start', 'search', today) | selectattr('summary', 'search', '[Pp]ointe') | selectattr('description', 'search', 'Tarif: DCPC') | list %}
-    {% if current_hour < 10 %}
-      {# Check for morning peak (events starting at 6h) #}
-      {{ critical_events | selectattr('start', 'search', today + 'T06:') | list | length > 0 }}
-    {% else %}
-      {# Check for evening peak (events starting at 16h) #}
-      {{ critical_events | selectattr('start', 'search', today + 'T16:') | list | length > 0 }}
-    {% endif %}
 
 action:
+  # Fetch today's calendar events to determine if peaks are critical or regular
+  - action: calendar.get_events
+    target:
+      entity_id: !input hydroqc_calendar
+    data:
+      start_date_time: "{{ now().replace(hour=0, minute=0, second=0, microsecond=0).isoformat() }}"
+      end_date_time: "{{ now().replace(hour=23, minute=59, second=59, microsecond=0).isoformat() }}"
+    response_variable: calendar_events
+  - variables:
+      # Check if there's a critical morning peak (starting at 6h) today
+      morning_peak_critical: >
+        {{ calendar_events[calendar_entity].events 
+           | selectattr('summary', 'search', '[Pp]ointe')
+           | selectattr('description', 'search', 'Tarif: DCPC')
+           | selectattr('start', 'search', now().strftime('%Y-%m-%dT06:'))
+           | list | length > 0 }}
+      # Check if there's a critical evening peak (starting at 16h) today
+      evening_peak_critical: >
+        {{ calendar_events[calendar_entity].events 
+           | selectattr('summary', 'search', '[Pp]ointe')
+           | selectattr('description', 'search', 'Tarif: DCPC')
+           | selectattr('start', 'search', now().strftime('%Y-%m-%dT16:'))
+           | list | length > 0 }}
+      # Determine which peak is next based on current time
+      next_peak_critical: >
+        {{ morning_peak_critical if now().hour < 10 else evening_peak_critical }}
   - choose:
       # ============================================
       # MORNING ANCHOR START (01:00)

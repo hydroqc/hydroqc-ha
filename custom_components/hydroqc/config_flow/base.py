@@ -182,13 +182,13 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 # Store selected contract info
                 self._selected_contract = selected_contract
 
-                # Check if this rate needs preheat configuration
+                # Check if this rate needs calendar configuration
                 rate_with_option = f"{selected_contract['rate']}{selected_contract['rate_option']}"
                 if rate_with_option in ["DPC", "DCPC"]:
-                    # Show preheat configuration step
-                    return await self.async_step_configure_preheat()
+                    # Show calendar configuration step
+                    return await self.async_step_calendar()
 
-                # For other rates, skip preheat and go directly to import history step
+                # For other rates, skip calendar and go directly to import history step
                 return await self.async_step_import_history()
 
         # Build contract selection options
@@ -208,44 +208,6 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ),
                 }
             ),
-        )
-
-    async def async_step_configure_preheat(
-        self, user_input: dict[str, Any] | None = None
-    ) -> ConfigFlowResult:
-        """Configure preheat duration for DPC/DCPC rates."""
-        if user_input is not None:
-            # Store preheat duration and proceed to calendar step
-            if self._selected_contract is not None:
-                self._selected_contract["preheat_duration"] = user_input.get(
-                    CONF_PREHEAT_DURATION, DEFAULT_PREHEAT_DURATION
-                )
-            return await self.async_step_calendar()
-
-        if self._selected_contract is None:
-            return self.async_abort(reason="missing_contract")
-
-        rate_name = (
-            "Flex-D (DPC)" if self._selected_contract["rate"] == "DPC" else "Winter Credits (D+CPC)"
-        )
-        return self.async_show_form(
-            step_id="configure_preheat",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(
-                        CONF_PREHEAT_DURATION,
-                        default=DEFAULT_PREHEAT_DURATION,
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=0,
-                            max=240,
-                            mode=NumberSelectorMode.BOX,
-                            unit_of_measurement="minutes",
-                        )
-                    ),
-                }
-            ),
-            description_placeholders={"rate_name": rate_name},
         )
 
     async def async_step_calendar(
@@ -291,9 +253,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             history_days = user_input.get(CONF_HISTORY_DAYS, 0)
             enable_consumption_sync = user_input.get(CONF_ENABLE_CONSUMPTION_SYNC, True)
-            preheat_duration = self._selected_contract.get(
-                "preheat_duration", DEFAULT_PREHEAT_DURATION
-            )
+            # Use default preheat duration during setup (can be changed in options)
+            preheat_duration = DEFAULT_PREHEAT_DURATION
             calendar_entity_id = self._selected_contract.get("calendar_entity_id", "")
 
             entry_data: dict[str, Any] = {
@@ -406,20 +367,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._selected_contract["rate_option"] = rate_option
             self._selected_contract["sector"] = self._selected_sector
 
-            # Only save preheat duration for rates that use it (DPC, D+CPC, and commercial peak rates)
+            # Use default preheat duration during setup (can be changed in options)
             preheat_duration = DEFAULT_PREHEAT_DURATION
-            if rate_with_option in [
-                "DPC",
-                "DCPC",
-                "M-GDP",
-                "M-CPC",
-                "M-GPC",
-                "M-ENG",
-                "M-OEA",
-            ]:
-                preheat_duration = user_input.get(CONF_PREHEAT_DURATION, DEFAULT_PREHEAT_DURATION)
-
-            self._selected_contract["preheat_duration"] = preheat_duration
 
             # Check if this rate needs calendar configuration
             if rate_with_option in ["DPC", "DCPC"]:
@@ -464,17 +413,6 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                             mode=SelectSelectorMode.DROPDOWN,
                         )
                     ),
-                    vol.Required(
-                        CONF_PREHEAT_DURATION,
-                        default=DEFAULT_PREHEAT_DURATION,
-                    ): NumberSelector(
-                        NumberSelectorConfig(
-                            min=0,
-                            max=240,
-                            mode=NumberSelectorMode.BOX,
-                            unit_of_measurement="minutes",
-                        )
-                    ),
                 }
             ),
             errors=errors,
@@ -503,9 +441,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_CONTRACT_NAME: self._contract_name,
                 CONF_RATE: self._selected_contract["rate"],
                 CONF_RATE_OPTION: self._selected_contract["rate_option"],
-                CONF_PREHEAT_DURATION: self._selected_contract.get(
-                    "preheat_duration", DEFAULT_PREHEAT_DURATION
-                ),
+                CONF_PREHEAT_DURATION: DEFAULT_PREHEAT_DURATION,
             }
 
             # Add calendar configuration if provided

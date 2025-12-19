@@ -96,29 +96,38 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     entry.async_on_unload(entry.add_update_listener(_async_options_updated))
 
     if coordinator.is_portal_mode and coordinator._contract:
-        # Check if this is the first setup (history_days present) or a restart (flag removed)
-        # We only import history once after initial setup, not on every restart
-        history_days = entry.data.get("history_days", 0)
+        # Check if consumption sync is enabled
+        enable_consumption_sync = entry.data.get("enable_consumption_sync", True)
 
-        if history_days > 0:
-            # First setup - remove the flag so it doesn't run again on restart
-            new_data = dict(entry.data)
-            del new_data["history_days"]
-            hass.config_entries.async_update_entry(entry, data=new_data)
+        if enable_consumption_sync:
+            # Check if this is the first setup (history_days present) or a restart (flag removed)
+            # We only import history once after initial setup, not on every restart
+            history_days = entry.data.get("history_days", 0)
 
-            if history_days > 30:
-                _LOGGER.info(
-                    "User requested %d-day history import, starting CSV import "
-                    "(regular sync will run after CSV import completes)",
-                    history_days,
-                )
-                coordinator.async_sync_consumption_history(days_back=history_days)
+            if history_days > 0:
+                # First setup - remove the flag so it doesn't run again on restart
+                new_data = dict(entry.data)
+                del new_data["history_days"]
+                hass.config_entries.async_update_entry(entry, data=new_data)
+
+                if history_days > 30:
+                    _LOGGER.info(
+                        "User requested %d-day history import, starting CSV import "
+                        "(regular sync will run after CSV import completes)",
+                        history_days,
+                    )
+                    coordinator.async_sync_consumption_history(days_back=history_days)
+                else:
+                    # 30 days or less: regular initial sync already covers this
+                    hass.async_create_task(coordinator._async_regular_consumption_sync())
             else:
-                # 30 days or less: regular initial sync already covers this
+                # Restart - just run regular sync to catch up on recent data
                 hass.async_create_task(coordinator._async_regular_consumption_sync())
         else:
-            # Restart - just run regular sync to catch up on recent data
-            hass.async_create_task(coordinator._async_regular_consumption_sync())
+            _LOGGER.info(
+                "Consumption sync disabled for %s, skipping consumption history import",
+                coordinator.contract_name,
+            )
 
     return True
 
@@ -189,6 +198,18 @@ async def _async_register_services(hass: HomeAssistant) -> None:
             for config_entry_id in device.config_entries:
                 coordinator: HydroQcDataCoordinator = hass.data[DOMAIN].get(config_entry_id)
                 if coordinator and coordinator.is_portal_mode:
+                    # Check if consumption sync is enabled (check options first, then data)
+                    enable_consumption_sync = coordinator.entry.options.get(
+                        "enable_consumption_sync",
+                        coordinator.entry.data.get("enable_consumption_sync", True),
+                    )
+                    if not enable_consumption_sync:
+                        _LOGGER.warning(
+                            "Device %s has consumption sync disabled, skipping history sync",
+                            device.name or device_id,
+                        )
+                        continue
+
                     try:
                         # Start CSV import for historical consumption (non-blocking)
                         coordinator.async_sync_consumption_history(days_back)

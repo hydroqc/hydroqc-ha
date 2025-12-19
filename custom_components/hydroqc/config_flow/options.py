@@ -17,6 +17,7 @@ from homeassistant.helpers.selector import (
 
 from ..const import (
     CONF_CALENDAR_ENTITY_ID,
+    CONF_ENABLE_CONSUMPTION_SYNC,
     CONF_PREHEAT_DURATION,
     CONF_RATE,
     CONF_RATE_OPTION,
@@ -39,6 +40,7 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
         rate_option = self.config_entry.data.get(CONF_RATE_OPTION, "")
         rate_with_option = f"{rate}{rate_option}"
         supports_calendar = rate_with_option in ["DPC", "DCPC"]
+        is_portal_mode = self.config_entry.data.get("auth_mode", "portal") == "portal"
 
         # Build schema based on rate capabilities
         schema_dict: dict[Any, Any] = {
@@ -70,6 +72,18 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
                 )
             ),
         }
+
+        # Add consumption sync option for Portal mode only
+        if is_portal_mode:
+            schema_dict[
+                vol.Optional(
+                    CONF_ENABLE_CONSUMPTION_SYNC,
+                    default=self.config_entry.options.get(
+                        CONF_ENABLE_CONSUMPTION_SYNC,
+                        self.config_entry.data.get(CONF_ENABLE_CONSUMPTION_SYNC, True),
+                    ),
+                )
+            ] = vol.Boolean()
 
         # Add calendar options for DPC/DCPC rates
         if supports_calendar:

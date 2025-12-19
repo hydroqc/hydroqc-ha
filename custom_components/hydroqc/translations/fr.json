@@ -71,13 +71,16 @@
       },
       "import_history": {
         "title": "Importer l'historique de consommation",
-        "description": "Combien de jours d'historique de consommation souhaitez-vous importer? Les 30 derniers jours seront synchronisés automatiquement. L'historique maximum disponible est de 800 jours. Définissez à 0 pour ignorer l'importation d'historique supplémentaire. L'importation se fait en arrière-plan et peut prendre plusieurs minutes.",
+        "description": "Configurez la synchronisation de consommation pour le tableau de bord énergétique. Activez pour importer les données de consommation horaire. Si activé, les 30 derniers jours seront synchronisés automatiquement. L'historique maximum disponible est de 800 jours. Définissez à 0 pour ignorer l'importation d'historique supplémentaire. L'importation se fait en arrière-plan et peut prendre plusieurs minutes.",
         "data": {
+          "enable_consumption_sync": "Activer la synchronisation de consommation",
           "history_days": "Jours d'historique à importer"
         },
         "data_description": {
-          "history_days": "Nombre de jours à importer (0-800). Définissez à 0 pour synchroniser uniquement les 30 derniers jours, ou entrez une valeur pour l'historique plus ancien."
+          "enable_consumption_sync": "Activer pour créer les capteurs de consommation et synchroniser les données horaires pour le tableau de bord énergétique. Désactiver si vous n'avez pas besoin du suivi de consommation ou avez une autre intégration qui fournit ces données.",
+          "history_days": "Nombre de jours à importer (0-800). Définissez à 0 pour synchroniser uniquement les 30 derniers jours, ou entrez une valeur pour l'historique plus ancien. S'applique uniquement si la synchronisation de consommation est activée."
         }
+      },
       },
       "opendata": {
         "title": "Mode Données Ouvertes - Sélection du secteur",
@@ -122,12 +125,14 @@
         "data": {
           "update_interval": "Intervalle de mise à jour (secondes)",
           "preheat_duration_minutes": "Durée de préchauffage (minutes)",
+          "enable_consumption_sync": "Activer la synchronisation de consommation",
           "calendar_entity_id": "Entité calendrier (optionnel)",
           "include_non_critical_peaks": "Inclure les pointes non critiques"
         },
         "data_description": {
           "update_interval": "Fréquence de récupération des données d'Hydro-Québec (30-600 secondes)",
           "preheat_duration_minutes": "Durée avant les événements de pointe critique pour déclencher le préchauffage (0-240 minutes)",
+          "enable_consumption_sync": "Activer pour synchroniser les données de consommation horaire pour le tableau de bord énergétique. Nécessite un rechargement de l'intégration pour prendre effet.",
           "calendar_entity_id": "Entité calendrier pour les événements de pointe (tarifs DPC/DCPC seulement). Laissez vide pour désactiver.",
           "include_non_critical_peaks": "Créer aussi des événements pour les périodes de pointe non critiques (horaire par défaut)"
         }

@@ -67,12 +67,14 @@
       },
       "import_history": {
         "title": "Import Consumption History",
-        "description": "How many days of consumption history would you like to import? The last 30 days will be synced automatically. Maximum available history is 800 days. Set to 0 to skip additional history import. The import runs in the background and may take several minutes.",
+        "description": "Configure consumption sync for the Energy Dashboard. Enable to import hourly consumption data. If enabled, the last 30 days will be synced automatically. Maximum available history is 800 days. Set to 0 to skip additional history import. The import runs in the background and may take several minutes.",
         "data": {
+          "enable_consumption_sync": "Enable Consumption Sync",
           "history_days": "Days of History to Import"
         },
         "data_description": {
-          "history_days": "Number of days to import (0-800). Set to 0 to sync only the last 30 days, or enter a value for older history."
+          "enable_consumption_sync": "Enable to create consumption sensors and sync hourly data for Energy Dashboard. Disable if you don't need consumption tracking or have another integration providing this data.",
+          "history_days": "Number of days to import (0-800). Set to 0 to sync only the last 30 days, or enter a value for older history. Only applies if consumption sync is enabled."
         }
       },
       "opendata": {
@@ -118,11 +120,13 @@
         "data": {
           "update_interval": "Update Interval (seconds)",
           "preheat_duration_minutes": "Pre-heat Duration (minutes)",
+          "enable_consumption_sync": "Enable Consumption Sync",
           "calendar_entity_id": "Calendar Entity (optional)"
         },
         "data_description": {
           "update_interval": "How often to fetch data from Hydro-Québec (30-600 seconds)",
           "preheat_duration_minutes": "Duration before critical peak events to trigger pre-heating (0-240 minutes)",
+          "enable_consumption_sync": "Enable to sync hourly consumption data for Energy Dashboard. Requires integration reload to take effect.",
           "calendar_entity_id": "Calendar entity for peak events (DPC/DCPC rates only). Leave empty to disable."
         }
       }

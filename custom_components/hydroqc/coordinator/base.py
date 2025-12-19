@@ -267,7 +267,16 @@ class HydroQcDataCoordinator(
 
         # Trigger consumption sync (matches hydroqc2mqtt pattern)
         # Only if not during first refresh to avoid blocking HA startup
-        if self.is_portal_mode and self._contract and hasattr(self, "_first_refresh_done"):
+        # AND only if consumption sync is enabled in config (check options first, then data)
+        enable_consumption_sync = self.entry.options.get(
+            "enable_consumption_sync", self.entry.data.get("enable_consumption_sync", True)
+        )
+        if (
+            self.is_portal_mode
+            and self._contract
+            and hasattr(self, "_first_refresh_done")
+            and enable_consumption_sync
+        ):
             self._regular_sync_task = asyncio.create_task(self._async_regular_consumption_sync())
 
         return data

@@ -33,6 +33,7 @@ from ..const import (
     CONF_CONTRACT_ID,
     CONF_CONTRACT_NAME,
     CONF_CUSTOMER_ID,
+    CONF_ENABLE_CONSUMPTION_SYNC,
     CONF_HISTORY_DAYS,
     CONF_PREHEAT_DURATION,
     CONF_RATE,
@@ -289,6 +290,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._abort_if_unique_id_configured()
 
             history_days = user_input.get(CONF_HISTORY_DAYS, 0)
+            enable_consumption_sync = user_input.get(CONF_ENABLE_CONSUMPTION_SYNC, True)
             preheat_duration = self._selected_contract.get(
                 "preheat_duration", DEFAULT_PREHEAT_DURATION
             )
@@ -305,7 +307,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_RATE: self._selected_contract["rate"],
                 CONF_RATE_OPTION: self._selected_contract["rate_option"],
                 CONF_PREHEAT_DURATION: preheat_duration,
-                CONF_HISTORY_DAYS: history_days,
+                CONF_ENABLE_CONSUMPTION_SYNC: enable_consumption_sync,
+                CONF_HISTORY_DAYS: history_days if enable_consumption_sync else 0,
             }
 
             # Add calendar configuration if provided
@@ -321,6 +324,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="import_history",
             data_schema=vol.Schema(
                 {
+                    vol.Optional(CONF_ENABLE_CONSUMPTION_SYNC, default=True): vol.Boolean(),
                     vol.Optional(CONF_HISTORY_DAYS, default=0): NumberSelector(
                         NumberSelectorConfig(
                             min=0,
@@ -331,6 +335,9 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     ),
                 }
             ),
+            description_placeholders={
+                "note": "Enable consumption sync to import hourly consumption data for the Energy Dashboard. If disabled, no consumption sensors will be created and the service to sync history will not be available."
+            },
         )
 
     async def async_step_opendata(

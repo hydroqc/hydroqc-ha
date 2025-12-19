@@ -81,7 +81,6 @@
           "history_days": "Nombre de jours à importer (0-800). Définissez à 0 pour synchroniser uniquement les 30 derniers jours, ou entrez une valeur pour l'historique plus ancien. S'applique uniquement si la synchronisation de consommation est activée."
         }
       },
-      },
       "opendata": {
         "title": "Mode Données Ouvertes - Sélection du secteur",
         "description": "Configurez la surveillance en utilisant les données publiques (sans connexion requise). Premièrement, sélectionnez votre secteur de clientèle",

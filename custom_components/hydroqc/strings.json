@@ -35,24 +35,38 @@
           "contract": "Select the contract you want to add to Home Assistant"
         }
       },
+    "configure_preheat": {
+      "title": "Configure Pre-heat Duration",
+      "description": "Configure when to trigger pre-heating alerts for {rate_name}",
+      "data": {
+        "preheat_duration_minutes": "Pre-heat Duration (minutes)"
+      },
+      "data_description": {
+        "preheat_duration_minutes": "Duration before critical peak events to trigger pre-heating (0-240 minutes, default: 120)"
+      }
+    },
       "calendar": {
         "title": "Calendar Integration (Optional)",
         "description": "Automatically create calendar events for critical peak periods for {contract_name}. Events will use standardized French titles for blueprint compatibility.",
         "data": {
-          "calendar_entity_id": "Calendar Entity (optional)"
+        "calendar_entity_id": "Calendar Entity (optional)",
+        "include_non_critical_peaks": "Include non-critical peaks"
         },
         "data_description": {
-          "calendar_entity_id": "Select a calendar entity to create peak events. Leave empty to skip calendar integration."
+        "calendar_entity_id": "Select a calendar entity to create peak events. Leave empty to skip calendar integration.",
+        "include_non_critical_peaks": "Also create events for non-critical peak periods (default schedule without API announcement)"
         }
       },
       "calendar_opendata": {
         "title": "Calendar Integration (Optional)",
         "description": "Automatically create calendar events for critical peak periods for {contract_name}. Events will use standardized French titles for blueprint compatibility.",
         "data": {
-          "calendar_entity_id": "Calendar Entity (optional)"
+        "calendar_entity_id": "Calendar Entity (optional)",
+        "include_non_critical_peaks": "Include non-critical peaks"
         },
         "data_description": {
-          "calendar_entity_id": "Select a calendar entity to create peak events. Leave empty to skip calendar integration."
+        "calendar_entity_id": "Select a calendar entity to create peak events. Leave empty to skip calendar integration.",
+        "include_non_critical_peaks": "Also create events for non-critical peak periods (default schedule without API announcement)"
         }
       },
       "import_history": {
@@ -82,11 +96,13 @@
         "description": "Select your electricity rate plan for {sector} customers. Available options are fetched from Hydro-Québec's public API.",
         "data": {
           "contract_name": "Contract Name",
-          "rate_selection": "Rate Plan"
+        "rate_selection": "Rate Plan",
+        "preheat_duration_minutes": "Pre-heat Duration (minutes)"
         },
         "data_description": {
           "contract_name": "A friendly name for this configuration (e.g., 'Home', 'Cottage')",
-          "rate_selection": "Select your electricity rate plan from available options"
+        "rate_selection": "Select your electricity rate plan from available options",
+        "preheat_duration_minutes": "Duration before critical peak events to trigger pre-heating (0-240 minutes, default: 120)"
         }
       }
     },
@@ -108,14 +124,16 @@
         "data": {
           "update_interval": "Update Interval (seconds)",
           "preheat_duration_minutes": "Pre-heat Duration (minutes)",
-          "enable_consumption_sync": "Enable Consumption Sync",
-          "calendar_entity_id": "Calendar Entity (optional)"
+          "enable_consumption_sync": "Enable consumption synchronization",
+          "calendar_entity_id": "Calendar Entity (optional)",
+          "include_non_critical_peaks": "Include non-critical peaks"
         },
         "data_description": {
           "update_interval": "How often to fetch data from Hydro-Québec (30-600 seconds)",
           "preheat_duration_minutes": "Duration before critical peak events to trigger pre-heating (0-240 minutes)",
-          "enable_consumption_sync": "Enable to sync hourly consumption data for Energy Dashboard. Requires integration reload to take effect.",
-          "calendar_entity_id": "Calendar entity for peak events (DPC/DCPC rates only). Leave empty to disable."
+          "enable_consumption_sync": "Enable to sync hourly consumption data for the energy dashboard. Requires integration reload to take effect.",
+          "calendar_entity_id": "Calendar entity for peak events (DPC/DCPC rates only). Leave empty to disable.",
+          "include_non_critical_peaks": "Also create events for non-critical peak periods (default schedule)"
         }
       }
     }

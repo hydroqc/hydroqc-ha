@@ -1,8 +1,12 @@
 """Constants for the Hydro-Québec integration."""
 
 from typing import Final
+import zoneinfo
 
 DOMAIN: Final = "hydroqc"
+
+# Timezone for Hydro-Québec data
+TIME_ZONE: Final = zoneinfo.ZoneInfo("America/Toronto")
 
 # Config flow constants
 CONF_CONTRACT_ID: Final = "contract_id"

@@ -6,12 +6,13 @@ import asyncio
 import contextlib
 import datetime
 import logging
-import zoneinfo
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.recorder import get_instance, statistics  # type: ignore[attr-defined]
 from homeassistant.core import HomeAssistant
+
+from .const import TIME_ZONE
 
 if TYPE_CHECKING:
     from hydroqc.contract.common import Contract
@@ -19,8 +20,6 @@ if TYPE_CHECKING:
     from .statistics_manager import StatisticsManager
 
 _LOGGER = logging.getLogger(__name__)
-# Create timezone once at module level to avoid blocking I/O in event loop
-_TIMEZONE_TORONTO = zoneinfo.ZoneInfo("America/Toronto")
 
 
 class ConsumptionHistoryImporter:

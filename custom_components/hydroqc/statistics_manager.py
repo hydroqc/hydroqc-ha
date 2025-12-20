@@ -13,6 +13,8 @@ from homeassistant.components.recorder import get_instance, statistics  # type: 
 from homeassistant.components.recorder.models import StatisticMeanType
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
+from .const import TIME_ZONE
+
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
 
@@ -71,7 +73,7 @@ class StatisticsManager:
             # Check last 30 days for existing statistics
             today = datetime.date.today()
             thirty_days_ago = today - datetime.timedelta(days=30)
-            tz = zoneinfo.ZoneInfo("America/Toronto")
+            tz = TIME_ZONE
 
             statistic_id = self._get_statistic_id("total")
 
@@ -221,7 +223,7 @@ class StatisticsManager:
             # Determine consumption types based on rate
             consumption_types = self._get_consumption_types()
 
-            tz = zoneinfo.ZoneInfo("America/Toronto")
+            tz = TIME_ZONE
             current_date = start_date
 
             # Fetch and import data for each day in range
@@ -318,7 +320,7 @@ class StatisticsManager:
             Last cumulative sum, or 0.0 if no previous statistics found
         """
         statistic_id = self._get_statistic_id(consumption_type)
-        tz = zoneinfo.ZoneInfo("America/Toronto")
+        tz = TIME_ZONE
 
         # Try to find last stat, looking back up to 30 days
         for i in range(30):
@@ -406,6 +408,18 @@ class StatisticsManager:
                 # Get consumption value for this type
                 consumption_key = f"conso{consumption_type.capitalize()}"
                 consumption_kwh = hour_data.get(consumption_key, 0.0)
+
+                # Ensure consumption is never negative, as it's cumulative
+                if consumption_kwh < 0:
+                    _LOGGER.warning(
+                        "Detected negative hourly consumption for %s on %s at %s (%.2f kWh). "
+                        "Treating as 0 to maintain cumulative sum integrity.",
+                        consumption_type,
+                        current_date,
+                        hour_str,
+                        consumption_kwh,
+                    )
+                    consumption_kwh = 0.0
 
                 # Update cumulative sum
                 cumulative_sum += consumption_kwh

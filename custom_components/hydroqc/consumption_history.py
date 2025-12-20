@@ -4,15 +4,18 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import csv
 import datetime
 import logging
+import os
 from collections.abc import Callable, Sequence
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.recorder import get_instance, statistics  # type: ignore[attr-defined]
 from homeassistant.core import HomeAssistant
 
-from .const import TIME_ZONE
+from .const import DEBUG_CSV_FILE_PATH, ENABLE_CSV_DEBUG, TIME_ZONE
 
 if TYPE_CHECKING:
     from hydroqc.contract.common import Contract
@@ -47,6 +50,25 @@ class ConsumptionHistoryImporter:
         self._rate = rate
         self._get_statistic_id = get_statistic_id_func
         self._statistics_manager = statistics_manager
+
+    async def _write_debug_csv(self, csv_data: list[Sequence[Any]]) -> None:
+        """Write the raw CSV data to a local file for debugging."""
+        if not ENABLE_CSV_DEBUG:
+            return
+
+        file_path: Path = Path(self.hass.config.path) / DEBUG_CSV_FILE_PATH
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        mode = "a" if file_path.exists() else "w"
+        try:
+            with file_path.open(mode, newline="", encoding="utf-8") as csvfile:
+                writer = csv.writer(csvfile)
+                if mode == "w" and csv_data:  # Write header only if new file
+                    writer.writerow(csv_data[0])
+                writer.writerows(csv_data[1:])  # Write data rows, skipping header if already written
+            _LOGGER.debug("Appended raw CSV data to %s", file_path)
+        except OSError as e:
+            _LOGGER.error("Failed to write debug CSV to %s: %s", file_path, e)
 
     async def import_csv_history(self, days_back: int) -> None:  # noqa: PLR0912, PLR0915
         """Import historical consumption data from CSV using iterative approach.
@@ -122,6 +144,8 @@ class ConsumptionHistoryImporter:
 
                     csv_data_raw = await self._contract.get_hourly_energy(current_start_date, today)
                     csv_data = list(csv_data_raw)
+
+                    await self._write_debug_csv(csv_data)
 
                     if len(csv_data) <= 1:  # Only header or empty
                         _LOGGER.warning(

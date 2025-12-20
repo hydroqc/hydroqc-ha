@@ -35,6 +35,16 @@
           "contract": "Sélectionnez le contrat que vous souhaitez ajouter à Home Assistant"
         }
       },
+    "configure_preheat": {
+      "title": "Configurer la durée de préchauffage",
+      "description": "Configurer quand déclencher les alertes de préchauffage pour {rate_name}",
+      "data": {
+        "preheat_duration_minutes": "Durée de préchauffage (minutes)"
+      },
+      "data_description": {
+        "preheat_duration_minutes": "Durée avant les événements de pointe critique pour déclencher le préchauffage (0-240 minutes, défaut: 120)"
+      }
+    },
       "calendar": {
         "title": "Intégration calendrier (optionnel)",
         "description": "Créer automatiquement des événements de calendrier pour les périodes de pointe critique pour {contract_name}. Les événements utilisent des titres français standardisés pour la compatibilité avec les blueprints.",
@@ -86,11 +96,13 @@
         "description": "Sélectionnez votre tarif d'électricité pour les clients {sector}. Les options disponibles sont récupérées depuis l'API publique d'Hydro-Québec",
         "data": {
           "contract_name": "Nom du contrat",
-          "rate_selection": "Tarif"
+        "rate_selection": "Tarif",
+        "preheat_duration_minutes": "Durée de préchauffage (minutes)"
         },
         "data_description": {
           "contract_name": "Un nom convivial pour cette configuration (ex: 'Maison', 'Chalet')",
-          "rate_selection": "Sélectionnez votre tarif d'électricité parmi les options disponibles"
+        "rate_selection": "Sélectionnez votre tarif d'électricité parmi les options disponibles",
+        "preheat_duration_minutes": "Durée avant les événements de pointe critique pour déclencher le préchauffage (0-240 minutes, défaut: 120)"
         }
       }
     },

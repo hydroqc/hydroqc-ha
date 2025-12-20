@@ -1,7 +1,7 @@
 """Constants for the Hydro-Québec integration."""
 
-from typing import Final
 import zoneinfo
+from typing import Final
 
 DOMAIN: Final = "hydroqc"
 

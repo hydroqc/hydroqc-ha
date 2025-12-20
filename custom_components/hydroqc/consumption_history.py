@@ -272,7 +272,7 @@ class ConsumptionHistoryImporter:
             Dictionary mapping consumption type to list of statistics
         """
         # Use module-level timezone to avoid blocking I/O
-        tz = _TIMEZONE_TORONTO
+        tz = TIME_ZONE
 
         # Build statistics per consumption type
         stats_by_type: dict[str, list[dict[str, Any]]] = {ctype: [] for ctype in consumption_types}

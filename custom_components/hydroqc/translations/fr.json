@@ -126,66 +126,184 @@
       }
     }
   },
-"sensor": {
-    "balance": "Solde",
-    "current_billing_period_current_day": "Jour actuel de la période de facturation",
-    "current_billing_period_duration": "Durée de la période de facturation",
-    "current_billing_period_total_to_date": "Total de la période de facturation à ce jour",
-    "current_billing_period_projected_bill": "Facture projetée de la période de facturation",
-    "current_billing_period_daily_bill_mean": "Moyenne quotidienne de la facture de la période de facturation",
-    "current_billing_period_daily_consumption_mean": "Moyenne quotidienne de consommation de la période de facturation",
-    "current_billing_period_total_consumption": "Consommation totale de la période de facturation",
-    "current_billing_period_projected_total_consumption": "Consommation totale projetée de la période de facturation",
-    "current_billing_period_average_temperature": "Température moyenne de la période de facturation",
-    "current_billing_period_kwh_cost_mean": "Coût moyen du kWh de la période de facturation",
-    "current_billing_period_rate": "Tarif de la période de facturation",
-    "current_billing_period_rate_option": "Option tarifaire de la période de facturation",
-    "outage": "Prochaine ou actuelle panne",
-    "current_billing_period_higher_price_consumption": "Consommation au prix supérieur de la période de facturation",
-    "current_billing_period_lower_price_consumption": "Consommation au prix inférieur de la période de facturation",
-    "amount_saved_vs_base_rate": "Économie/Perte nette par rapport au tarif D",
-    "dpc_state": "Détail de la période PCD actuelle",
-    "dpc_next_peak_start": "Début de la prochaine pointe",
-    "dpc_next_peak_end": "Fin de la prochaine pointe",
-    "dpc_next_pre_heat_start": "Début du prochain préchauffage",
-    "dpc_critical_hours_count": "Nombre d'heures de pointe",
-    "dpc_winter_days_count": "Nombre de jours d'hiver",
-    "wc_state": "Détail de la période de CP actuelle",
-    "wc_cumulated_credit": "Crédit d'hiver cumulé",
-    "wc_projected_cumulated_credit": "Crédit d'hiver cumulé projeté",
-    "wc_next_anchor_start": "Début du prochain ancrage",
-    "wc_next_anchor_end": "Fin du prochain ancrage",
-    "wc_next_peak_start": "Début de la prochaine pointe",
-    "wc_next_peak_end": "Fin de la prochaine pointe",
-    "wc_next_critical_peak_start": "Début de la prochaine pointe critique",
-    "wc_next_critical_peak_end": "Fin de la prochaine pointe critique",
-    "wc_next_pre_heat_start": "Début du prochain préchauffage",
-    "wc_yesterday_morning_peak_credit": "Crédit économisé de la pointe d'hier matin",
-    "wc_yesterday_morning_peak_actual_consumption": "Consommation réelle de la pointe d'hier matin",
-    "wc_yesterday_morning_peak_ref_consumption": "Consommation de référence de la pointe d'hier matin",
-    "wc_yesterday_morning_peak_saved_consumption": "Consommation économisée de la pointe d'hier matin",
-    "wc_yesterday_evening_peak_credit": "Crédit économisé de la pointe d'hier soir",
-    "wc_yesterday_evening_peak_actual_consumption": "Consommation réelle de la pointe d'hier soir",
-    "wc_yesterday_evening_peak_ref_consumption": "Consommation de référence de la pointe d'hier soir",
-    "wc_yesterday_evening_peak_saved_consumption": "Consommation économisée de la pointe d'hier soir"
-  },
-  "binary_sensor": {
-    "current_period_epp_enabled": "MVE activé pour la période actuelle",
-    "wc_critical": "Critique",
-    "wc_critical_peak_in_progress": "Pointe critique en cours",
-    "wc_pre_heat": "Préchauffage en cours",
-    "wc_next_anchor_critical": "Prochaine période d'ancrage critique",
-    "wc_next_peak_critical": "Prochaine période de pointe critique",
-    "wc_upcoming_critical_peak": "Pointe critique à venir",
-    "wc_critical_morning_peak_today": "Pointe critique du matin aujourd'hui",
-    "wc_critical_evening_peak_today": "Pointe critique du soir aujourd'hui",
-    "wc_critical_morning_peak_tomorrow": "Pointe critique du matin demain",
-    "wc_critical_evening_peak_tomorrow": "Pointe critique du soir demain",
-    "dpc_pre_heat": "Préchauffage en cours",
-    "dpc_peak_in_progress": "Pointe critique en cours",
-    "dpc_critical_morning_peak_today": "Pointe critique du matin aujourd'hui",
-    "dpc_critical_evening_peak_today": "Pointe critique du soir aujourd'hui",
-    "dpc_critical_morning_peak_tomorrow": "Pointe critique du matin demain",
-    "dpc_critical_evening_peak_tomorrow": "Pointe critique du soir demain"
+  "entity": {
+    "sensor": {
+      "balance": {
+        "name": "Solde"
+      },
+      "current_billing_period_current_day": {
+        "name": "Jour actuel de la période de facturation"
+      },
+      "current_billing_period_duration": {
+        "name": "Durée de la période de facturation"
+      },
+      "current_billing_period_total_to_date": {
+        "name": "Total de la période de facturation à ce jour"
+      },
+      "current_billing_period_projected_bill": {
+        "name": "Facture projetée de la période de facturation"
+      },
+      "current_billing_period_daily_bill_mean": {
+        "name": "Moyenne quotidienne de la facture de la période de facturation"
+      },
+      "current_billing_period_daily_consumption_mean": {
+        "name": "Moyenne quotidienne de consommation de la période de facturation"
+      },
+      "current_billing_period_total_consumption": {
+        "name": "Consommation totale de la période de facturation"
+      },
+      "current_billing_period_projected_total_consumption": {
+        "name": "Consommation totale projetée de la période de facturation"
+      },
+      "current_billing_period_average_temperature": {
+        "name": "Température moyenne de la période de facturation"
+      },
+      "current_billing_period_kwh_cost_mean": {
+        "name": "Coût moyen du kWh de la période de facturation"
+      },
+      "current_billing_period_rate": {
+        "name": "Tarif de la période de facturation"
+      },
+      "current_billing_period_rate_option": {
+        "name": "Option tarifaire de la période de facturation"
+      },
+      "outage": {
+        "name": "Prochaine ou actuelle panne"
+      },
+      "current_billing_period_higher_price_consumption": {
+        "name": "Consommation au prix supérieur de la période de facturation"
+      },
+      "current_billing_period_lower_price_consumption": {
+        "name": "Consommation au prix inférieur de la période de facturation"
+      },
+      "amount_saved_vs_base_rate": {
+        "name": "Économie/Perte nette par rapport au tarif D"
+      },
+      "dpc_state": {
+        "name": "Détail de la période PCD actuelle"
+      },
+      "dpc_next_peak_start": {
+        "name": "Début de la prochaine pointe"
+      },
+      "dpc_next_peak_end": {
+        "name": "Fin de la prochaine pointe"
+      },
+      "dpc_next_pre_heat_start": {
+        "name": "Début du prochain préchauffage"
+      },
+      "dpc_critical_hours_count": {
+        "name": "Nombre d'heures de pointe"
+      },
+      "dpc_winter_days_count": {
+        "name": "Nombre de jours d'hiver"
+      },
+      "wc_state": {
+        "name": "Détail de la période de CP actuelle"
+      },
+      "wc_cumulated_credit": {
+        "name": "Crédit d'hiver cumulé"
+      },
+      "wc_projected_cumulated_credit": {
+        "name": "Crédit d'hiver cumulé projeté"
+      },
+      "wc_next_anchor_start": {
+        "name": "Début du prochain ancrage"
+      },
+      "wc_next_anchor_end": {
+        "name": "Fin du prochain ancrage"
+      },
+      "wc_next_peak_start": {
+        "name": "Début de la prochaine pointe"
+      },
+      "wc_next_peak_end": {
+        "name": "Fin de la prochaine pointe"
+      },
+      "wc_next_critical_peak_start": {
+        "name": "Début de la prochaine pointe critique"
+      },
+      "wc_next_critical_peak_end": {
+        "name": "Fin de la prochaine pointe critique"
+      },
+      "wc_next_pre_heat_start": {
+        "name": "Début du prochain préchauffage"
+      },
+      "wc_yesterday_morning_peak_credit": {
+        "name": "Crédit économisé de la pointe d'hier matin"
+      },
+      "wc_yesterday_morning_peak_actual_consumption": {
+        "name": "Consommation réelle de la pointe d'hier matin"
+      },
+      "wc_yesterday_morning_peak_ref_consumption": {
+        "name": "Consommation de référence de la pointe d'hier matin"
+      },
+      "wc_yesterday_morning_peak_saved_consumption": {
+        "name": "Consommation économisée de la pointe d'hier matin"
+      },
+      "wc_yesterday_evening_peak_credit": {
+        "name": "Crédit économisé de la pointe d'hier soir"
+      },
+      "wc_yesterday_evening_peak_actual_consumption": {
+        "name": "Consommation réelle de la pointe d'hier soir"
+      },
+      "wc_yesterday_evening_peak_ref_consumption": {
+        "name": "Consommation de référence de la pointe d'hier soir"
+      },
+      "wc_yesterday_evening_peak_saved_consumption": {
+        "name": "Consommation économisée de la pointe d'hier soir"
+      }
+    },
+    "binary_sensor": {
+      "current_period_epp_enabled": {
+        "name": "MVE activé pour la période actuelle"
+      },
+      "wc_critical": {
+        "name": "Critique"
+      },
+      "wc_critical_peak_in_progress": {
+        "name": "Pointe critique en cours"
+      },
+      "wc_pre_heat": {
+        "name": "Préchauffage en cours"
+      },
+      "wc_next_anchor_critical": {
+        "name": "Prochaine période d'ancrage critique"
+      },
+      "wc_next_peak_critical": {
+        "name": "Prochaine période de pointe critique"
+      },
+      "wc_upcoming_critical_peak": {
+        "name": "Pointe critique à venir"
+      },
+      "wc_critical_morning_peak_today": {
+        "name": "Pointe critique du matin aujourd'hui"
+      },
+      "wc_critical_evening_peak_today": {
+        "name": "Pointe critique du soir aujourd'hui"
+      },
+      "wc_critical_morning_peak_tomorrow": {
+        "name": "Pointe critique du matin demain"
+      },
+      "wc_critical_evening_peak_tomorrow": {
+        "name": "Pointe critique du soir demain"
+      },
+      "dpc_pre_heat": {
+        "name": "Préchauffage en cours"
+      },
+      "dpc_peak_in_progress": {
+        "name": "Pointe critique en cours"
+      },
+      "dpc_critical_morning_peak_today": {
+        "name": "Pointe critique du matin aujourd'hui"
+      },
+      "dpc_critical_evening_peak_today": {
+        "name": "Pointe critique du soir aujourd'hui"
+      },
+      "dpc_critical_morning_peak_tomorrow": {
+        "name": "Pointe critique du matin demain"
+      },
+      "dpc_critical_evening_peak_tomorrow": {
+        "name": "Pointe critique du soir demain"
+      }
+    }
   }
 }

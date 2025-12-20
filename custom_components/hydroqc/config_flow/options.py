@@ -83,7 +83,7 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
                         self.config_entry.data.get(CONF_ENABLE_CONSUMPTION_SYNC, True),
                     ),
                 )
-            ] = vol.Boolean()
+            ] = bool
 
         # Add calendar options for DPC/DCPC rates
         if supports_calendar:

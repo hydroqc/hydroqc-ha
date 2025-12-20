@@ -162,10 +162,10 @@
         "name": "Moyenne quotidienne conso"
       },
       "current_billing_period_total_consumption": {
-        "name": "Consommation totale"
+        "name": "Conso. totale"
       },
       "current_billing_period_projected_total_consumption": {
-        "name": "Consommation totale projetée"
+        "name": "Conso. totale projetée"
       },
       "current_billing_period_average_temperature": {
         "name": "Température moyenne"
@@ -195,10 +195,10 @@
         "name": "État PCD"
       },
       "dpc_next_peak_start": {
-        "name": "Début de la prochaine pointe"
+        "name": "Début prochaine pointe"
       },
       "dpc_next_peak_end": {
-        "name": "Fin de la prochaine pointe"
+        "name": "Fin prochaine pointe"
       },
       "dpc_next_pre_heat_start": {
         "name": "Début prochain préchauffage"
@@ -225,16 +225,16 @@
         "name": "Fin du prochain ancrage"
       },
       "wc_next_peak_start": {
-        "name": "Début de la prochaine pointe"
+        "name": "Début prochaine pointe"
       },
       "wc_next_peak_end": {
-        "name": "Fin de la prochaine pointe"
+        "name": "Fin prochaine pointe"
       },
       "wc_next_critical_peak_start": {
-        "name": "Début de la prochaine pointe critique"
+        "name": "Début prochaine pointe critique"
       },
       "wc_next_critical_peak_end": {
-        "name": "Fin de la prochaine pointe critique"
+        "name": "Fin prochaine pointe critique"
       },
       "wc_next_pre_heat_start": {
         "name": "Début prochain préchauffage"

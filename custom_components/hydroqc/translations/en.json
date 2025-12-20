@@ -142,55 +142,55 @@
         "name": "Balance"
       },
       "current_billing_period_current_day": {
-        "name": "Current Billing Period Current Day"
+        "name": "Billing Period Day"
       },
       "current_billing_period_duration": {
-        "name": "Current Billing Period Duration"
+        "name": "Billing Period Duration"
       },
       "current_billing_period_total_to_date": {
-        "name": "Current Billing Period Total To Date"
+        "name": "Bill Total to Date"
       },
       "current_billing_period_projected_bill": {
-        "name": "Current Billing Period Projected Bill"
+        "name": "Projected Bill"
       },
       "current_billing_period_daily_bill_mean": {
-        "name": "Current Billing Period Daily Bill Mean"
+        "name": "Daily Bill Average"
       },
       "current_billing_period_daily_consumption_mean": {
-        "name": "Current Billing Period Daily Consumption Mean"
+        "name": "Daily Consumption Average"
       },
       "current_billing_period_total_consumption": {
-        "name": "Current Billing Period Total Consumption"
+        "name": "Total Consumption"
       },
       "current_billing_period_projected_total_consumption": {
-        "name": "Current Billing Period Projected Total Consumption"
+        "name": "Projected Total Consumption"
       },
       "current_billing_period_average_temperature": {
-        "name": "Current Billing Period Average Temperature"
+        "name": "Average Temperature"
       },
       "current_billing_period_kwh_cost_mean": {
-        "name": "Current Billing Period kWh Cost Mean"
+        "name": "Average kWh Cost"
       },
       "current_billing_period_rate": {
-        "name": "Current Billing Period Rate"
+        "name": "Current Rate"
       },
       "current_billing_period_rate_option": {
-        "name": "Current Billing Period Rate Option"
+        "name": "Rate Option"
       },
       "outage": {
-        "name": "Next Or Current Outage"
+        "name": "Outage Status"
       },
       "current_billing_period_higher_price_consumption": {
-        "name": "Current Billing Period Higher Price Consumption"
+        "name": "High Price Consumption"
       },
       "current_billing_period_lower_price_consumption": {
-        "name": "Current Billing Period Lower Price Consumption"
+        "name": "Low Price Consumption"
       },
       "amount_saved_vs_base_rate": {
-        "name": "Net Saving/Loss vs Rate D"
+        "name": "Savings vs Rate D"
       },
       "dpc_state": {
-        "name": "Current DPC Period Detail"
+        "name": "DPC Status"
       },
       "dpc_next_peak_start": {
         "name": "Next Peak Start"
@@ -199,22 +199,22 @@
         "name": "Next Peak End"
       },
       "dpc_next_pre_heat_start": {
-        "name": "Next Pre-heat Start"
+        "name": "Next Preheat Start"
       },
       "dpc_critical_hours_count": {
-        "name": "Number of Critical Hours"
+        "name": "Critical Hours Count"
       },
       "dpc_winter_days_count": {
-        "name": "Number of Winter Days"
+        "name": "Winter Days Count"
       },
       "wc_state": {
-        "name": "Current WC Period Detail"
+        "name": "Winter Credit Status"
       },
       "wc_cumulated_credit": {
-        "name": "Cumulated Winter Credit"
+        "name": "Total Winter Credit"
       },
       "wc_projected_cumulated_credit": {
-        "name": "Projected Cumulated Winter Credit"
+        "name": "Projected Winter Credit"
       },
       "wc_next_anchor_start": {
         "name": "Next Anchor Start"
@@ -235,84 +235,84 @@
         "name": "Next Critical Peak End"
       },
       "wc_next_pre_heat_start": {
-        "name": "Next Pre-heat Start"
+        "name": "Next Preheat Start"
       },
       "wc_yesterday_morning_peak_credit": {
-        "name": "Yesterday Morning Peak Saved Credit"
+        "name": "Yest. Morning Credit"
       },
       "wc_yesterday_morning_peak_actual_consumption": {
-        "name": "Yesterday Morning Peak Actual Consumption"
+        "name": "Yest. Morning Consumption"
       },
       "wc_yesterday_morning_peak_ref_consumption": {
-        "name": "Yesterday Morning Peak Reference Consumption"
+        "name": "Yest. Morning Ref. Cons."
       },
       "wc_yesterday_morning_peak_saved_consumption": {
-        "name": "Yesterday Morning Peak Saved Consumption"
+        "name": "Yest. Morning Saved Cons."
       },
       "wc_yesterday_evening_peak_credit": {
-        "name": "Yesterday Evening Peak Saved Credit"
+        "name": "Yest. Evening Credit"
       },
       "wc_yesterday_evening_peak_actual_consumption": {
-        "name": "Yesterday Evening Peak Actual Consumption"
+        "name": "Yest. Evening Consumption"
       },
       "wc_yesterday_evening_peak_ref_consumption": {
-        "name": "Yesterday Evening Peak Reference Consumption"
+        "name": "Yest. Evening Ref. Cons."
       },
       "wc_yesterday_evening_peak_saved_consumption": {
-        "name": "Yesterday Evening Peak Saved Consumption"
+        "name": "Yest. Evening Saved Cons."
       }
     },
     "binary_sensor": {
       "current_period_epp_enabled": {
-        "name": "Current Period EPP Enabled"
+        "name": "EPP Active"
       },
       "wc_critical": {
-        "name": "Critical"
+        "name": "Critical Period"
       },
       "wc_critical_peak_in_progress": {
-        "name": "Critical Peak In Progress"
+        "name": "Critical Peak Active"
       },
       "wc_pre_heat": {
-        "name": "Pre-heat In Progress"
+        "name": "Preheat Active"
       },
       "wc_next_anchor_critical": {
-        "name": "Next Anchor Period Critical"
+        "name": "Next Anchor Critical"
       },
       "wc_next_peak_critical": {
-        "name": "Next Peak Period Critical"
+        "name": "Next Peak Critical"
       },
       "wc_upcoming_critical_peak": {
         "name": "Upcoming Critical Peak"
       },
       "wc_critical_morning_peak_today": {
-        "name": "Critical Morning Peak Today"
+        "name": "Morning Peak Today"
       },
       "wc_critical_evening_peak_today": {
-        "name": "Critical Evening Peak Today"
+        "name": "Evening Peak Today"
       },
       "wc_critical_morning_peak_tomorrow": {
-        "name": "Critical Morning Peak Tomorrow"
+        "name": "Morning Peak Tomorrow"
       },
       "wc_critical_evening_peak_tomorrow": {
-        "name": "Critical Evening Peak Tomorrow"
+        "name": "Evening Peak Tomorrow"
       },
       "dpc_pre_heat": {
-        "name": "Pre-heat In Progress"
+        "name": "Preheat Active"
       },
       "dpc_peak_in_progress": {
-        "name": "Critical Peak In Progress"
+        "name": "Critical Peak Active"
       },
       "dpc_critical_morning_peak_today": {
-        "name": "Critical Morning Peak Today"
+        "name": "Morning Peak Today"
       },
       "dpc_critical_evening_peak_today": {
-        "name": "Critical Evening Peak Today"
+        "name": "Evening Peak Today"
       },
       "dpc_critical_morning_peak_tomorrow": {
-        "name": "Critical Morning Peak Tomorrow"
+        "name": "Morning Peak Tomorrow"
       },
       "dpc_critical_evening_peak_tomorrow": {
-        "name": "Critical Evening Peak Tomorrow"
+        "name": "Evening Peak Tomorrow"
       }
     }
   }

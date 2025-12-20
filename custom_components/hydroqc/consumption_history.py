@@ -55,7 +55,7 @@ class ConsumptionHistoryImporter:
         if not ENABLE_CSV_DEBUG:
             return
 
-        file_path: Path = Path(self.hass.config.config_dir) / DEBUG_CSV_FILE_PATH
+        file_path: Path = Path(str(self.hass.config.config_dir)) / DEBUG_CSV_FILE_PATH
         file_path.parent.mkdir(parents=True, exist_ok=True)
 
         mode = "a" if file_path.exists() else "w"

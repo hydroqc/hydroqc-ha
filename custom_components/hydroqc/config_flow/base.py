@@ -406,7 +406,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="opendata_rate",
             data_schema=vol.Schema(
                 {
-                    vol.Required(CONF_CONTRACT_NAME, default="Home"): str,
+                    vol.Required(CONF_CONTRACT_NAME, default="Home"): TextSelector(),
                     vol.Required("rate_selection"): SelectSelector(
                         SelectSelectorConfig(
                             options=cast(list[SelectOptionDict], rate_options),

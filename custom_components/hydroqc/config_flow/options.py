@@ -8,6 +8,7 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.helpers.selector import (
+    BooleanSelector,
     EntitySelector,
     EntitySelectorConfig,
     NumberSelector,
@@ -83,7 +84,7 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
                         self.config_entry.data.get(CONF_ENABLE_CONSUMPTION_SYNC, True),
                     ),
                 )
-            ] = vol.Boolean()
+            ] = BooleanSelector()
 
         # Add calendar options for DPC/DCPC rates
         if supports_calendar:

@@ -5,14 +5,235 @@
 ### Modifié
 
 ### Corrigé
-- Correction de l'état `current_state` pour DPC - retourne maintenant "normal" au lieu de "off_season" lorsqu'il n'y a pas d'événements pendant la saison hivernale (PR #70, merci @lit-af)
-- Migration de `pytz` vers `zoneinfo` (bibliothèque standard) pour la gestion des fuseaux horaires (PR #66, merci @jf-navica)
-- Correction du calcul de la somme cumulative pour éviter les réinitialisations lors de lacunes dans les données (PR #66, merci @jf-navica)
-  - La fonction `get_base_sum()` regarde maintenant jusqu'à 30 jours en arrière pour trouver la dernière somme connue
-  - Base la continuité sur le premier point de données réel au lieu de la date de début demandée
-- Blocage des valeurs de consommation négatives lors de l'importation CSV (PR #66, merci @jf-navica)
 
 ### Retiré
+
+---
+
+## [0.5.0] - 2025-12-22
+
+### Note de mise à jour importante
+
+**🎉 Version stable** : Première version stable du projet HydroQC Home Assistant ! Après plusieurs mois de développement et de tests communautaires, cette version apporte stabilité, performance et support multilingue.
+
+**⚠️ Actions requises lors de la mise à jour** :
+
+1. **Blueprint Crédits Hivernaux** : Le blueprint a été complètement refondu pour corriger un bug critique
+   - **Action requise** : Réimportez le blueprint depuis HACS ou GitHub
+   - Le nouveau blueprint utilise `calendar.get_events` pour détecter les pointes critiques à l'exécution
+   - Les anciennes automatisations continueront de fonctionner avec le nouveau blueprint
+
+2. **Nettoyage du calendrier DCPC** : Les événements non-critiques ne sont plus créés
+   - **Recommandation** : Supprimez manuellement les anciens événements non-critiques de votre calendrier
+   - Les événements non-critiques ont le titre "Pointe régulière" (avant cette version)
+   - Seules les pointes critiques annoncées par Hydro-Québec apparaissent maintenant (titre: "Pointe")
+
+3. **Système de traduction** : Les noms d'entités suivent maintenant la langue du système Home Assistant
+   - Vérifiez **Paramètres → Système → Général → Langue** pour votre langue d'affichage
+   - Support complet : Français, Anglais, Espagnol
+
+### Ajouté
+
+- **Système de traduction multilingue** (PR #75, #78, merci @jf-navica)
+  - Migration complète vers le système `translation_key` de Home Assistant
+  - **Nouveau** : Support complet de l'espagnol (`es.json`) - 319 lignes de traductions
+  - Noms de capteurs plus courts et concis pour améliorer l'affichage mobile
+  - Exemples : "Billing Period Day" au lieu de "Current Billing Period Current Day"
+  - Les entités affichent automatiquement les noms dans la langue du système Home Assistant
+  - Langues supportées : Français, Anglais, Espagnol (couverture complète des 58 capteurs et 16 capteurs binaires)
+
+- **Option de désactivation de la synchronisation de consommation** (PR #74, #78)
+  - Nouvelle option dans le flux de configuration Portal mode : "Activer la synchronisation de l'historique de consommation"
+  - Activée par défaut pour compatibilité ascendante
+  - Permet de désactiver le suivi de consommation pour réduire les appels API
+  - Utile pour les utilisateurs qui n'utilisent pas le tableau de bord Énergie
+  - Configurable après l'installation via Options
+
+- **Détection fiable des pointes critiques dans le blueprint** (PR #73)
+  - Le blueprint Crédits Hivernaux utilise maintenant `calendar.get_events` à l'exécution
+  - Détection précise des pointes critiques vs régulières
+  - Variables de template pour `morning_peak_critical`, `evening_peak_critical`, et `next_peak_critical`
+  - Fonctionne de manière fiable avec les déclencheurs à heures fixes
+
+### Modifié
+
+- **Simplification du flux de configuration initial** (PR #78)
+  - Retrait de la configuration du pré-chauffage du flux de configuration initial
+  - Durée de pré-chauffage utilise la valeur par défaut (120 minutes) lors de la configuration
+  - Configuration du pré-chauffage reste disponible dans les Options après l'installation
+  - Réduit le nombre d'étapes de configuration pour simplifier l'expérience initiale
+
+- **Refonte complète du blueprint Crédits Hivernaux** (`winter-credits-calendar.yaml`, PR #72, #73)
+  - Déclencheurs à heures fixes (01h, 04h, 06h, 10h, 12h, 14h, 16h, 20h) pour l'horaire quotidien
+  - Déclencheurs calendrier avec offset uniquement pour le pré-chauffage des pointes critiques
+  - Variable `next_peak_critical` pour déterminer si la prochaine pointe est critique
+  - Validation du tarif DCPC pour éviter les conflits avec calendriers multi-tarifs
+  - Mode `single` avec `max_exceeded: silent` pour éviter les exécutions multiples
+  - Utilisation de `calendar.get_events` pour obtenir les événements du jour à l'exécution
+  - Patron de templating inspiré du blueprint Flex-D pour une meilleure cohérence
+
+- **Amélioration des noms de capteurs** (PR #75, merci @jf-navica)
+  - 58 noms de capteurs raccourcis pour meilleure lisibilité
+  - Exemples français : "Conso. totale" au lieu de "Consommation totale horaire"
+  - Exemples anglais : "Balance" reste "Balance" (déjà court)
+  - Améliore l'affichage sur mobile et dans les tableaux de bord
+
+- **Simplification du calendrier DCPC** (PR #72)
+  - Le calendrier ne crée plus d'événements pour les pointes non-critiques
+  - Réduit la charge sur le calendrier Home Assistant (pas de mise à jour quotidienne)
+  - Améliore les performances et la fiabilité
+  - Seules les pointes critiques annoncées par Hydro-Québec apparaissent dans le calendrier
+
+### Corrigé
+
+- **Bug critique du blueprint winter-credits-calendar** (PR #73)
+  - `state_attr(calendar_entity, 'events')` retournait vide, empêchant la distinction entre pointes critiques et régulières
+  - Solution : Utilisation de `calendar.get_events` pour obtenir les événements réels à l'exécution
+  - Les déclencheurs à heures fixes fonctionnent maintenant correctement
+  - La variable `next_peak_critical` reflète maintenant l'état réel du calendrier
+
+- **Erreur de sélection du calendrier dans le flux de configuration** (PR #75, merci @jf-navica)
+  - Simplification du schéma de configuration en utilisant le type natif `bool` au lieu de `BooleanSelector()`
+  - Correction des erreurs de sérialisation du schéma Home Assistant
+  - Configuration plus fiable et maintenable
+
+- **Corrections de sérialisation du schéma de configuration** (PR #78)
+  - Changement de `str` vers `TextSelector()` pour le champ `contract_name`
+  - Changement de `vol.Boolean()` vers `bool` pour le champ `enable_consumption_sync`
+  - Imports corrects des sélecteurs Home Assistant
+
+- **État `current_state` pour DPC** (PR #70, merci @lit-af)
+  - Retourne maintenant "normal" au lieu de "off_season" lorsqu'il n'y a pas d'événements pendant la saison hivernale
+  - Améliore la clarté de l'état des capteurs DPC
+
+- **Gestion des fuseaux horaires** (PR #66, merci @jf-navica)
+  - Migration de `pytz` vers `zoneinfo` (bibliothèque standard Python)
+  - Meilleure compatibilité et performances
+
+- **Calcul de la somme cumulative de consommation** (PR #66, merci @jf-navica)
+  - Correction pour éviter les réinitialisations lors de lacunes dans les données
+  - `get_base_sum()` regarde maintenant jusqu'à 30 jours en arrière pour trouver la dernière somme connue
+  - Base la continuité sur le premier point de données réel au lieu de la date de début demandée
+  - Blocage des valeurs de consommation négatives lors de l'importation CSV
+
+### Retiré
+
+- **Option "Inclure les pointes non-critiques"** pour DCPC (PR #72)
+  - Suppression de `CONF_INCLUDE_NON_CRITICAL_PEAKS` de la configuration
+  - Retiré du flux de configuration et des options
+  - Simplification de la gestion des événements calendrier
+
+- **Logique de gestion des événements non-critiques** dans `calendar_manager.py` (PR #72)
+  - Fonction `async_update_peak_event()` supprimée
+  - Constante `TITLE_REGULAR` supprimée
+  - Paramètre `include_non_critical` retiré de `_create_or_update_peak_events()`
+
+- **Champs `name` codés en dur** dans `const.py` (PR #75, merci @jf-navica)
+  - 58 suppressions de champs "name" dans les dictionnaires SENSORS et BINARY_SENSORS
+  - Remplacés par le système translation_key pour une meilleure maintenabilité
+
+### Guide de mise à jour depuis 0.3.1 ou version antérieure
+
+#### 1. Mise à jour de l'intégration
+
+**Via HACS (recommandé)** :
+1. Ouvrez HACS → Intégrations
+2. Trouvez "Hydro-Québec"
+3. Cliquez sur "Mettre à jour"
+4. Redémarrez Home Assistant
+
+**Manuellement** :
+1. Téléchargez `hydroqc.zip` depuis la [page des releases](https://github.com/hydroqc/hydroqc-ha/releases/tag/v0.5.0)
+2. Extrayez dans `custom_components/hydroqc/`
+3. Redémarrez Home Assistant
+
+#### 2. Mise à jour du blueprint Crédits Hivernaux (OBLIGATOIRE si vous l'utilisez)
+
+Le blueprint a été complètement refondu pour corriger un bug critique. **Vous devez le réimporter.**
+
+**Via HACS** :
+1. Allez dans **Paramètres → Automatisations & Scènes → Blueprints**
+2. Cliquez sur **⋮** à côté de "HydroQC - Crédits Hivernaux"
+3. Sélectionnez **Réimporter le blueprint**
+
+**Manuellement** :
+1. Téléchargez [`winter-credits-calendar.yaml`](https://github.com/hydroqc/hydroqc-ha/blob/main/blueprints/winter-credits-calendar.yaml)
+2. Copiez le fichier dans `config/blueprints/automation/hydroqc/`
+3. Rechargez les blueprints : **Paramètres → Automatisations & Scènes → Blueprints → ⋮ → Recharger les blueprints**
+
+**Vérification** :
+- Vos automatisations existantes continueront de fonctionner automatiquement
+- Le blueprint détectera maintenant correctement les pointes critiques vs régulières
+- Testez votre automatisation avant la prochaine pointe critique
+
+#### 3. Nettoyage du calendrier DCPC (recommandé)
+
+Les versions précédentes créaient des événements "Pointe régulière" dans le calendrier. Ces événements ne sont plus créés dans cette version.
+
+**Pour supprimer les anciens événements non-critiques** :
+
+1. Ouvrez l'entité calendrier HydroQC dans Home Assistant
+2. Trouvez les événements avec le titre **"Pointe régulière"** (ou "Regular Peak" en anglais)
+3. Supprimez-les manuellement un par un (ils apparaissent quotidiennement à 6h-10h et 16h-20h)
+
+**Alternative automatique** (via les outils de développement) :
+```yaml
+service: calendar.delete_event
+target:
+  entity_id: calendar.hydroqc_maison_dcpc
+data:
+  uid: # UID de l'événement (visible dans les détails de l'événement)
+```
+
+**Note** : Les nouveaux événements (pointes critiques uniquement) auront le titre **"Pointe"** avec la description "Événement de pointe critique - Tarif: DCPC".
+
+#### 4. Vérification de la langue d'affichage
+
+Les noms d'entités suivent maintenant la **langue du système** Home Assistant, pas la langue du profil utilisateur.
+
+**Pour vérifier ou changer la langue** :
+1. Allez dans **Paramètres → Système → Général**
+2. Vérifiez le champ **Langue** sous "Langue & Région"
+3. Sélectionnez votre langue préférée (Français, English, Español)
+4. Cliquez sur **Enregistrer** et rafraîchissez votre navigateur
+
+**Langues supportées** :
+- 🇫🇷 Français : Noms complets et concis (ex: "Solde", "Conso. totale")
+- 🇬🇧 English : Clean names (e.g., "Balance", "Billing Period Day")
+- 🇪🇸 Español : Traducciones completas (ej: "Saldo", "Día período facturación")
+
+#### 5. Option de synchronisation de consommation (nouvelle fonctionnalité)
+
+Si vous ne souhaitez pas synchroniser l'historique de consommation (par exemple, si vous n'utilisez pas le tableau de bord Énergie) :
+
+1. Allez dans **Paramètres → Appareils & Services → Hydro-Québec**
+2. Cliquez sur **Configurer** (icône engrenage) sur votre intégration
+3. Décochez **"Activer la synchronisation de l'historique de consommation"**
+4. Cliquez sur **Soumettre**
+
+**Effet** :
+- ✅ Réduit les appels API vers Hydro-Québec
+- ✅ Améliore les performances si vous n'avez pas besoin des données de consommation
+- ✅ Les autres capteurs (balance, facture, pointes) continuent de fonctionner normalement
+- ⚠️ Les statistiques de consommation horaire ne seront plus mises à jour
+
+### Remerciements
+
+Un grand merci à tous les contributeurs de cette version :
+
+- **@jf-navica** : Système de traduction complet, support espagnol, corrections de bugs (PR #75, #66)
+- **@lit-af** : Correction de l'état DPC `current_state` (PR #70)
+- Et tous les utilisateurs qui ont testé les versions beta et fourni des retours précieux !
+
+### Prochaines étapes
+
+Cette version stable marque une étape importante pour le projet. Les prochaines versions se concentreront sur :
+- Améliorations de la documentation
+- Nouveaux capteurs et fonctionnalités demandés par la communauté
+- Optimisations de performance
+- Support de nouveaux tarifs Hydro-Québec
+
+**Merci de signaler tout problème via les [issues GitHub](https://github.com/hydroqc/hydroqc-ha/issues).**
 
 ---
 

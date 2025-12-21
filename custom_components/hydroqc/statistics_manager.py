@@ -51,6 +51,7 @@ class StatisticsManager:
         self._get_statistic_id = get_statistic_id_func
         self._contract_name = contract_name
         self._last_known_sums: dict[str, tuple[datetime.date, float]] = {}
+        self._import_lock = asyncio.Lock()
 
     async def determine_sync_start_date(  # noqa: PLR0911, PLR0915
         self,
@@ -207,6 +208,11 @@ class StatisticsManager:
             # On error, trigger CSV import to be safe
             return (True, None)
 
+    @property
+    def import_lock(self) -> asyncio.Lock:
+        """Return the import lock to prevent concurrent imports."""
+        return self._import_lock
+
     async def fetch_and_import_hourly_consumption(
         self, start_date: datetime.date, end_date: datetime.date
     ) -> None:
@@ -222,58 +228,64 @@ class StatisticsManager:
             _LOGGER.warning("Contract not initialized")
             return
 
-        try:
-            # Determine consumption types based on rate
-            consumption_types = self._get_consumption_types()
+        if self._import_lock.locked():
+            _LOGGER.info("Waiting for existing import to finish before starting daily sync...")
 
-            tz = TIME_ZONE
-            current_date = start_date
+        async with self._import_lock:
+            try:
+                # Determine consumption types based on rate
+                consumption_types = self._get_consumption_types()
 
-            # Fetch and import data for each day in range
-            while current_date <= end_date:
-                try:
-                    _LOGGER.info("Fetching hourly consumption for %s", current_date)
+                tz = TIME_ZONE
+                current_date = start_date
 
-                    # Get hourly data for this specific date
-                    hourly_data = await self._contract.get_hourly_consumption(current_date)
+                # Fetch and import data for each day in range
+                while current_date <= end_date:
+                    try:
+                        _LOGGER.info("Fetching hourly consumption for %s", current_date)
 
-                    hourly_list = hourly_data["results"].get("listeDonneesConsoEnergieHoraire", [])
-                    if not hourly_list:
-                        _LOGGER.debug("Empty hourly consumption list for %s", current_date)
+                        # Get hourly data for this specific date
+                        hourly_data = await self._contract.get_hourly_consumption(current_date)
+
+                        hourly_list = hourly_data["results"].get(
+                            "listeDonneesConsoEnergieHoraire", []
+                        )
+                        if not hourly_list:
+                            _LOGGER.debug("Empty hourly consumption list for %s", current_date)
+                            current_date += datetime.timedelta(days=1)
+                            continue
+
+                        # Process each consumption type
+                        await self._process_day_consumption(
+                            current_date,
+                            hourly_list,  # type: ignore[arg-type]
+                            consumption_types,
+                            tz,
+                        )
+
+                        current_date += datetime.timedelta(days=1)
+
+                        # Yield control to event loop to allow HA to process other tasks
+                        await asyncio.sleep(0)
+
+                    except Exception as err:
+                        _LOGGER.exception(
+                            "Failed to fetch/import consumption for %s: %s",
+                            current_date,
+                            err,
+                        )
                         current_date += datetime.timedelta(days=1)
                         continue
 
-                    # Process each consumption type
-                    await self._process_day_consumption(
-                        current_date,
-                        hourly_list,  # type: ignore[arg-type]
-                        consumption_types,
-                        tz,
-                    )
+                _LOGGER.info(
+                    "Completed hourly consumption sync from %s to %s",
+                    start_date,
+                    end_date,
+                )
 
-                    current_date += datetime.timedelta(days=1)
-
-                    # Yield control to event loop to allow HA to process other tasks
-                    await asyncio.sleep(0)
-
-                except Exception as err:
-                    _LOGGER.exception(
-                        "Failed to fetch/import consumption for %s: %s",
-                        current_date,
-                        err,
-                    )
-                    current_date += datetime.timedelta(days=1)
-                    continue
-
-            _LOGGER.info(
-                "Completed hourly consumption sync from %s to %s",
-                start_date,
-                end_date,
-            )
-
-        except Exception as err:
-            _LOGGER.exception("Error fetching hourly consumption")
-            raise UpdateFailed(f"Failed to fetch hourly consumption: {err}") from err
+            except Exception as err:
+                _LOGGER.exception("Error fetching hourly consumption")
+                raise UpdateFailed(f"Failed to fetch hourly consumption: {err}") from err
 
     def _get_consumption_types(self) -> list[str]:
         """Get consumption types based on rate."""

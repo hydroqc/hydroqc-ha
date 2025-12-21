@@ -14,17 +14,13 @@
 
 ### Note de mise à jour importante
 
-**🎉 Version stable** : Première version stable du projet HydroQC Home Assistant ! Après plusieurs mois de développement et de tests communautaires, cette version apporte stabilité, performance et support multilingue.
-
 **⚠️ Actions requises lors de la mise à jour** :
 
-1. **Blueprint Crédits Hivernaux** : Le blueprint a été complètement refondu pour corriger un bug critique
+1. **Blueprint Crédits Hivernaux** : Le blueprint a été complètement refondu pour prendre en charge les ancrage et les pointes non-critiques. Seulenent les pointes critiques sont géré via le calendrier désormais.
    - **Action requise** : Réimportez le blueprint depuis HACS ou GitHub
-   - Le nouveau blueprint utilise `calendar.get_events` pour détecter les pointes critiques à l'exécution
-   - Les anciennes automatisations continueront de fonctionner avec le nouveau blueprint
 
 2. **Nettoyage du calendrier DCPC** : Les événements non-critiques ne sont plus créés
-   - **Recommandation** : Supprimez manuellement les anciens événements non-critiques de votre calendrier
+   - **Recommandation** : Supprimez manuellement les futures événements non-critiques de votre calendrier
    - Les événements non-critiques ont le titre "Pointe régulière" (avant cette version)
    - Seules les pointes critiques annoncées par Hydro-Québec apparaissent maintenant (titre: "Pointe")
 
@@ -49,16 +45,10 @@
   - Utile pour les utilisateurs qui n'utilisent pas le tableau de bord Énergie
   - Configurable après l'installation via Options
 
-- **Détection fiable des pointes critiques dans le blueprint** (PR #73)
-  - Le blueprint Crédits Hivernaux utilise maintenant `calendar.get_events` à l'exécution
-  - Détection précise des pointes critiques vs régulières
-  - Variables de template pour `morning_peak_critical`, `evening_peak_critical`, et `next_peak_critical`
-  - Fonctionne de manière fiable avec les déclencheurs à heures fixes
-
 ### Modifié
 
 - **Simplification du flux de configuration initial** (PR #78)
-  - Retrait de la configuration du pré-chauffage du flux de configuration initial
+  - Retrait de la configuration du pré-chauffage du flux de configuration initial.
   - Durée de pré-chauffage utilise la valeur par défaut (120 minutes) lors de la configuration
   - Configuration du pré-chauffage reste disponible dans les Options après l'installation
   - Réduit le nombre d'étapes de configuration pour simplifier l'expérience initiale
@@ -75,13 +65,10 @@
 - **Amélioration des noms de capteurs** (PR #75, merci @jf-navica)
   - 58 noms de capteurs raccourcis pour meilleure lisibilité
   - Exemples français : "Conso. totale" au lieu de "Consommation totale horaire"
-  - Exemples anglais : "Balance" reste "Balance" (déjà court)
   - Améliore l'affichage sur mobile et dans les tableaux de bord
 
 - **Simplification du calendrier DCPC** (PR #72)
   - Le calendrier ne crée plus d'événements pour les pointes non-critiques
-  - Réduit la charge sur le calendrier Home Assistant (pas de mise à jour quotidienne)
-  - Améliore les performances et la fiabilité
   - Seules les pointes critiques annoncées par Hydro-Québec apparaissent dans le calendrier
 
 ### Corrigé
@@ -170,22 +157,11 @@ Le blueprint a été complètement refondu pour corriger un bug critique. **Vous
 
 Les versions précédentes créaient des événements "Pointe régulière" dans le calendrier. Ces événements ne sont plus créés dans cette version.
 
-**Pour supprimer les anciens événements non-critiques** :
+**Pour supprimer les futures événements non-critiques** :
 
 1. Ouvrez l'entité calendrier HydroQC dans Home Assistant
-2. Trouvez les événements avec le titre **"Pointe régulière"** (ou "Regular Peak" en anglais)
+2. Trouvez les événements avec le titre **"Pointe régulière"**
 3. Supprimez-les manuellement un par un (ils apparaissent quotidiennement à 6h-10h et 16h-20h)
-
-**Alternative automatique** (via les outils de développement) :
-```yaml
-service: calendar.delete_event
-target:
-  entity_id: calendar.hydroqc_maison_dcpc
-data:
-  uid: # UID de l'événement (visible dans les détails de l'événement)
-```
-
-**Note** : Les nouveaux événements (pointes critiques uniquement) auront le titre **"Pointe"** avec la description "Événement de pointe critique - Tarif: DCPC".
 
 #### 4. Vérification de la langue d'affichage
 
@@ -224,14 +200,6 @@ Un grand merci à tous les contributeurs de cette version :
 - **@jf-navica** : Système de traduction complet, support espagnol, corrections de bugs (PR #75, #66)
 - **@lit-af** : Correction de l'état DPC `current_state` (PR #70)
 - Et tous les utilisateurs qui ont testé les versions beta et fourni des retours précieux !
-
-### Prochaines étapes
-
-Cette version stable marque une étape importante pour le projet. Les prochaines versions se concentreront sur :
-- Améliorations de la documentation
-- Nouveaux capteurs et fonctionnalités demandés par la communauté
-- Optimisations de performance
-- Support de nouveaux tarifs Hydro-Québec
 
 **Merci de signaler tout problème via les [issues GitHub](https://github.com/hydroqc/hydroqc-ha/issues).**
 

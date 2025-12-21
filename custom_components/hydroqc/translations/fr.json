@@ -39,24 +39,20 @@
         "title": "Intégration calendrier (optionnel)",
         "description": "Créer automatiquement des événements de calendrier pour les périodes de pointe critique pour {contract_name}. Les événements utilisent des titres français standardisés pour la compatibilité avec les blueprints.",
         "data": {
-          "calendar_entity_id": "Entité calendrier (optionnel)",
-          "include_non_critical_peaks": "Inclure les pointes non critiques"
+          "calendar_entity_id": "Entité calendrier (optionnel)"
         },
         "data_description": {
-          "calendar_entity_id": "Sélectionnez une entité calendrier pour créer les événements de pointe. Laissez vide pour ignorer l'intégration calendrier.",
-          "include_non_critical_peaks": "Créer aussi des événements pour les périodes de pointe non critiques (horaire par défaut sans annonce API)"
+          "calendar_entity_id": "Sélectionnez une entité calendrier pour créer les événements de pointe. Laissez vide pour ignorer l'intégration calendrier."
         }
       },
       "calendar_opendata": {
         "title": "Intégration calendrier (optionnel)",
         "description": "Créer automatiquement des événements de calendrier pour les périodes de pointe critique pour {contract_name}. Les événements utilisent des titres français standardisés pour la compatibilité avec les blueprints.",
         "data": {
-          "calendar_entity_id": "Entité calendrier (optionnel)",
-          "include_non_critical_peaks": "Inclure les pointes non critiques"
+          "calendar_entity_id": "Entité calendrier (optionnel)"
         },
         "data_description": {
-          "calendar_entity_id": "Sélectionnez une entité calendrier pour créer les événements de pointe. Laissez vide pour ignorer l'intégration calendrier.",
-          "include_non_critical_peaks": "Créer aussi des événements pour les périodes de pointe non critiques (horaire par défaut sans annonce API)"
+          "calendar_entity_id": "Sélectionnez une entité calendrier pour créer les événements de pointe. Laissez vide pour ignorer l'intégration calendrier."
         }
       },
       "import_history": {
@@ -113,16 +109,194 @@
           "update_interval": "Intervalle de mise à jour (secondes)",
           "preheat_duration_minutes": "Durée de préchauffage (minutes)",
           "enable_consumption_sync": "Activer la synchronisation de consommation",
-          "calendar_entity_id": "Entité calendrier (optionnel)",
-          "include_non_critical_peaks": "Inclure les pointes non critiques"
+          "calendar_entity_id": "Entité calendrier (optionnel)"
         },
         "data_description": {
           "update_interval": "Fréquence de récupération des données d'Hydro-Québec (30-600 secondes)",
           "preheat_duration_minutes": "Durée avant les événements de pointe critique pour déclencher le préchauffage (0-240 minutes)",
           "enable_consumption_sync": "Activer pour synchroniser les données de consommation horaire pour le tableau de bord énergétique. Nécessite un rechargement de l'intégration pour prendre effet.",
-          "calendar_entity_id": "Entité calendrier pour les événements de pointe (tarifs DPC/DCPC seulement). Laissez vide pour désactiver.",
-          "include_non_critical_peaks": "Créer aussi des événements pour les périodes de pointe non critiques (horaire par défaut)"
+          "calendar_entity_id": "Entité calendrier pour les événements de pointe (tarifs DPC/DCPC seulement). Laissez vide pour désactiver."
         }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "balance": {
+        "name": "Solde"
+      },
+      "current_billing_period_current_day": {
+        "name": "Jour période facturation"
+      },
+      "current_billing_period_duration": {
+        "name": "Durée période facturation"
+      },
+      "current_billing_period_total_to_date": {
+        "name": "Total facture à ce jour"
+      },
+      "current_billing_period_projected_bill": {
+        "name": "Facture projetée"
+      },
+      "current_billing_period_daily_bill_mean": {
+        "name": "Moyenne quotidienne facture"
+      },
+      "current_billing_period_daily_consumption_mean": {
+        "name": "Moyenne quotidienne conso"
+      },
+      "current_billing_period_total_consumption": {
+        "name": "Conso. totale"
+      },
+      "current_billing_period_projected_total_consumption": {
+        "name": "Conso. totale projetée"
+      },
+      "current_billing_period_average_temperature": {
+        "name": "Température moyenne"
+      },
+      "current_billing_period_kwh_cost_mean": {
+        "name": "Coût moyen kWh"
+      },
+      "current_billing_period_rate": {
+        "name": "Tarif actuel"
+      },
+      "current_billing_period_rate_option": {
+        "name": "Option tarifaire"
+      },
+      "outage": {
+        "name": "État panne"
+      },
+      "current_billing_period_higher_price_consumption": {
+        "name": "Conso. prix supérieur"
+      },
+      "current_billing_period_lower_price_consumption": {
+        "name": "Conso. prix inférieur"
+      },
+      "amount_saved_vs_base_rate": {
+        "name": "Économie vs Tarif D"
+      },
+      "dpc_state": {
+        "name": "État PCD"
+      },
+      "dpc_next_peak_start": {
+        "name": "Début prochaine pointe"
+      },
+      "dpc_next_peak_end": {
+        "name": "Fin prochaine pointe"
+      },
+      "dpc_next_pre_heat_start": {
+        "name": "Début prochain préchauffage"
+      },
+      "dpc_critical_hours_count": {
+        "name": "Heures de pointe"
+      },
+      "dpc_winter_days_count": {
+        "name": "Jours d'hiver"
+      },
+      "wc_state": {
+        "name": "État Crédit Hivernal"
+      },
+      "wc_cumulated_credit": {
+        "name": "Crédit hivernal total"
+      },
+      "wc_projected_cumulated_credit": {
+        "name": "Crédit hivernal projeté"
+      },
+      "wc_next_anchor_start": {
+        "name": "Début du prochain ancrage"
+      },
+      "wc_next_anchor_end": {
+        "name": "Fin du prochain ancrage"
+      },
+      "wc_next_peak_start": {
+        "name": "Début prochaine pointe"
+      },
+      "wc_next_peak_end": {
+        "name": "Fin prochaine pointe"
+      },
+      "wc_next_critical_peak_start": {
+        "name": "Début prochaine pointe critique"
+      },
+      "wc_next_critical_peak_end": {
+        "name": "Fin prochaine pointe critique"
+      },
+      "wc_next_pre_heat_start": {
+        "name": "Début prochain préchauffage"
+      },
+      "wc_yesterday_morning_peak_credit": {
+        "name": "Crédit hier matin"
+      },
+      "wc_yesterday_morning_peak_actual_consumption": {
+        "name": "Conso. réelle hier matin"
+      },
+      "wc_yesterday_morning_peak_ref_consumption": {
+        "name": "Conso. réf. hier matin"
+      },
+      "wc_yesterday_morning_peak_saved_consumption": {
+        "name": "Conso. éco. hier matin"
+      },
+      "wc_yesterday_evening_peak_credit": {
+        "name": "Crédit hier soir"
+      },
+      "wc_yesterday_evening_peak_actual_consumption": {
+        "name": "Conso. réelle hier soir"
+      },
+      "wc_yesterday_evening_peak_ref_consumption": {
+        "name": "Conso. réf. hier soir"
+      },
+      "wc_yesterday_evening_peak_saved_consumption": {
+        "name": "Conso. éco. hier soir"
+      }
+    },
+    "binary_sensor": {
+      "current_period_epp_enabled": {
+        "name": "MVE actif"
+      },
+      "wc_critical": {
+        "name": "Période critique"
+      },
+      "wc_critical_peak_in_progress": {
+        "name": "Pointe critique active"
+      },
+      "wc_pre_heat": {
+        "name": "Préchauffage actif"
+      },
+      "wc_next_anchor_critical": {
+        "name": "Prochain ancrage critique"
+      },
+      "wc_next_peak_critical": {
+        "name": "Prochaine pointe critique"
+      },
+      "wc_upcoming_critical_peak": {
+        "name": "Pointe critique à venir"
+      },
+      "wc_critical_morning_peak_today": {
+        "name": "Pointe matin aujourd'hui"
+      },
+      "wc_critical_evening_peak_today": {
+        "name": "Pointe soir aujourd'hui"
+      },
+      "wc_critical_morning_peak_tomorrow": {
+        "name": "Pointe matin demain"
+      },
+      "wc_critical_evening_peak_tomorrow": {
+        "name": "Pointe soir demain"
+      },
+      "dpc_pre_heat": {
+        "name": "Préchauffage actif"
+      },
+      "dpc_peak_in_progress": {
+        "name": "Pointe critique active"
+      },
+      "dpc_critical_morning_peak_today": {
+        "name": "Pointe matin aujourd'hui"
+      },
+      "dpc_critical_evening_peak_today": {
+        "name": "Pointe soir aujourd'hui"
+      },
+      "dpc_critical_morning_peak_tomorrow": {
+        "name": "Pointe matin demain"
+      },
+      "dpc_critical_evening_peak_tomorrow": {
+        "name": "Pointe soir demain"
       }
     }
   }

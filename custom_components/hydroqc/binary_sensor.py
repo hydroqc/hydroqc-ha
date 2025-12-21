@@ -92,7 +92,7 @@ class HydroQcBinarySensor(
         contract_id = entry.data.get(CONF_CONTRACT_ID, entry.entry_id)
 
         # Entity configuration
-        self._attr_name = sensor_config["name"]
+        self._attr_translation_key = self._sensor_key
         self._attr_unique_id = f"{contract_id}_{sensor_key}"
         self._attr_device_class = sensor_config.get("device_class")
         self._attr_icon = sensor_config.get("icon")

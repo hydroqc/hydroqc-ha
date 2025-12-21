@@ -1,0 +1,313 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Elegir modo de conexión",
+        "description": "Seleccione cómo desea conectarse a Hydro-Québec",
+        "data": {
+          "auth_mode": "Modo de conexión"
+        },
+        "data_description": {
+          "auth_mode": "Modo Portal: Inicie sesión para acceso completo a la cuenta. Modo Datos Abiertos: Use solo datos públicos (no requiere inicio de sesión)"
+        }
+      },
+      "account": {
+        "title": "Modo Portal - Inicio de sesión",
+        "description": "Ingrese sus credenciales de Hydro-Québec",
+        "data": {
+          "username": "Nombre de usuario (Correo electrónico)",
+          "password": "Contraseña",
+          "contract_name": "Nombre del contrato"
+        },
+        "data_description": {
+          "username": "Su dirección de correo electrónico de la cuenta de Hydro-Québec",
+          "password": "Su contraseña de la cuenta de Hydro-Québec",
+          "contract_name": "Un nombre amigable para este contrato (ej. 'Casa', 'Cabaña')"
+        }
+      },
+      "select_contract": {
+        "title": "Seleccionar contrato",
+        "description": "Elija qué contrato monitorear",
+        "data": {
+          "contract": "Contrato"
+        },
+        "data_description": {
+          "contract": "Seleccione el contrato que desea agregar a Home Assistant"
+        }
+      },
+      "configure_preheat": {
+        "title": "Configurar duración de precalentamiento",
+        "description": "Configure cuándo activar alertas de precalentamiento para {rate_name}",
+        "data": {
+          "preheat_duration_minutes": "Duración de precalentamiento (minutos)"
+        },
+        "data_description": {
+          "preheat_duration_minutes": "Duración antes de eventos de pico crítico para activar precalentamiento (0-240 minutos, predeterminado: 120)"
+        }
+      },
+      "calendar": {
+        "title": "Integración de calendario (Opcional)",
+        "description": "Crear automáticamente eventos de calendario para períodos de pico crítico para {contract_name}. Los eventos usarán títulos estandarizados en francés para compatibilidad con blueprints.",
+        "data": {
+          "calendar_entity_id": "Entidad de calendario (opcional)"
+        },
+        "data_description": {
+          "calendar_entity_id": "Seleccione una entidad de calendario para crear eventos de pico. Deje vacío para omitir la integración de calendario."
+        }
+      },
+      "calendar_opendata": {
+        "title": "Integración de calendario (Opcional)",
+        "description": "Crear automáticamente eventos de calendario para períodos de pico crítico para {contract_name}. Los eventos usarán títulos estandarizados en francés para compatibilidad con blueprints.",
+        "data": {
+          "calendar_entity_id": "Entidad de calendario (opcional)"
+        },
+        "data_description": {
+          "calendar_entity_id": "Seleccione una entidad de calendario para crear eventos de pico. Deje vacío para omitir la integración de calendario."
+        }
+      },
+      "import_history": {
+        "title": "Importar historial de consumo",
+        "description": "¿Cuántos días de historial de consumo desea importar? Los últimos 30 días se sincronizarán automáticamente. El historial máximo disponible es de 800 días. Establezca en 0 para omitir la importación de historial adicional. La importación se ejecuta en segundo plano y puede tardar varios minutos.",
+        "data": {
+          "history_days": "Días de historial para importar"
+        },
+        "data_description": {
+          "history_days": "Número de días para importar (0-800). Establezca en 0 para sincronizar solo los últimos 30 días, o ingrese un valor para historial más antiguo."
+        }
+      },
+      "opendata": {
+        "title": "Modo Datos Abiertos - Seleccionar sector",
+        "description": "Configure el monitoreo usando datos públicos (no requiere inicio de sesión). Primero, seleccione su sector de cliente",
+        "data": {
+          "sector": "Sector de cliente"
+        },
+        "data_description": {
+          "sector": "Seleccione si es un cliente residencial o comercial"
+        }
+      },
+      "opendata_offer": {
+        "title": "Modo Datos Abiertos - Seleccionar tarifa",
+        "description": "Seleccione su plan de tarifa eléctrica para clientes {sector}. Las opciones disponibles se obtienen de la API pública de Hydro-Québec",
+        "data": {
+          "contract_name": "Nombre del contrato",
+          "rate_selection": "Plan de tarifa",
+          "preheat_duration_minutes": "Duración de precalentamiento (minutos)"
+        },
+        "data_description": {
+          "contract_name": "Un nombre amigable para esta configuración (ej. 'Casa', 'Cabaña')",
+          "rate_selection": "Seleccione su plan de tarifa eléctrica de las opciones disponibles",
+          "preheat_duration_minutes": "Duración antes de eventos de pico crítico para activar precalentamiento (0-240 minutos, predeterminado: 120)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Error al conectar con Hydro-Québec",
+      "invalid_auth": "Nombre de usuario o contraseña inválidos",
+      "no_contracts": "No se encontraron contratos para esta cuenta",
+      "unknown": "Ocurrió un error inesperado"
+    },
+    "abort": {
+      "already_configured": "Este contrato ya está configurado"
+    }
+  },
+  "options": {
+    "step": {
+      "init": {
+        "title": "Opciones de Hydro-Québec",
+        "description": "Configurar opciones de integración",
+        "data": {
+          "update_interval": "Intervalo de actualización (segundos)",
+          "preheat_duration_minutes": "Duración de precalentamiento (minutos)",
+          "enable_consumption_sync": "Habilitar sincronización de consumo",
+          "calendar_entity_id": "Entidad de calendario (opcional)"
+        },
+        "data_description": {
+          "update_interval": "Con qué frecuencia obtener datos de Hydro-Québec (30-600 segundos)",
+          "preheat_duration_minutes": "Duración antes de eventos de pico crítico para activar precalentamiento (0-240 minutos)",
+          "enable_consumption_sync": "Habilitar para sincronizar datos de consumo por hora para el panel de energía. Requiere recargar la integración para tener efecto.",
+          "calendar_entity_id": "Entidad de calendario para eventos de pico (solo tarifas DPC/DCPC). Deje vacío para deshabilitar."
+        }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "balance": {
+        "name": "Saldo"
+      },
+      "current_billing_period_current_day": {
+        "name": "Día período facturación"
+      },
+      "current_billing_period_duration": {
+        "name": "Duración período fact."
+      },
+      "current_billing_period_total_to_date": {
+        "name": "Total factura a la fecha"
+      },
+      "current_billing_period_projected_bill": {
+        "name": "Factura proyectada"
+      },
+      "current_billing_period_daily_bill_mean": {
+        "name": "Promedio diario factura"
+      },
+      "current_billing_period_daily_consumption_mean": {
+        "name": "Promedio diario consumo"
+      },
+      "current_billing_period_total_consumption": {
+        "name": "Consumo total"
+      },
+      "current_billing_period_projected_total_consumption": {
+        "name": "Consumo total proyectado"
+      },
+      "current_billing_period_average_temperature": {
+        "name": "Temperatura promedio"
+      },
+      "current_billing_period_kwh_cost_mean": {
+        "name": "Costo promedio kWh"
+      },
+      "current_billing_period_rate": {
+        "name": "Tarifa actual"
+      },
+      "current_billing_period_rate_option": {
+        "name": "Opción de tarifa"
+      },
+      "outage": {
+        "name": "Estado de corte"
+      },
+      "current_billing_period_higher_price_consumption": {
+        "name": "Consumo precio alto"
+      },
+      "current_billing_period_lower_price_consumption": {
+        "name": "Consumo precio bajo"
+      },
+      "amount_saved_vs_base_rate": {
+        "name": "Ahorro vs Tarifa D"
+      },
+      "dpc_state": {
+        "name": "Estado DPC"
+      },
+      "dpc_next_peak_start": {
+        "name": "Inicio del próximo pico"
+      },
+      "dpc_next_peak_end": {
+        "name": "Fin del próximo pico"
+      },
+      "dpc_next_pre_heat_start": {
+        "name": "Inicio próx. precalent."
+      },
+      "dpc_critical_hours_count": {
+        "name": "Horas críticas"
+      },
+      "dpc_winter_days_count": {
+        "name": "Días de invierno"
+      },
+      "wc_state": {
+        "name": "Estado Crédito Invierno"
+      },
+      "wc_cumulated_credit": {
+        "name": "Crédito invierno total"
+      },
+      "wc_projected_cumulated_credit": {
+        "name": "Crédito invierno proy."
+      },
+      "wc_next_anchor_start": {
+        "name": "Inicio del próximo anclaje"
+      },
+      "wc_next_anchor_end": {
+        "name": "Fin del próximo anclaje"
+      },
+      "wc_next_peak_start": {
+        "name": "Inicio del próximo pico"
+      },
+      "wc_next_peak_end": {
+        "name": "Fin del próximo pico"
+      },
+      "wc_next_critical_peak_start": {
+        "name": "Inicio del próximo pico crítico"
+      },
+      "wc_next_critical_peak_end": {
+        "name": "Fin del próximo pico crítico"
+      },
+      "wc_next_pre_heat_start": {
+        "name": "Inicio próx. precalent."
+      },
+      "wc_yesterday_morning_peak_credit": {
+        "name": "Crédito ayer mañana"
+      },
+      "wc_yesterday_morning_peak_actual_consumption": {
+        "name": "Consumo real ayer mañana"
+      },
+      "wc_yesterday_morning_peak_ref_consumption": {
+        "name": "Consumo ref. ayer mañana"
+      },
+      "wc_yesterday_morning_peak_saved_consumption": {
+        "name": "Consumo ahor. ayer mañana"
+      },
+      "wc_yesterday_evening_peak_credit": {
+        "name": "Crédito ayer tarde"
+      },
+      "wc_yesterday_evening_peak_actual_consumption": {
+        "name": "Consumo real ayer tarde"
+      },
+      "wc_yesterday_evening_peak_ref_consumption": {
+        "name": "Consumo ref. ayer tarde"
+      },
+      "wc_yesterday_evening_peak_saved_consumption": {
+        "name": "Consumo ahor. ayer tarde"
+      }
+    },
+    "binary_sensor": {
+      "current_period_epp_enabled": {
+        "name": "EPP Activo"
+      },
+      "wc_critical": {
+        "name": "Período crítico"
+      },
+      "wc_critical_peak_in_progress": {
+        "name": "Pico crítico activo"
+      },
+      "wc_pre_heat": {
+        "name": "Precalentamiento activo"
+      },
+      "wc_next_anchor_critical": {
+        "name": "Próximo anclaje crítico"
+      },
+      "wc_next_peak_critical": {
+        "name": "Próximo pico crítico"
+      },
+      "wc_upcoming_critical_peak": {
+        "name": "Próximo pico crítico"
+      },
+      "wc_critical_morning_peak_today": {
+        "name": "Pico mañana hoy"
+      },
+      "wc_critical_evening_peak_today": {
+        "name": "Pico tarde hoy"
+      },
+      "wc_critical_morning_peak_tomorrow": {
+        "name": "Pico mañana mañana"
+      },
+      "wc_critical_evening_peak_tomorrow": {
+        "name": "Pico tarde mañana"
+      },
+      "dpc_pre_heat": {
+        "name": "Precalentamiento activo"
+      },
+      "dpc_peak_in_progress": {
+        "name": "Pico crítico activo"
+      },
+      "dpc_critical_morning_peak_today": {
+        "name": "Pico mañana hoy"
+      },
+      "dpc_critical_evening_peak_today": {
+        "name": "Pico tarde hoy"
+      },
+      "dpc_critical_morning_peak_tomorrow": {
+        "name": "Pico mañana mañana"
+      },
+      "dpc_critical_evening_peak_tomorrow": {
+        "name": "Pico tarde mañana"
+      }
+    }
+  }
+}

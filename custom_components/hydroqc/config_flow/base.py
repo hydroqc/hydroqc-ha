@@ -287,7 +287,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="import_history",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(CONF_ENABLE_CONSUMPTION_SYNC, default=True): BooleanSelector(),
+                    vol.Optional(CONF_ENABLE_CONSUMPTION_SYNC, default=True): bool,
                     vol.Optional(CONF_HISTORY_DAYS, default=0): NumberSelector(
                         NumberSelectorConfig(
                             min=0,

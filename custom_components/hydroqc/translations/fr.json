@@ -174,7 +174,7 @@
         "name": "Économie vs Tarif D"
       },
       "dpc_state": {
-        "name": "État PCD"
+        "name": "État DPC"
       },
       "dpc_next_peak_start": {
         "name": "Début prochaine pointe"

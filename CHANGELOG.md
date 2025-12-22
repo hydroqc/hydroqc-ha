@@ -69,6 +69,7 @@ L'option "Intervalle de mise à jour" a été retirée de la configuration. Le s
 
 - **Organisation des capteurs diagnostiques**
   - Déplacement de 15 capteurs non-essentiels vers la catégorie diagnostique
+  - Déplacement de 15 capteurs binaires liés aux pointes vers la catégorie diagnostique
   - Désencombre la liste principale des entités
   - Capteurs toujours accessibles dans la section diagnostique
   - Capteurs diagnostiques:
@@ -76,6 +77,9 @@ L'option "Intervalle de mise à jour" a été retirée de la configuration. Le s
     - Informations techniques: température moyenne, coût moyen, option EPP
     - Winter Credits (DCPC): état WC, début pré-chauffage
     - Flex-D (DPC): heures critiques, jours hiver, début pré-chauffage
+  - Capteurs binaires diagnostiques (pointes):
+    - Winter Credits: pré-chauffage, pointe critique en cours, alertes anchor/peak, pointes matin/soir
+    - Flex-D: pré-chauffage, pointe en cours, pointes critiques matin/soir
 
 ### Modifié
 

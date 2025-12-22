@@ -4,14 +4,17 @@ from __future__ import annotations
 
 import asyncio
 import contextlib
+import csv
 import datetime
 import logging
-import zoneinfo
 from collections.abc import Callable, Sequence
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.recorder import get_instance, statistics  # type: ignore[attr-defined]
 from homeassistant.core import HomeAssistant
+
+from .const import DEBUG_CSV_FILE_PATH, ENABLE_CSV_DEBUG, TIME_ZONE
 
 if TYPE_CHECKING:
     from hydroqc.contract.common import Contract
@@ -19,8 +22,6 @@ if TYPE_CHECKING:
     from .statistics_manager import StatisticsManager
 
 _LOGGER = logging.getLogger(__name__)
-# Create timezone once at module level to avoid blocking I/O in event loop
-_TIMEZONE_TORONTO = zoneinfo.ZoneInfo("America/Toronto")
 
 
 class ConsumptionHistoryImporter:
@@ -49,6 +50,35 @@ class ConsumptionHistoryImporter:
         self._get_statistic_id = get_statistic_id_func
         self._statistics_manager = statistics_manager
 
+    async def _write_debug_csv(self, csv_data: list[Sequence[Any]]) -> None:
+        """Write the raw CSV data to a local file for debugging."""
+        _LOGGER.debug("Attempting to write debug CSV. ENABLE_CSV_DEBUG: %s", ENABLE_CSV_DEBUG)
+        if not ENABLE_CSV_DEBUG:
+            return
+
+        file_path: Path = Path(str(self.hass.config.config_dir)) / DEBUG_CSV_FILE_PATH
+        _LOGGER.debug("Debug CSV file path: %s", file_path)
+        _LOGGER.debug("CSV data length: %d", len(csv_data))
+
+        if not csv_data:
+            _LOGGER.info("No CSV data to write to debug file.")
+            return
+
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+
+        mode = "a" if file_path.exists() else "w"
+        try:
+            with file_path.open(mode, newline="", encoding="utf-8") as csvfile:
+                writer = csv.writer(csvfile)
+                if mode == "w":  # Always write header if new file, assuming csv_data is not empty
+                    writer.writerow(csv_data[0])
+                writer.writerows(
+                    csv_data[1:]
+                )  # Write data rows, skipping header if already written
+            _LOGGER.debug("Appended raw CSV data to %s", file_path)
+        except OSError as e:
+            _LOGGER.error("Failed to write debug CSV to %s: %s", file_path, e)
+
     async def import_csv_history(self, days_back: int) -> None:  # noqa: PLR0912, PLR0915
         """Import historical consumption data from CSV using iterative approach.
 
@@ -62,203 +92,213 @@ class ConsumptionHistoryImporter:
         Args:
             days_back: Number of days back to import (default 731 = ~2 years)
         """
-        try:
-            if not self._contract:
-                _LOGGER.warning("Contract not initialized")
-                return
-
-            # Calculate date range: days_back ago to yesterday
-            today = datetime.date.today()
-            yesterday = today - datetime.timedelta(days=1)
-            current_start_date = today - datetime.timedelta(days=days_back)
-
-            # Try to get contract start date
-            contract_start_date = None
-            if hasattr(self._contract, "start_date") and self._contract.start_date:
-                with contextlib.suppress(ValueError, TypeError):
-                    contract_start_date = datetime.date.fromisoformat(
-                        str(self._contract.start_date)
-                    )
-
-            # Use the more recent date (contract start or days_back)
-            if contract_start_date and contract_start_date > current_start_date:
-                current_start_date = contract_start_date
-                _LOGGER.info(
-                    "CSV import: Using contract start date %s (newer than %d days ago)",
-                    current_start_date,
-                    days_back,
-                )
-
+        if self._statistics_manager.import_lock.locked():
             _LOGGER.info(
-                "CSV import: Starting iterative import from %s to %s (%d days)",
-                current_start_date,
-                yesterday,
-                (yesterday - current_start_date).days,
+                "Waiting for existing import to finish before starting CSV history import..."
             )
 
-            # Determine consumption types based on rate
-            consumption_types = self._statistics_manager._get_consumption_types()
+        async with self._statistics_manager.import_lock:
+            try:
+                if not self._contract:
+                    _LOGGER.warning("Contract not initialized")
+                    return
 
-            iteration = 0
-            total_rows_imported = 0
+                # Calculate date range: days_back ago to yesterday
+                today = datetime.date.today()
+                yesterday = today - datetime.timedelta(days=1)
+                current_start_date = today - datetime.timedelta(days=days_back)
 
-            # Loop until we have data up to yesterday
-            while current_start_date <= yesterday:
-                iteration += 1
-                _LOGGER.info(
-                    "CSV import: Iteration %d - Requesting data from %s to now",
-                    iteration,
-                    current_start_date,
-                )
+                # Try to get contract start date
+                contract_start_date = None
+                if hasattr(self._contract, "start_date") and self._contract.start_date:
+                    with contextlib.suppress(ValueError, TypeError):
+                        contract_start_date = datetime.date.fromisoformat(
+                            str(self._contract.start_date)
+                        )
 
-                try:
-                    # Step 1: Request CSV data from current_start_date to now
-                    _LOGGER.debug(
-                        "[PORTAL REQUEST] Iteration %d: Requesting CSV from %s to %s (%d days)",
-                        iteration,
+                # Use the more recent date (contract start or days_back)
+                if contract_start_date and contract_start_date > current_start_date:
+                    current_start_date = contract_start_date
+                    _LOGGER.info(
+                        "CSV import: Using contract start date %s (newer than %d days ago)",
                         current_start_date,
-                        today,
-                        (today - current_start_date).days,
+                        days_back,
                     )
 
-                    csv_data_raw = await self._contract.get_hourly_energy(current_start_date, today)
-                    csv_data = list(csv_data_raw)
+                _LOGGER.info(
+                    "CSV import: Starting iterative import from %s to %s (%d days)",
+                    current_start_date,
+                    yesterday,
+                    (yesterday - current_start_date).days,
+                )
 
-                    if len(csv_data) <= 1:  # Only header or empty
-                        _LOGGER.warning(
-                            "[PORTAL RESPONSE] Iteration %d: No data (from %s), advancing 30 days",
+                # Determine consumption types based on rate
+                consumption_types = self._statistics_manager._get_consumption_types()
+
+                iteration = 0
+                total_rows_imported = 0
+
+                # Loop until we have data up to yesterday
+                while current_start_date <= yesterday:
+                    iteration += 1
+                    _LOGGER.info(
+                        "CSV import: Iteration %d - Requesting data from %s to now",
+                        iteration,
+                        current_start_date,
+                    )
+
+                    try:
+                        # Step 1: Request CSV data from current_start_date to now
+                        _LOGGER.debug(
+                            "[PORTAL REQUEST] Iteration %d: Requesting CSV from %s to %s (%d days)",
                             iteration,
                             current_start_date,
+                            today,
+                            (today - current_start_date).days,
                         )
-                        # Increment start date by 30 days and try again
-                        current_start_date += datetime.timedelta(days=30)
 
-                        # Safety check: don't go past yesterday
-                        if current_start_date > yesterday:
-                            _LOGGER.warning("[PORTAL RESPONSE] No data in range, giving up")
-                            break
+                        csv_data_raw = await self._contract.get_hourly_energy(
+                            current_start_date, today
+                        )
+                        csv_data = list(csv_data_raw)
 
-                        # Continue to next iteration
-                        continue
+                        await self._write_debug_csv(csv_data)
 
-                    data_rows = len(csv_data) - 1  # Exclude header
-
-                    # Get date range from received CSV
-                    first_row = csv_data[1] if len(csv_data) > 1 else None
-                    last_row = csv_data[-1]
-
-                    first_date_str = (
-                        str(first_row[1]) if first_row and len(first_row) > 1 else "unknown"
-                    )
-                    last_date_str = (
-                        str(last_row[1]) if last_row and len(last_row) > 1 else "unknown"
-                    )
-
-                    _LOGGER.info(
-                        "[PORTAL RESPONSE] Iteration %d: Got %d rows (first: %s, last: %s)",
-                        iteration,
-                        data_rows,
-                        first_date_str,
-                        last_date_str,
-                    )
-
-                    # Step 2: Parse CSV and import to statistics database
-                    _LOGGER.debug(
-                        "[CSV PARSE] Iteration %d: Parsing %d rows for types: %s",
-                        iteration,
-                        data_rows,
-                        ", ".join(consumption_types),
-                    )
-
-                    stats_by_type = self._parse_csv_data(
-                        csv_data,
-                        consumption_types,
-                    )
-
-                    _LOGGER.debug(
-                        "[RECORDER IMPORT] Iteration %d: Importing to Home Assistant recorder",
-                        iteration,
-                    )
-
-                    await self._import_statistics(
-                        stats_by_type, current_start_date, consumption_types
-                    )
-
-                    total_rows_imported += data_rows
-
-                    # Step 3: CSV is reversed (newest first, oldest last)
-                    # - First row (after header) = newest/latest date
-                    # - Last row = oldest date
-                    # Check first row to see if we've reached yesterday (target)
-                    first_data_row = csv_data[1] if len(csv_data) > 1 else None
-                    last_data_row = csv_data[-1]
-
-                    if isinstance(first_data_row, list) and len(first_data_row) > 1:
-                        try:
-                            # Get newest date (first row) to check if we've reached yesterday
-                            newest_date_str = str(first_data_row[1])
-                            newest_datetime = datetime.datetime.strptime(
-                                newest_date_str, "%Y-%m-%d %H:%M:%S"
-                            )
-                            newest_date_in_csv = newest_datetime.date()
-
-                            # Get oldest date (last row) for next iteration's start_date
-                            oldest_date_str = str(last_data_row[1])
-                            oldest_datetime = datetime.datetime.strptime(
-                                oldest_date_str, "%Y-%m-%d %H:%M:%S"
-                            )
-                            oldest_date_in_csv = oldest_datetime.date()
-
-                            _LOGGER.info(
-                                "CSV import: Iteration %d - Date range: %s (oldest) to %s (newest)",
+                        if len(csv_data) <= 1:  # Only header or empty
+                            _LOGGER.warning(
+                                "[PORTAL RESPONSE] Iteration %d: No data (from %s), advancing 30 days",
                                 iteration,
-                                oldest_date_in_csv,
-                                newest_date_in_csv,
+                                current_start_date,
                             )
+                            # Increment start date by 30 days and try again
+                            current_start_date += datetime.timedelta(days=30)
 
-                            # Step 4: Check if we have yesterday's data (check newest date)
-                            if newest_date_in_csv >= yesterday:
-                                _LOGGER.info(
-                                    "CSV import: Completed - Have data up to %s (target: %s)",
-                                    newest_date_in_csv,
-                                    yesterday,
-                                )
+                            # Safety check: don't go past yesterday
+                            if current_start_date > yesterday:
+                                _LOGGER.warning("[PORTAL RESPONSE] No data in range, giving up")
                                 break
 
-                            # Set next iteration's start_date to day after newest date in CSV
-                            current_start_date = newest_date_in_csv + datetime.timedelta(days=1)
+                            # Continue to next iteration
+                            continue
 
-                        except ValueError as e:
-                            _LOGGER.error("CSV import: Could not parse dates in CSV: %s", e)
+                        data_rows = len(csv_data) - 1  # Exclude header
+
+                        # Get date range from received CSV
+                        first_row = csv_data[1] if len(csv_data) > 1 else None
+                        last_row = csv_data[-1]
+
+                        first_date_str = (
+                            str(first_row[1]) if first_row and len(first_row) > 1 else "unknown"
+                        )
+                        last_date_str = (
+                            str(last_row[1]) if last_row and len(last_row) > 1 else "unknown"
+                        )
+
+                        _LOGGER.info(
+                            "[PORTAL RESPONSE] Iteration %d: Got %d rows (first: %s, last: %s)",
+                            iteration,
+                            data_rows,
+                            first_date_str,
+                            last_date_str,
+                        )
+
+                        # Step 2: Parse CSV and import to statistics database
+                        _LOGGER.debug(
+                            "[CSV PARSE] Iteration %d: Parsing %d rows for types: %s",
+                            iteration,
+                            data_rows,
+                            ", ".join(consumption_types),
+                        )
+
+                        stats_by_type = self._parse_csv_data(
+                            csv_data,
+                            consumption_types,
+                        )
+
+                        _LOGGER.debug(
+                            "[RECORDER IMPORT] Iteration %d: Importing to Home Assistant recorder",
+                            iteration,
+                        )
+
+                        await self._import_statistics(
+                            stats_by_type, current_start_date, consumption_types
+                        )
+
+                        total_rows_imported += data_rows
+
+                        # Step 3: CSV is reversed (newest first, oldest last)
+                        # - First row (after header) = newest/latest date
+                        # - Last row = oldest date
+                        # Check first row to see if we've reached yesterday (target)
+                        first_data_row = csv_data[1] if len(csv_data) > 1 else None
+                        last_data_row = csv_data[-1]
+
+                        if isinstance(first_data_row, list) and len(first_data_row) > 1:
+                            try:
+                                # Get newest date (first row) to check if we've reached yesterday
+                                newest_date_str = str(first_data_row[1])
+                                newest_datetime = datetime.datetime.strptime(
+                                    newest_date_str, "%Y-%m-%d %H:%M:%S"
+                                )
+                                newest_date_in_csv = newest_datetime.date()
+
+                                # Get oldest date (last row) for next iteration's start_date
+                                oldest_date_str = str(last_data_row[1])
+                                oldest_datetime = datetime.datetime.strptime(
+                                    oldest_date_str, "%Y-%m-%d %H:%M:%S"
+                                )
+                                oldest_date_in_csv = oldest_datetime.date()
+
+                                _LOGGER.info(
+                                    "CSV import: Iteration %d - Date range: %s (oldest) to %s (newest)",
+                                    iteration,
+                                    oldest_date_in_csv,
+                                    newest_date_in_csv,
+                                )
+
+                                # Step 4: Check if we have yesterday's data (check newest date)
+                                if newest_date_in_csv >= yesterday:
+                                    _LOGGER.info(
+                                        "CSV import: Completed - Have data up to %s (target: %s)",
+                                        newest_date_in_csv,
+                                        yesterday,
+                                    )
+                                    break
+
+                                # Set next iteration's start_date to day after newest date in CSV
+                                current_start_date = newest_date_in_csv + datetime.timedelta(days=1)
+
+                            except ValueError as e:
+                                _LOGGER.error("CSV import: Could not parse dates in CSV: %s", e)
+                                break
+                        else:
+                            _LOGGER.error("CSV import: Invalid row format in CSV data")
                             break
-                    else:
-                        _LOGGER.error("CSV import: Invalid row format in CSV data")
+
+                        # Yield control to event loop to keep HA responsive
+                        await asyncio.sleep(0.1)
+
+                    except Exception as e:
+                        _LOGGER.error(
+                            "CSV import: Error in iteration %d (from %s): %s",
+                            iteration,
+                            current_start_date,
+                            e,
+                            exc_info=True,
+                        )
                         break
 
-                    # Yield control to event loop to keep HA responsive
-                    await asyncio.sleep(0.1)
+                _LOGGER.info(
+                    "CSV import: Completed %d iteration(s), imported %d total rows",
+                    iteration,
+                    total_rows_imported,
+                )
 
-                except Exception as e:
-                    _LOGGER.error(
-                        "CSV import: Error in iteration %d (from %s): %s",
-                        iteration,
-                        current_start_date,
-                        e,
-                        exc_info=True,
-                    )
-                    break
-
-            _LOGGER.info(
-                "CSV import: Completed %d iteration(s), imported %d total rows",
-                iteration,
-                total_rows_imported,
-            )
-
-        except asyncio.CancelledError:
-            _LOGGER.info("CSV consumption history import cancelled")
-            raise
-        except Exception as err:
-            _LOGGER.error("Error importing CSV consumption history: %s", err, exc_info=True)
+            except asyncio.CancelledError:
+                _LOGGER.info("CSV consumption history import cancelled")
+                raise
+            except Exception as err:
+                _LOGGER.error("Error importing CSV consumption history: %s", err, exc_info=True)
 
     def _parse_csv_data(
         self, csv_data: list[Sequence[Any]], consumption_types: list[str]
@@ -273,7 +313,7 @@ class ConsumptionHistoryImporter:
             Dictionary mapping consumption type to list of statistics
         """
         # Use module-level timezone to avoid blocking I/O
-        tz = _TIMEZONE_TORONTO
+        tz = TIME_ZONE
 
         # Build statistics per consumption type
         stats_by_type: dict[str, list[dict[str, Any]]] = {ctype: [] for ctype in consumption_types}
@@ -512,12 +552,22 @@ class ConsumptionHistoryImporter:
             # Import to recorder
             metadata = self._statistics_manager.build_statistics_metadata(consumption_type)
 
+            self._statistics_manager.write_debug_stats(stats_list, metadata)
+
             await get_instance(self.hass).async_add_executor_job(
                 statistics.async_add_external_statistics,
                 self.hass,
                 metadata,
                 stats_list,
             )
+
+            # Update cache in statistics manager to maintain continuity for next iteration
+            if stats_list:
+                last_stat = stats_list[-1]
+                last_date = last_stat["start"].date()
+                self._statistics_manager.set_last_known_sum(
+                    consumption_type, last_date, last_stat["sum"]
+                )
 
             _LOGGER.info(
                 "Imported %d CSV statistics for %s (sum: %.2f kWh)",

@@ -3,15 +3,19 @@
 from __future__ import annotations
 
 import asyncio
+import csv
 import datetime
 import logging
 import zoneinfo
 from collections.abc import Callable
+from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.recorder import get_instance, statistics  # type: ignore[attr-defined]
 from homeassistant.components.recorder.models import StatisticMeanType
 from homeassistant.helpers.update_coordinator import UpdateFailed
+
+from .const import DEBUG_STATS_FILE_PATH, ENABLE_CSV_DEBUG, TIME_ZONE
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -46,6 +50,8 @@ class StatisticsManager:
         self._rate = rate
         self._get_statistic_id = get_statistic_id_func
         self._contract_name = contract_name
+        self._last_known_sums: dict[str, tuple[datetime.date, float]] = {}
+        self._import_lock = asyncio.Lock()
 
     async def determine_sync_start_date(  # noqa: PLR0911, PLR0915
         self,
@@ -71,7 +77,7 @@ class StatisticsManager:
             # Check last 30 days for existing statistics
             today = datetime.date.today()
             thirty_days_ago = today - datetime.timedelta(days=30)
-            tz = zoneinfo.ZoneInfo("America/Toronto")
+            tz = TIME_ZONE
 
             statistic_id = self._get_statistic_id("total")
 
@@ -202,6 +208,11 @@ class StatisticsManager:
             # On error, trigger CSV import to be safe
             return (True, None)
 
+    @property
+    def import_lock(self) -> asyncio.Lock:
+        """Return the import lock to prevent concurrent imports."""
+        return self._import_lock
+
     async def fetch_and_import_hourly_consumption(
         self, start_date: datetime.date, end_date: datetime.date
     ) -> None:
@@ -217,58 +228,64 @@ class StatisticsManager:
             _LOGGER.warning("Contract not initialized")
             return
 
-        try:
-            # Determine consumption types based on rate
-            consumption_types = self._get_consumption_types()
+        if self._import_lock.locked():
+            _LOGGER.info("Waiting for existing import to finish before starting daily sync...")
 
-            tz = zoneinfo.ZoneInfo("America/Toronto")
-            current_date = start_date
+        async with self._import_lock:
+            try:
+                # Determine consumption types based on rate
+                consumption_types = self._get_consumption_types()
 
-            # Fetch and import data for each day in range
-            while current_date <= end_date:
-                try:
-                    _LOGGER.info("Fetching hourly consumption for %s", current_date)
+                tz = TIME_ZONE
+                current_date = start_date
 
-                    # Get hourly data for this specific date
-                    hourly_data = await self._contract.get_hourly_consumption(current_date)
+                # Fetch and import data for each day in range
+                while current_date <= end_date:
+                    try:
+                        _LOGGER.info("Fetching hourly consumption for %s", current_date)
 
-                    hourly_list = hourly_data["results"].get("listeDonneesConsoEnergieHoraire", [])
-                    if not hourly_list:
-                        _LOGGER.debug("Empty hourly consumption list for %s", current_date)
+                        # Get hourly data for this specific date
+                        hourly_data = await self._contract.get_hourly_consumption(current_date)
+
+                        hourly_list = hourly_data["results"].get(
+                            "listeDonneesConsoEnergieHoraire", []
+                        )
+                        if not hourly_list:
+                            _LOGGER.debug("Empty hourly consumption list for %s", current_date)
+                            current_date += datetime.timedelta(days=1)
+                            continue
+
+                        # Process each consumption type
+                        await self._process_day_consumption(
+                            current_date,
+                            hourly_list,  # type: ignore[arg-type]
+                            consumption_types,
+                            tz,
+                        )
+
+                        current_date += datetime.timedelta(days=1)
+
+                        # Yield control to event loop to allow HA to process other tasks
+                        await asyncio.sleep(0)
+
+                    except Exception as err:
+                        _LOGGER.exception(
+                            "Failed to fetch/import consumption for %s: %s",
+                            current_date,
+                            err,
+                        )
                         current_date += datetime.timedelta(days=1)
                         continue
 
-                    # Process each consumption type
-                    await self._process_day_consumption(
-                        current_date,
-                        hourly_list,  # type: ignore[arg-type]
-                        consumption_types,
-                        tz,
-                    )
+                _LOGGER.info(
+                    "Completed hourly consumption sync from %s to %s",
+                    start_date,
+                    end_date,
+                )
 
-                    current_date += datetime.timedelta(days=1)
-
-                    # Yield control to event loop to allow HA to process other tasks
-                    await asyncio.sleep(0)
-
-                except Exception as err:
-                    _LOGGER.exception(
-                        "Failed to fetch/import consumption for %s: %s",
-                        current_date,
-                        err,
-                    )
-                    current_date += datetime.timedelta(days=1)
-                    continue
-
-            _LOGGER.info(
-                "Completed hourly consumption sync from %s to %s",
-                start_date,
-                end_date,
-            )
-
-        except Exception as err:
-            _LOGGER.exception("Error fetching hourly consumption")
-            raise UpdateFailed(f"Failed to fetch hourly consumption: {err}") from err
+            except Exception as err:
+                _LOGGER.exception("Error fetching hourly consumption")
+                raise UpdateFailed(f"Failed to fetch hourly consumption: {err}") from err
 
     def _get_consumption_types(self) -> list[str]:
         """Get consumption types based on rate."""
@@ -318,7 +335,19 @@ class StatisticsManager:
             Last cumulative sum, or 0.0 if no previous statistics found
         """
         statistic_id = self._get_statistic_id(consumption_type)
-        tz = zoneinfo.ZoneInfo("America/Toronto")
+        tz = TIME_ZONE
+
+        # Check in-memory cache first to avoid DB race conditions during sequential imports
+        if consumption_type in self._last_known_sums:
+            last_date, last_sum = self._last_known_sums[consumption_type]
+            if last_date == reference_date:
+                _LOGGER.debug(
+                    "Using cached base sum %.2f kWh for %s on %s",
+                    last_sum,
+                    consumption_type,
+                    reference_date,
+                )
+                return last_sum
 
         # Try to find last stat, looking back up to 30 days
         for i in range(30):
@@ -369,6 +398,47 @@ class StatisticsManager:
         )
         return 0.0
 
+    def set_last_known_sum(
+        self, consumption_type: str, date: datetime.date, sum_value: float
+    ) -> None:
+        """Update the last known sum cache."""
+        self._last_known_sums[consumption_type] = (date, sum_value)
+
+    def write_debug_stats(self, stats_list: list[dict[str, Any]], metadata: dict[str, Any]) -> None:
+        """Write statistics to debug CSV file."""
+        if not ENABLE_CSV_DEBUG:
+            return
+
+        try:
+            file_path = Path(self.hass.config.config_dir) / DEBUG_STATS_FILE_PATH
+            file_path.parent.mkdir(parents=True, exist_ok=True)
+
+            file_exists = file_path.exists()
+            mode = "a" if file_exists else "w"
+
+            statistic_id = metadata.get("statistic_id", "unknown")
+
+            with file_path.open(mode, newline="", encoding="utf-8") as csvfile:
+                fieldnames = ["statistic_id", "start", "state", "sum"]
+                writer = csv.DictWriter(csvfile, fieldnames=fieldnames)
+
+                if not file_exists:
+                    writer.writeheader()
+
+                for stat in stats_list:
+                    row = {
+                        "statistic_id": statistic_id,
+                        "start": stat["start"].isoformat(),
+                        "state": stat["state"],
+                        "sum": stat["sum"],
+                    }
+                    writer.writerow(row)
+
+            _LOGGER.debug("Written %d stats to debug file %s", len(stats_list), file_path)
+
+        except Exception as err:
+            _LOGGER.error("Failed to write debug stats: %s", err)
+
     async def _process_day_consumption(
         self,
         current_date: datetime.date,
@@ -407,6 +477,18 @@ class StatisticsManager:
                 consumption_key = f"conso{consumption_type.capitalize()}"
                 consumption_kwh = hour_data.get(consumption_key, 0.0)
 
+                # Ensure consumption is never negative, as it's cumulative
+                if consumption_kwh < 0:
+                    _LOGGER.warning(
+                        "Detected negative hourly consumption for %s on %s at %s (%.2f kWh). "
+                        "Treating as 0 to maintain cumulative sum integrity.",
+                        consumption_type,
+                        current_date,
+                        hour_str,
+                        consumption_kwh,
+                    )
+                    consumption_kwh = 0.0
+
                 # Update cumulative sum
                 cumulative_sum += consumption_kwh
 
@@ -422,12 +504,18 @@ class StatisticsManager:
             if stats_list:
                 metadata = self.build_statistics_metadata(consumption_type)
 
+                self.write_debug_stats(stats_list, metadata)
+
                 await get_instance(self.hass).async_add_executor_job(
                     statistics.async_add_external_statistics,
                     self.hass,
                     metadata,
                     stats_list,
                 )
+
+                # Update cache with the last sum of the day
+                last_stat = stats_list[-1]
+                self.set_last_known_sum(consumption_type, current_date, last_stat["sum"])
 
                 _LOGGER.info(
                     "Imported %d hourly statistics for %s on %s (sum: %.2f kWh)",

@@ -53,6 +53,12 @@ L'option "Intervalle de mise à jour" a été retirée de la configuration. Le s
   - Messages d'erreur spécifiques pour portail indisponible
   - Meilleure expérience utilisateur lors des périodes de maintenance HQ
 
+- **Capteur de diagnostic de statut du portail**
+  - Nouveau capteur binaire diagnostique montrant la disponibilité du portail HQ
+  - Mode Portail uniquement (ignoré en mode OpenData)
+  - Affichage dans la section diagnostique (non mis en évidence)
+  - Utile pour surveillance et dépannage
+
 ### Modifié
 
 - Intervalle fixe du coordinateur : 5 minutes (au lieu de configurable)

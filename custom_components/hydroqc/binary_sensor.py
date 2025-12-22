@@ -101,6 +101,14 @@ class HydroQcBinarySensor(
         # Set entity category for diagnostic sensors
         if sensor_config.get("diagnostic", False):
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
+        
+        # Set attribution based on data source
+        if isinstance(self._data_source, str) and self._data_source.startswith("public_client."):
+            self._attr_attribution = "Données ouvertes Hydro-Québec"
+        elif coordinator.is_portal_mode:
+            self._attr_attribution = "Espace Client Hydro-Québec"
+        else:
+            self._attr_attribution = None
 
         # Device info
         self._attr_device_info = DeviceInfo(

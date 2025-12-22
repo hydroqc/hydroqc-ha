@@ -97,6 +97,14 @@ class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], SensorEntity):
         self._attr_state_class = sensor_config.get("state_class")
         self._attr_native_unit_of_measurement = sensor_config.get("unit")
         self._attr_icon = sensor_config.get("icon")
+        
+        # Set attribution based on data source
+        if isinstance(self._data_source, str) and self._data_source.startswith("public_client."):
+            self._attr_attribution = "Données ouvertes Hydro-Québec"
+        elif coordinator.is_portal_mode:
+            self._attr_attribution = "Espace Client Hydro-Québec"
+        else:
+            self._attr_attribution = None
 
         # Device info
         self._attr_device_info = DeviceInfo(

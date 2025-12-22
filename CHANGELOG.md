@@ -59,6 +59,11 @@ L'option "Intervalle de mise à jour" a été retirée de la configuration. Le s
   - Affichage dans la section diagnostique (non mis en évidence)
   - Utile pour surveillance et dépannage
 
+- **Attribution des sources de données**
+  - Capteurs du portail attribués à "Espace Client Hydro-Québec"
+  - Capteurs OpenData attribués à "Données ouvertes Hydro-Québec"
+  - Affichage de l'attribution dans les détails des entités
+
 ### Modifié
 
 - Intervalle fixe du coordinateur : 5 minutes (au lieu de configurable)

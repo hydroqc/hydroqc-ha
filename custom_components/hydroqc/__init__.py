@@ -53,11 +53,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     coordinator = HydroQcDataCoordinator(hass, entry)
 
-    # Add startup jitter to prevent thundering herd on HA restart
-    jitter_seconds = random.randint(0, 60)
-    _LOGGER.debug("Adding %d second startup jitter before first refresh", jitter_seconds)
-    await asyncio.sleep(jitter_seconds)
-
     try:
         await coordinator.async_config_entry_first_refresh()
     except Exception as err:
@@ -78,6 +73,21 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     # Mark first refresh as done and schedule initial consumption sync in background
     # This runs after HA setup completes to avoid blocking startup
     coordinator._first_refresh_done = True
+
+    # Schedule delayed first update with random jitter to prevent thundering herd
+    # This happens in the background after HA startup completes
+    async def _delayed_first_update() -> None:
+        """Perform first coordinator update after random delay."""
+        jitter_seconds = random.randint(0, 60)
+        _LOGGER.debug(
+            "[%s] Waiting %d seconds before first update (anti-thundering herd)",
+            entry.title,
+            jitter_seconds,
+        )
+        await asyncio.sleep(jitter_seconds)
+        await coordinator.async_refresh()
+
+    hass.async_create_task(_delayed_first_update())
 
     # Schedule hourly updates for peak sensors to ensure accurate state transitions
     coordinator._schedule_hourly_update()

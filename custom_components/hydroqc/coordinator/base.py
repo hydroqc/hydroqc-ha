@@ -245,10 +245,11 @@ class HydroQcDataCoordinator(
         return elapsed >= 10800  # 180 minutes
     async def _async_update_data(self) -> dict[str, Any]:  # noqa: PLR0912, PLR0915
         """Fetch data from Hydro-Québec API."""
+        # Start with previous data to preserve values when updates are skipped
         data: dict[str, Any] = {
-            "contract": None,
-            "account": None,
-            "customer": None,
+            "contract": self.data.get("contract") if self.data else None,
+            "account": self.data.get("account") if self.data else None,
+            "customer": self.data.get("customer") if self.data else None,
             "public_client": self.public_client,
         }
 

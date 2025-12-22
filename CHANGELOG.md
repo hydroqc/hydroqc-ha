@@ -6,6 +6,7 @@
 
 ### Corrigé
 - Restauration de l'état précédent des capteurs pour éviter l'affichage de "Inconnu" lors des redémarrages et entre les actualisations
+- Préservation des données du portail lors des actualisations ignorées pour éviter les valeurs "Inconnu"
 
 ### Retiré
 

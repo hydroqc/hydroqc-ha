@@ -93,9 +93,11 @@ L'option "Intervalle de mise à jour" a été retirée de la configuration. Le s
 
 ### Modifié
 
-- Intervalle fixe du coordinateur : 5 minutes (au lieu de configurable)
+- Intervalle du coordinateur : désactivé (au lieu de 5 minutes fixes)
+- Ordonnancement manuel par déclencheurs temporels uniquement
 - Synchronisation consommation : toutes les heures (au lieu de 15 min)
-- Réduction significative de la charge système tout en maintenant la fraîcheur des données
+- **Les capteurs ne se mettent à jour que lors de la récupération réelle de données**
+- Réduction significative de la charge système et des mises à jour inutiles des capteurs
 
 ### Retiré
 

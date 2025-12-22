@@ -5,6 +5,7 @@
 ### Modifié
 
 ### Corrigé
+- Restauration de l'état précédent des capteurs pour éviter l'affichage de "Inconnu" lors des redémarrages et entre les actualisations
 
 ### Retiré
 
@@ -65,6 +66,12 @@ L'option "Intervalle de mise à jour" a été retirée de la configuration. Le s
   - Capteurs du portail attribués à "Espace Client Hydro-Québec"
   - Capteurs OpenData attribués à "Données ouvertes Hydro-Québec"
   - Affichage de l'attribution dans les détails des entités
+
+- **Organisation des capteurs diagnostiques**
+  - Déplacement de 10 capteurs non-essentiels vers la catégorie diagnostique
+  - Désencombre la liste principale des entités
+  - Capteurs toujours accessibles dans la section diagnostique
+  - Inclut: durée de période, jour actuel, EPP, température moyenne, coût moyen, etc.
 
 ### Modifié
 

@@ -21,10 +21,20 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
    - **`coordinator/consumption_sync.py`**: ConsumptionSyncMixin for consumption history sync
    - **`coordinator/sensor_data.py`**: SensorDataMixin for sensor value retrieval
    - **`coordinator.py`**: Root-level re-export for backward compatibility
-   - Manages both Portal mode (`WebUser`/`Customer`/`Account`/`Contract` hierarchy) and OpenData mode (`PublicClient`) 
-   - Updates every 60 seconds (configurable via `CONF_UPDATE_INTERVAL`)
+   - Manages both Portal mode (`WebUser`/`Customer`/`Account`/`Contract` hierarchy) and OpenData mode (`PublicClient`)
+   - **Manual scheduling only** - `update_interval=None` (automatic polling disabled for efficiency)
+   - **Scheduled triggers**:
+     - OpenData: Every 5 minutes (checks time windows before fetching)
+     - Portal: Every hour (checks time windows before fetching)
+     - Peaks: Hourly at XX:00:00 (winter season only)
+   - **Smart time windows**:
+     - OpenData: 11:00-18:00 EST (5 min interval) / other times (60 min) / off-season (disabled)
+     - Portal: 00:00-08:00 EST (60 min interval) / other times (180 min)
+   - **Sensors only update when data actually fetched** - raises `UpdateFailed` when no new data to prevent unnecessary sensor updates
    - Uses dot-notation paths (`get_sensor_value()`) to extract nested data: e.g., `"contract.cp_current_bill"` → `coordinator.data["contract"].cp_current_bill`
    - `is_sensor_seasonal()`: Portal mode sensors with `peak_handler` are seasonal (Dec 1 - Mar 31), OpenData sensors are always available
+   - **Data preservation**: Previous portal data preserved when updates skipped (prevents "unknown" values)
+   - **Portal status tracking**: `_portal_available` tracks portal online status, checked before operations
    - **Task management**: Separate `_csv_import_task` and `_regular_sync_task` per coordinator instance (per contract)
    - `is_consumption_history_syncing`: Only checks `_csv_import_task` status (not regular sync)
    - **Logging prefixes**: Portal mode logs use `[Portal]` prefix, public API logs use `[OpenData]` prefix
@@ -47,10 +57,16 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
    - Auto-generated from `SENSORS` and `BINARY_SENSORS` dicts in `const.py`
    - Filtered by rate: sensors specify `rates` list (`["ALL"]`, `["DPC"]`, `["DCPC"]`, etc.)
    - Rate-specific: Use `coordinator.rate_with_option` (e.g., `"DCPC"` = D+CPC, `"DPC"` = Flex-D)
+   - **State restoration**: Both inherit from `RestoreEntity` to preserve last known state across restarts
+   - **Diagnostic sensors**: 31 entities marked with `EntityCategory.DIAGNOSTIC` flag (declutters main entity list)
+   - **Disabled by default**: 14 non-essential sensors disabled by default (can be manually enabled)
+   - **Attribution**: Sensors show data source ("Espace Client Hydro-Québec" or "Données ouvertes Hydro-Québec")
 
 4. **`const.py`** - Single source of truth for sensor definitions
    - Each sensor: `data_source`, `device_class`, `state_class`, `icon`, `unit`, `rates`, optional `attributes`
    - Data sources use dot notation: `"contract.peak_handler.cumulated_credit"`, `"public_client.peak_handler.current_state"`
+   - **Diagnostic flag**: `"diagnostic": True` marks sensors for diagnostic category
+   - **Disabled by default flag**: `"disabled_by_default": True` disables sensors on first setup (can be enabled manually)
 
 5. **`public_data/`** package - Public API peak data handler
    - **`public_data/models.py`**: Data classes (PreHeatPeriod, AnchorPeriod, PeakEvent)
@@ -257,11 +273,70 @@ just restart  # Restart HA container to reload integration
 
 **Sensors are always available** - they never become "unavailable" in Home Assistant, instead showing the last known value. This ensures historical data is preserved even during temporary outages.
 
+**State restoration**: Both sensor and binary_sensor entities inherit from `RestoreEntity` to preserve their last known state across Home Assistant restarts and during inactive refresh windows.
+
 **All sensors include these attributes:**
 - `last_update`: ISO 8601 timestamp of last successful data fetch
 - `data_source`: One of `"portal"` (authenticated), `"open_data"` (public API), or `"unknown"`
 
 **Sensor-specific attributes** are defined in the `attributes` dict in `const.py` and extracted via dot notation paths.
+
+**Diagnostic sensors**: 31 entities marked with `EntityCategory.DIAGNOSTIC`:
+- Portal status (1 binary sensor)
+- Billing period details (4 sensors)
+- Technical information (3 sensors)
+- Peak-related sensors (15 binary sensors + 2 sensors for preheat times)
+
+**Disabled by default**: 14 non-essential sensors disabled on first setup:
+- Rate/rate option (2 sensors)
+- Portal status (1 binary sensor)
+- EPP enabled (1 binary sensor)
+- Winter days count (1 sensor)
+- Preheat start times (2 sensors)
+- Preheat in progress (2 binary sensors)
+- Peak today/tomorrow sensors (8 binary sensors)
+
+### Smart Refresh Scheduling System
+
+**Overview**: The coordinator uses manual scheduling with time-based triggers instead of automatic polling. This prevents unnecessary sensor updates when no new data is fetched.
+
+**Key Components**:
+- `update_interval=None` - Automatic polling disabled
+- Scheduled callbacks use `async_track_time_change()` to trigger updates
+- `_async_update_data()` raises `UpdateFailed` when no new data to prevent sensor updates
+
+**Scheduled Triggers**:
+1. **OpenData Updates** (`_async_scheduled_opendata_update`):
+   - Runs every 5 minutes
+   - Checks `_should_update_opendata()` before fetching
+   - Time windows: 11:00-18:00 EST (5 min) / other times (60 min) / off-season (disabled)
+
+2. **Portal Updates** (`_async_scheduled_portal_update`):
+   - Runs every hour (top of hour)
+   - Checks `_should_update_portal()` before fetching
+   - Time windows: 00:00-08:00 EST (60 min) / other times (180 min)
+
+3. **Peak Updates** (`_async_hourly_peak_update`):
+   - Runs hourly at XX:00:00 sharp
+   - Only during winter season (Dec 1 - Mar 31)
+   - Always fetches when triggered
+
+**Data Fetching Logic**:
+- `_async_update_data()` tracks `data_fetched` flag
+- Preserves previous portal data when specific updates skipped
+- Raises `UpdateFailed` if no new data fetched (prevents sensor updates)
+- Portal status checked before fetch attempts (`_portal_available`)
+- Billing period boundaries detected (±3 days) with contextual warnings
+
+**Portal Status Tracking**:
+- `check_hq_portal_status()` called before portal operations
+- `_portal_available` tracked for binary sensor
+- Offline warnings logged once per hour (prevents spam)
+
+**Calendar & Consumption Sync**:
+- Calendar sync only runs when peak event count changes
+- Consumption sync runs hourly (separate from coordinator updates)
+- Background tasks managed separately (`_calendar_sync_task`, `_csv_import_task`, `_regular_sync_task`)
 
 ### Adding New Sensors
 1. Add entry to `SENSORS` or `BINARY_SENSORS` in `const.py`:
@@ -274,6 +349,8 @@ just restart  # Restart HA container to reload integration
        "icon": "mdi:flash",
        "unit": "kWh",
        "rates": ["DPC", "DCPC"],  # Or ["ALL"]
+       "diagnostic": False,  # True for diagnostic category
+       "disabled_by_default": False,  # True to disable on first setup
        "attributes": {  # Optional extra attributes
            "max": "contract.max_value",
        },
@@ -494,9 +571,13 @@ Two methods for importing consumption history:
 - **Task separation**: CSV import uses `_csv_import_task`, regular sync uses `_regular_sync_task` - never confuse them
 - **History import threshold**: Only trigger CSV import for >30 days (regular sync covers ≤30 days efficiently)
 - **Statistics naming**: Display names include contract name prefix (e.g., "Home Total Hourly Consumption")
-  - Main classes: `WebUser`, `Customer`, `Account`, `Contract`, `PublicClient`
-  - Contract types: `ContractDCPC`, `ContractDPC`, `ContractDT` (subclasses of `Contract`)
-- **Home Assistant 2024.1.0+**: Uses `DataUpdateCoordinator`, `ConfigFlow`, `CoordinatorEntity`
+- **Coordinator scheduling**: Manual scheduling only (`update_interval=None`) - sensors only update when data actually fetched
+- **Data preservation**: Portal data preserved when updates skipped - prevents "unknown" values during inactive windows
+- **Portal status**: Always check `_portal_available` before operations, tracked from `check_hq_portal_status()`
+- **UpdateFailed pattern**: Raise `UpdateFailed` when no new data fetched to prevent unnecessary sensor updates
+- **State restoration**: Sensors and binary sensors inherit from `RestoreEntity` - preserve state across restarts
+- **Diagnostic sensors**: Use `EntityCategory.DIAGNOSTIC` for 31 non-essential entities (billing details, peaks, technical info)
+- **Disabled by default**: Use `disabled_by_default=True` for 14 sensors users rarely need (can be manually enabled)
 
 ## Processus de Release
 

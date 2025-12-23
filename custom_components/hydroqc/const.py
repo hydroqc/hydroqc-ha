@@ -169,6 +169,7 @@ SENSORS: Final = {
         "device_class": "timestamp",
         "icon": "mdi:calendar-start",
         "rates": ["ALL"],
+        "diagnostic": True,
         "attributes": {
             "end_date": "contract.next_outage.end_date",
             "cause": "contract.next_outage.cause.name",
@@ -214,7 +215,8 @@ SENSORS: Final = {
         "data_source": "public_client.peak_handler.next_peak.start_date",
         "device_class": "timestamp",
         "icon": "mdi:clock-start",
-        "rates": ["DPC"],        "diagnostic": True,    },
+        "rates": ["DPC"],
+    },
     "dpc_next_peak_end": {
         "data_source": "public_client.peak_handler.next_peak.end_date",
         "device_class": "timestamp",
@@ -275,6 +277,7 @@ SENSORS: Final = {
         "device_class": "timestamp",
         "icon": "mdi:clock-start",
         "rates": ["DCPC"],
+        "diagnostic": True,
         "attributes": {
             "critical": "public_client.peak_handler.next_peak.is_critical",
         },
@@ -284,6 +287,7 @@ SENSORS: Final = {
         "device_class": "timestamp",
         "icon": "mdi:clock-end",
         "rates": ["DCPC"],
+        "diagnostic": True,
         "attributes": {
             "critical": "public_client.peak_handler.next_peak.is_critical",
         },
@@ -293,6 +297,7 @@ SENSORS: Final = {
         "device_class": "timestamp",
         "icon": "mdi:clock-start",
         "rates": ["DCPC"],
+        "diagnostic": True,
         "attributes": {
             "critical": "public_client.peak_handler.next_peak.is_critical",
         },
@@ -302,6 +307,7 @@ SENSORS: Final = {
         "device_class": "timestamp",
         "icon": "mdi:clock-end",
         "rates": ["DCPC"],
+        "diagnostic": True,
         "attributes": {
             "critical": "public_client.peak_handler.next_peak.is_critical",
         },
@@ -323,6 +329,7 @@ SENSORS: Final = {
         "device_class": "timestamp",
         "icon": "mdi:clock-start",
         "rates": ["DCPC"],
+        "diagnostic": True,
         "attributes": {
             "critical": "public_client.peak_handler.next_peak.is_critical",
         },

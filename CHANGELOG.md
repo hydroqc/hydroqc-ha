@@ -5,8 +5,6 @@
 ### Modifié
 
 ### Corrigé
-- Restauration de l'état précédent des capteurs pour éviter l'affichage de "Inconnu" lors des redémarrages et entre les actualisations
-- Préservation des données du portail lors des actualisations ignorées pour éviter les valeurs "Inconnu"
 
 ### Retiré
 
@@ -28,76 +26,63 @@ L'option "Intervalle de mise à jour" a été retirée de la configuration. Le s
 
 - **Ordonnancement intelligent des mises à jour** (#35)
   - Fenêtres temporelles adaptées aux heures de mise à jour HQ
-  - OpenData : 11h-18h (5 min actif / 60 min inactif)
-  - Portail : 0h-8h (60 min actif / 180 min inactif)
-  - Synchronisation consommation : toutes les heures
+  - OpenData : 11h-18h EST (5 min actif / 60 min inactif)
+  - Portail : 0h-8h EST (60 min actif / 180 min inactif)
+  - Pointes : toutes les heures à XX:00:00 (saison hivernale uniquement)
+  - Synchronisation consommation : toutes les heures (60+ minutes)
   - Détection automatique hors-saison (OpenData désactivé hors déc-mars)
   
 - **Détection du portail hors-ligne**
   - Vérifie le statut du portail avant toute opération
   - Évite les erreurs inutiles pendant les maintenances
   - Journalisation limitée (1x par heure maximum)
+  - Nouveau capteur binaire diagnostique montrant la disponibilité du portail
   
-- **Optimisation synchronisation calendrier**
-  - Mise à jour uniquement quand de nouveaux événements détectés
-  - Réduit la charge sur le système calendrier
-  
-- **Protection contre le "thundering herd"**
-  - Intervalle fixe de 5 minutes distribue naturellement la charge
-  - Évite les pics d'appels simultanés grâce aux fenêtres temporelles
-
 - **Détection des changements de période de facturation**
-  - Identifie automatiquement les périodes à risque (2-3 jours avant/après fin de période)
-  - Messages d'erreur contextuels pour problème connu du portail HQ
+  - Identifie automatiquement les périodes à risque (±3 jours autour de la fin de période)
+  - Messages d'avertissement contextuels pour problème connu du portail HQ
   - Aide les utilisateurs à comprendre les échecs temporaires de synchronisation
 
-- **Amélioration des erreurs de configuration**
-  - Vérification du statut du portail avant la connexion
-  - Messages d'erreur spécifiques pour maintenance du portail (Erreur 500)
-  - Messages d'erreur spécifiques pour portail indisponible
-  - Meilleure expérience utilisateur lors des périodes de maintenance HQ
-
-- **Capteur de diagnostic de statut du portail**
-  - Nouveau capteur binaire diagnostique montrant la disponibilité du portail HQ
-  - Mode Portail uniquement (ignoré en mode OpenData)
-  - Affichage dans la section diagnostique (non mis en évidence)
-  - Utile pour surveillance et dépannage
-
 - **Attribution des sources de données**
-  - Capteurs du portail attribués à "Espace Client Hydro-Québec"
-  - Capteurs OpenData attribués à "Données ouvertes Hydro-Québec"
+  - Capteurs du portail : "Espace Client Hydro-Québec"
+  - Capteurs OpenData : "Données ouvertes Hydro-Québec"
   - Affichage de l'attribution dans les détails des entités
 
-- **Organisation des capteurs diagnostiques**
-  - Déplacement de 15 capteurs non-essentiels vers la catégorie diagnostique
-  - Déplacement de 15 capteurs binaires liés aux pointes vers la catégorie diagnostique
-  - 14 capteurs désactivés par défaut (peuvent être activés manuellement)
-  - Désencombre la liste principale des entités
-  - Capteurs toujours accessibles dans la section diagnostique
-  - Capteurs diagnostiques:
-    - Période facturation: durée, jour actuel, moyenne consommation, tarif
-    - Informations techniques: température moyenne, coût moyen, option EPP
-    - Winter Credits (DCPC): état WC, début pré-chauffage
-    - Flex-D (DPC): heures critiques, jours hiver, début pré-chauffage
-  - Capteurs binaires diagnostiques (pointes):
-    - Winter Credits: pré-chauffage, pointe critique en cours, alertes anchor/peak, pointes matin/soir
-    - Flex-D: pré-chauffage, pointe en cours, pointes critiques matin/soir
-  - Capteurs désactivés par défaut:
-    - Tarif et option de tarif (informations techniques)
-    - Statut du portail (diagnostic de connexion)
-    - EPP activé (option de facturation)
-    - Jours d'hiver (compteur DPC)
+- **Organisation des capteurs**
+  - **36 capteurs diagnostiques** pour désencombrer la liste principale :
+    - 1 capteur de statut du portail
+    - 4 capteurs de période de facturation (durée, jour actuel, moyenne, tarif)
+    - 3 capteurs d'informations techniques
+    - 2 capteurs de début pré-chauffage (WC et DPC)
+    - 15 capteurs binaires de pointes (WC et DPC)
+    - 6 capteurs timestamp (ancrages et pointes régulières DCPC, panne)
+    - 5 autres capteurs techniques (état WC, heures critiques DPC, etc.)
+  - **14 capteurs désactivés par défaut** (peuvent être activés manuellement) :
+    - Tarif et option de tarif
+    - Statut du portail
+    - EPP activé
+    - Jours d'hiver (DPC)
     - Heures de début pré-chauffage (WC et DPC)
-    - Pointes pré-chauffage (WC et DPC)
-    - Pointes critiques aujourd'hui/demain matin/soir (WC et DPC)
+    - Pré-chauffage en cours (WC et DPC)
+    - Pointes aujourd'hui/demain matin/soir (WC et DPC)
 
 ### Modifié
 
-- Intervalle du coordinateur : désactivé (au lieu de 5 minutes fixes)
-- Ordonnancement manuel par déclencheurs temporels uniquement
-- Synchronisation consommation : toutes les heures (au lieu de 15 min)
+- **Ordonnancement manuel uniquement** : l'intervalle automatique du coordinateur est désactivé
 - **Les capteurs ne se mettent à jour que lors de la récupération réelle de données**
-- Réduction significative de la charge système et des mises à jour inutiles des capteurs
+- **Préservation de l'état des capteurs** :
+  - Données du portail préservées lors des actualisations ignorées
+  - État précédent restauré après redémarrage de Home Assistant
+  - Plus de valeurs "Inconnu" entre les actualisations
+- **Optimisation de la synchronisation calendrier** : mise à jour uniquement si nouveaux événements
+- Synchronisation consommation : toutes les heures (au lieu de 15 min)
+- Réduction significative de la charge système et des mises à jour inutiles
+
+### Corrigé
+
+- Gestion des erreurs "No data available" lors de la synchronisation de consommation (données du jour actuel pas encore disponibles)
+- Suppression du délai de démarrage bloquant (améliore le temps de démarrage de HA)
+- Correction de l'accès à l'attribut `_events` dans PeakHandler
 
 ### Retiré
 

@@ -61,6 +61,7 @@ def mock_webuser() -> MagicMock:
     webuser.close_session = AsyncMock()
     webuser.get_info = AsyncMock()
     webuser.fetch_customers_info = AsyncMock()
+    webuser.check_hq_portal_status = AsyncMock(return_value=True)
     webuser.get_customer = MagicMock()
 
     # Mock customer
@@ -91,6 +92,8 @@ def mock_webuser() -> MagicMock:
     contract.cp_end_date = datetime(2024, 11, 30, tzinfo=EST_TIMEZONE).date()
     contract.get_periods_info = AsyncMock()
     contract.refresh_outages = AsyncMock()
+    contract.get_hourly_consumption = AsyncMock()
+    contract.get_csv_consumption_history = AsyncMock()
 
     # Link objects
     customer.accounts = [account]

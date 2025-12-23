@@ -12,6 +12,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.recorder import get_instance, statistics  # type: ignore[attr-defined]
 from homeassistant.components.recorder.models import StatisticMeanType
 from homeassistant.helpers.update_coordinator import UpdateFailed
+
 from hydroqc.error import HydroQcHTTPError
 
 if TYPE_CHECKING:

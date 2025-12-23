@@ -97,15 +97,15 @@ class HydroQcBinarySensor(
         self._attr_unique_id = f"{contract_id}_{sensor_key}"
         self._attr_device_class = sensor_config.get("device_class")
         self._attr_icon = sensor_config.get("icon")
-        
+
         # Set entity category for diagnostic sensors
         if sensor_config.get("diagnostic", False):
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        
+
         # Set entity registry enabled default (for sensors disabled by default)
         if sensor_config.get("disabled_by_default", False):
             self._attr_entity_registry_enabled_default = False
-        
+
         # Set attribution based on data source
         if isinstance(self._data_source, str) and self._data_source.startswith("public_client."):
             self._attr_attribution = "Données ouvertes Hydro-Québec"

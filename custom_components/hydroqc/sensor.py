@@ -99,15 +99,15 @@ class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], RestoreEntity, Se
         self._attr_state_class = sensor_config.get("state_class")
         self._attr_native_unit_of_measurement = sensor_config.get("unit")
         self._attr_icon = sensor_config.get("icon")
-        
+
         # Set entity category for diagnostic sensors
         if sensor_config.get("diagnostic", False):
             self._attr_entity_category = EntityCategory.DIAGNOSTIC
-        
+
         # Set entity registry enabled default (for sensors disabled by default)
         if sensor_config.get("disabled_by_default", False):
             self._attr_entity_registry_enabled_default = False
-        
+
         # Set attribution based on data source
         if isinstance(self._data_source, str) and self._data_source.startswith("public_client."):
             self._attr_attribution = "Données ouvertes Hydro-Québec"
@@ -148,7 +148,7 @@ class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], RestoreEntity, Se
                 )
 
     @property
-    def native_value(self) -> Any:
+    def native_value(self) -> Any:  # noqa: PLR0911
         """Return the state of the sensor."""
         # Check if sensor is seasonal and out of season
         if not self.coordinator.is_sensor_seasonal(self._data_source):

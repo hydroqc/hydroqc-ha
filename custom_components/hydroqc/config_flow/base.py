@@ -101,7 +101,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return await self.async_step_account()
         return await self.async_step_opendata()
 
-    async def async_step_account(
+    async def async_step_account(  # noqa: PLR0912
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle portal mode account setup."""
@@ -121,13 +121,13 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     log_level="INFO",
                     http_log_level="WARNING",
                 )
-                
+
                 portal_available = await temp_webuser.check_hq_portal_status()
                 if not portal_available:
                     errors["base"] = "portal_unavailable"
                     await temp_webuser.close_session()
                     raise RuntimeError("Portal unavailable")
-                
+
                 # Try to login and fetch contracts
                 self._webuser = temp_webuser
                 await self._webuser.login()

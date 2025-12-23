@@ -96,10 +96,7 @@ class ConsumptionSyncMixin:
 
             # Check if within 3 days after period start (new period just started)
             days_from_start = (today - period_start).days
-            if 0 <= days_from_start <= 3:
-                return True
-
-            return False
+            return 0 <= days_from_start <= 3
         except Exception:
             return False
 

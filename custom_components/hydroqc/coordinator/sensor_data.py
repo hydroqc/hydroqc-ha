@@ -36,7 +36,7 @@ class SensorDataMixin:
             if self.is_portal_mode:
                 return self._portal_available
             return None
-        
+
         if not self.data:
             # For binary sensors ending with is_critical, return False instead of None
             if data_source.endswith(".is_critical"):

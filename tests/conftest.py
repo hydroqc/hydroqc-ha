@@ -23,7 +23,6 @@ from custom_components.hydroqc.const import (
     CONF_PREHEAT_DURATION,
     CONF_RATE,
     CONF_RATE_OPTION,
-    CONF_UPDATE_INTERVAL,
     DOMAIN,
 )
 
@@ -48,7 +47,6 @@ def mock_config_entry() -> MockConfigEntry:
             CONF_RATE: "D",
             CONF_RATE_OPTION: "",
             CONF_PREHEAT_DURATION: 120,
-            CONF_UPDATE_INTERVAL: 60,
         },
         unique_id="contract123",
     )
@@ -411,7 +409,6 @@ def mock_config_entry_opendata() -> MockConfigEntry:
             CONF_RATE: "DPC",
             CONF_RATE_OPTION: "",
             CONF_PREHEAT_DURATION: 120,
-            CONF_UPDATE_INTERVAL: 60,
         },
         unique_id="opendata_dpc",
     )
@@ -430,7 +427,6 @@ def mock_config_entry_opendata_dcpc() -> MockConfigEntry:
             CONF_RATE: "D",
             CONF_RATE_OPTION: "CPC",
             CONF_PREHEAT_DURATION: 120,
-            CONF_UPDATE_INTERVAL: 60,
         },
         unique_id="opendata_dcpc",
     )

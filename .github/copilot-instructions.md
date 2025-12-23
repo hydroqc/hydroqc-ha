@@ -336,7 +336,12 @@ just restart  # Restart HA container to reload integration
 
 **Calendar & Consumption Sync**:
 - Calendar sync only runs when peak event count changes
-- Consumption sync runs hourly (separate from coordinator updates)
+- Consumption sync runs independently from smart scheduling:
+  - Triggered at the end of successful portal data fetches (piggybacks on portal updates)
+  - Checks if 60+ minutes elapsed since last sync
+  - Runs as background task (`_regular_sync_task`) without blocking sensor updates
+  - Writes directly to Home Assistant's statistics database (not part of coordinator data)
+  - Two types: CSV import (`_csv_import_task`) for historical bulk data, regular sync for recent incremental updates
 - Background tasks managed separately (`_calendar_sync_task`, `_csv_import_task`, `_regular_sync_task`)
 
 ### Adding New Sensors

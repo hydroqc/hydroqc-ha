@@ -3,13 +3,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
-from homeassistant.helpers.entity import EntityCategory
+from homeassistant.helpers.entity import EntityCategory  # type: ignore[attr-defined]
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -37,8 +37,9 @@ async def async_setup_entry(
 
     for sensor_key, sensor_config in BINARY_SENSORS.items():
         # Check if sensor is applicable for this rate
-        if "ALL" not in sensor_config["rates"]:
-            if coordinator.rate_with_option not in sensor_config["rates"]:
+        rates = cast(list[str], sensor_config["rates"])
+        if "ALL" not in rates:
+            if coordinator.rate_with_option not in rates:
                 continue
 
         # In opendata mode, only create sensors that use public_client data
@@ -53,8 +54,9 @@ async def async_setup_entry(
 
         # Skip winter credit sensors (contract.peak_handler) if not DCPC
         # Note: public_client.peak_handler sensors should NOT be skipped
+        data_source_str = cast(str, sensor_config["data_source"])
         if (
-            "contract.peak_handler." in sensor_config["data_source"]
+            "contract.peak_handler." in data_source_str
             and coordinator.rate_option != "CPC"
         ):
             continue

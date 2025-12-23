@@ -1,7 +1,7 @@
 """Unit tests for consumption history synchronization."""
 
 from typing import Any
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -33,9 +33,11 @@ class TestConsumptionHistorySync:
 
         # Mock hourly data spanning DST transition
         mock_contract.get_hourly_energy.return_value = sample_hourly_json
+        mock_webuser.check_hq_portal_status = AsyncMock(return_value=True)
 
         with patch("custom_components.hydroqc.coordinator.base.WebUser", return_value=mock_webuser):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+            coordinator._first_refresh_done = False
             await coordinator.async_refresh()
 
             # Verify contract is called with timezone-aware datetime
@@ -54,12 +56,14 @@ class TestConsumptionHistorySync:
         """Test hourly consumption sync after spring DST transition."""
         mock_config_entry.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract
+        mock_webuser.check_hq_portal_status = AsyncMock(return_value=True)
 
         # Mock hourly data after DST
         mock_contract.get_hourly_energy.return_value = sample_hourly_json
 
         with patch("custom_components.hydroqc.coordinator.base.WebUser", return_value=mock_webuser):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+            coordinator._first_refresh_done = False
             await coordinator.async_refresh()
 
             # Verify coordinator handles DST transition correctly
@@ -77,12 +81,14 @@ class TestConsumptionHistorySync:
         """Test hourly consumption sync during fall DST transition (repeated hour)."""
         mock_config_entry.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract
+        mock_webuser.check_hq_portal_status = AsyncMock(return_value=True)
 
-        # Mock hourly data with repeated hour during fall DST
+        # Mock hourly data spanning repeated hour (1 AM occurs twice)
         mock_contract.get_hourly_energy.return_value = sample_hourly_json
 
         with patch("custom_components.hydroqc.coordinator.base.WebUser", return_value=mock_webuser):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+            coordinator._first_refresh_done = False
             await coordinator.async_refresh()
 
             # Verify coordinator handles fall DST (repeated hour) correctly
@@ -98,6 +104,7 @@ class TestConsumptionHistorySync:
         """Test CSV import handles French decimal format correctly."""
         mock_config_entry.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract
+        mock_webuser.check_hq_portal_status = AsyncMock(return_value=True)
 
         # Mock CSV data with French decimal separators (comma)
         csv_data = {
@@ -118,6 +125,7 @@ class TestConsumptionHistorySync:
 
         with patch("custom_components.hydroqc.coordinator.base.WebUser", return_value=mock_webuser):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+            coordinator._first_refresh_done = False
             await coordinator.async_refresh()
 
             # Should handle French decimals without errors
@@ -133,6 +141,7 @@ class TestConsumptionHistorySync:
         """Test CSV import handles missing consumption data gracefully."""
         mock_config_entry.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract
+        mock_webuser.check_hq_portal_status = AsyncMock(return_value=True)
 
         # Mock CSV data with missing consumption values
         csv_data = {
@@ -153,6 +162,7 @@ class TestConsumptionHistorySync:
 
         with patch("custom_components.hydroqc.coordinator.base.WebUser", return_value=mock_webuser):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+            coordinator._first_refresh_done = False
             await coordinator.async_refresh()
 
             # Should skip missing data entries without crashing
@@ -169,9 +179,11 @@ class TestConsumptionHistorySync:
         """Test statistics metadata includes mean_type field (HA 2025.11+)."""
         mock_config_entry.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract
+        mock_webuser.check_hq_portal_status = AsyncMock(return_value=True)
 
         with patch("custom_components.hydroqc.coordinator.base.WebUser", return_value=mock_webuser):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+            coordinator._first_refresh_done = False
             await coordinator.async_refresh()
 
             # Verify metadata includes required mean_type field
@@ -190,11 +202,13 @@ class TestConsumptionHistorySync:
         """Test cumulative sum is calculated correctly for statistics."""
         mock_config_entry.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract
+        mock_webuser.check_hq_portal_status = AsyncMock(return_value=True)
 
         mock_contract.get_hourly_energy.return_value = sample_hourly_json
 
         with patch("custom_components.hydroqc.coordinator.base.WebUser", return_value=mock_webuser):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+            coordinator._first_refresh_done = False
             await coordinator.async_refresh()
 
             # Cumulative sum should be calculated from first import

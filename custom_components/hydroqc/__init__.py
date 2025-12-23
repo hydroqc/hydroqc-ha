@@ -43,6 +43,12 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     """Set up Hydro-Québec from a config entry."""
     _LOGGER.debug("Setting up Hydro-Québec integration for %s", entry.title)
 
+    # Migration: Remove deprecated update_interval from options
+    if "update_interval" in entry.options:
+        new_options = {k: v for k, v in entry.options.items() if k != "update_interval"}
+        hass.config_entries.async_update_entry(entry, options=new_options)
+        _LOGGER.info("Migrated config: removed deprecated 'update_interval' option")
+
     coordinator = HydroQcDataCoordinator(hass, entry)
 
     try:
@@ -62,8 +68,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     if not hass.services.has_service(DOMAIN, SERVICE_REFRESH_DATA):
         await _async_register_services(hass)
 
-    # Mark first refresh as done and schedule initial consumption sync in background
-    # This runs after HA setup completes to avoid blocking startup
+    # Mark first refresh as done
     coordinator._first_refresh_done = True
 
     # Schedule hourly updates for peak sensors to ensure accurate state transitions

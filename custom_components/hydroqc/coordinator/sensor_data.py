@@ -30,6 +30,13 @@ class SensorDataMixin:
         - Only returns True if preheat is in progress AND next peak is critical
         - This prevents preheat triggers on non-critical peaks
         """
+        # Handle special data sources
+        if data_source == "portal_available":
+            # Portal mode only - return portal availability status
+            if self.is_portal_mode:
+                return self._portal_available
+            return None
+
         if not self.data:
             # For binary sensors ending with is_critical, return False instead of None
             if data_source.endswith(".is_critical"):

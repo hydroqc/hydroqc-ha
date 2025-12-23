@@ -3,12 +3,13 @@
 from __future__ import annotations
 
 import logging
-from typing import Any
+from typing import Any, cast
 
 from homeassistant.components.binary_sensor import BinarySensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import EntityCategory  # type: ignore[attr-defined]
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -36,8 +37,9 @@ async def async_setup_entry(
 
     for sensor_key, sensor_config in BINARY_SENSORS.items():
         # Check if sensor is applicable for this rate
-        if "ALL" not in sensor_config["rates"]:
-            if coordinator.rate_with_option not in sensor_config["rates"]:
+        rates = cast(list[str], sensor_config["rates"])
+        if "ALL" not in rates:
+            if coordinator.rate_with_option not in rates:
                 continue
 
         # In opendata mode, only create sensors that use public_client data
@@ -52,10 +54,8 @@ async def async_setup_entry(
 
         # Skip winter credit sensors (contract.peak_handler) if not DCPC
         # Note: public_client.peak_handler sensors should NOT be skipped
-        if (
-            "contract.peak_handler." in sensor_config["data_source"]
-            and coordinator.rate_option != "CPC"
-        ):
+        data_source_str = cast(str, sensor_config["data_source"])
+        if "contract.peak_handler." in data_source_str and coordinator.rate_option != "CPC":
             continue
 
         entities.append(HydroQcBinarySensor(coordinator, entry, sensor_key, sensor_config, version))
@@ -96,6 +96,22 @@ class HydroQcBinarySensor(
         self._attr_unique_id = f"{contract_id}_{sensor_key}"
         self._attr_device_class = sensor_config.get("device_class")
         self._attr_icon = sensor_config.get("icon")
+
+        # Set entity category for diagnostic sensors
+        if sensor_config.get("diagnostic", False):
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+        # Set entity registry enabled default (for sensors disabled by default)
+        if sensor_config.get("disabled_by_default", False):
+            self._attr_entity_registry_enabled_default = False
+
+        # Set attribution based on data source
+        if isinstance(self._data_source, str) and self._data_source.startswith("public_client."):
+            self._attr_attribution = "Données ouvertes Hydro-Québec"
+        elif coordinator.is_portal_mode:
+            self._attr_attribution = "Espace Client Hydro-Québec"
+        else:
+            self._attr_attribution = None
 
         # Device info
         self._attr_device_info = DeviceInfo(

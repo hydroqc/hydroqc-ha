@@ -10,8 +10,10 @@ from typing import Any, cast
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.helpers.entity import DeviceInfo  # type: ignore[attr-defined]
+from homeassistant.helpers.device_registry import DeviceInfo
+from homeassistant.helpers.entity import EntityCategory  # type: ignore[attr-defined]
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
+from homeassistant.helpers.restore_state import RestoreEntity
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
 from homeassistant.loader import async_get_integration
 
@@ -65,7 +67,7 @@ async def async_setup_entry(
     _LOGGER.debug("Added %d sensor entities", len(entities))
 
 
-class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], SensorEntity):
+class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], RestoreEntity, SensorEntity):
     """Representation of a Hydro-Québec sensor."""
 
     _attr_has_entity_name = True
@@ -85,6 +87,7 @@ class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], SensorEntity):
         self._sensor_config = sensor_config
         self._data_source = sensor_config["data_source"]
         self._attributes_sources = sensor_config.get("attributes", {})
+        self._restored_value: Any = None
 
         # OpenData mode uses entry_id, Portal mode uses contract info
         contract_name = entry.data.get(CONF_CONTRACT_NAME, "OpenData")
@@ -98,6 +101,22 @@ class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], SensorEntity):
         self._attr_native_unit_of_measurement = sensor_config.get("unit")
         self._attr_icon = sensor_config.get("icon")
 
+        # Set entity category for diagnostic sensors
+        if sensor_config.get("diagnostic", False):
+            self._attr_entity_category = EntityCategory.DIAGNOSTIC
+
+        # Set entity registry enabled default (for sensors disabled by default)
+        if sensor_config.get("disabled_by_default", False):
+            self._attr_entity_registry_enabled_default = False
+
+        # Set attribution based on data source
+        if isinstance(self._data_source, str) and self._data_source.startswith("public_client."):
+            self._attr_attribution = "Données ouvertes Hydro-Québec"
+        elif coordinator.is_portal_mode:
+            self._attr_attribution = "Espace Client Hydro-Québec"
+        else:
+            self._attr_attribution = None
+
         # Device info
         self._attr_device_info = DeviceInfo(
             identifiers={(DOMAIN, contract_id)},
@@ -107,8 +126,30 @@ class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], SensorEntity):
             sw_version=version,
         )
 
+    async def async_added_to_hass(self) -> None:
+        """Restore last state when entity is added to hass."""
+        await super().async_added_to_hass()
+
+        # Restore previous state to avoid showing unknown during reload
+        if (last_state := await self.async_get_last_state()) is not None:
+            # Try to restore the numeric state
+            try:
+                if last_state.state not in ("unknown", "unavailable"):
+                    self._restored_value = last_state.state
+                    _LOGGER.debug(
+                        "Restored sensor %s state: %s",
+                        self.entity_id,
+                        self._restored_value,
+                    )
+            except (ValueError, TypeError):
+                _LOGGER.debug(
+                    "Could not restore sensor %s state: %s",
+                    self.entity_id,
+                    last_state.state,
+                )
+
     @property
-    def native_value(self) -> Any:
+    def native_value(self) -> Any:  # noqa: PLR0911
         """Return the state of the sensor."""
         # Check if sensor is seasonal and out of season
         if not self.coordinator.is_sensor_seasonal(self._data_source):
@@ -116,8 +157,25 @@ class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], SensorEntity):
 
         value = self.coordinator.get_sensor_value(self._data_source)
 
+        # If coordinator hasn't fetched data yet and we have a restored value, use it
+        if value is None and self._restored_value is not None:
+            _LOGGER.debug(
+                "Sensor %s using restored value: %s (coordinator data not yet available)",
+                self.entity_id,
+                self._restored_value,
+            )
+            return self._restored_value
+
         if value is None:
             return None
+
+        # We have fresh data from coordinator, clear the restored value
+        if self._restored_value is not None:
+            _LOGGER.debug(
+                "Sensor %s got fresh data from coordinator, clearing restored value",
+                self.entity_id,
+            )
+            self._restored_value = None
 
         # Format value based on type
         if isinstance(value, datetime.datetime):

@@ -1,7 +1,7 @@
 """Unit tests for sensor entities."""
 
 from datetime import datetime
-from unittest.mock import MagicMock, patch
+from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
 import pytest
@@ -163,6 +163,7 @@ class TestHydroQcSensor:
         """Test sensor returns correct state value."""
         mock_config_entry.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract
+        mock_webuser.check_hq_portal_status = AsyncMock(return_value=True)
         # Set the projected bill value on mock contract
         mock_contract.cp_projected_bill = 75.00
 
@@ -174,6 +175,7 @@ class TestHydroQcSensor:
             patch("custom_components.hydroqc.coordinator.base.PublicDataClient", return_value=mock_public_client),
         ):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+            coordinator._first_refresh_done = False
             await coordinator.async_refresh()
 
             # Register coordinator in hass.data like real integration does
@@ -207,6 +209,7 @@ class TestHydroQcSensor:
         """Test sensor includes correct attributes."""
         mock_config_entry.add_to_hass(hass)
         mock_webuser.customers[0].accounts[0].contracts[0] = mock_contract
+        mock_webuser.check_hq_portal_status = AsyncMock(return_value=True)
 
         with (
             patch(
@@ -216,6 +219,7 @@ class TestHydroQcSensor:
             patch("custom_components.hydroqc.coordinator.base.PublicDataClient", return_value=mock_public_client),
         ):
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+            coordinator._first_refresh_done = False
             await coordinator.async_refresh()
 
             # Register coordinator in hass.data like real integration does

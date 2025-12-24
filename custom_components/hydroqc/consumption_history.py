@@ -450,13 +450,24 @@ class ConsumptionHistoryImporter:
         start_date: datetime.date,
         consumption_types: list[str],
     ) -> None:
-        """Import parsed statistics into Home Assistant recorder.
+        """Import parsed statistics into Home Assistant recorder with batching.
+
+        Uses batching and throttling to avoid overwhelming slower systems:
+        - Processes 168 hours (7 days) per batch
+        - 0.5s delay between batches
+        - 1s delay between consumption types
 
         Args:
             stats_by_type: Dictionary mapping consumption type to statistics
             start_date: Start date of import period
             consumption_types: List of consumption types to import
         """
+        # Batch size: 168 hours = 7 days worth of hourly data
+        # Good balance between speed and reliability on slower systems
+        BATCH_SIZE = 168
+        DELAY_BETWEEN_BATCHES = 0.5  # seconds
+        DELAY_BETWEEN_TYPES = 1.0  # seconds
+
         for consumption_type in consumption_types:
             stats_list = stats_by_type[consumption_type]
 
@@ -509,19 +520,198 @@ class ConsumptionHistoryImporter:
                 cumulative_sum += stat["state"]
                 stat["sum"] = round(cumulative_sum, 2)
 
-            # Import to recorder
+            # Import to recorder in batches to avoid overwhelming slower systems
             metadata = self._statistics_manager.build_statistics_metadata(consumption_type)
+            total_batches = (len(stats_list) + BATCH_SIZE - 1) // BATCH_SIZE
 
-            await get_instance(self.hass).async_add_executor_job(
-                statistics.async_add_external_statistics,
-                self.hass,
-                metadata,
-                stats_list,
-            )
+            for batch_num in range(total_batches):
+                start_idx = batch_num * BATCH_SIZE
+                end_idx = min(start_idx + BATCH_SIZE, len(stats_list))
+                batch = stats_list[start_idx:end_idx]
+
+                _LOGGER.info(
+                    "[RECORDER IMPORT] Type '%s': Writing batch %d/%d (%d hours, %s to %s)",
+                    consumption_type,
+                    batch_num + 1,
+                    total_batches,
+                    len(batch),
+                    batch[0]["start"].date() if batch else "unknown",
+                    batch[-1]["start"].date() if batch else "unknown",
+                )
+
+                await get_instance(self.hass).async_add_executor_job(
+                    statistics.async_add_external_statistics,
+                    self.hass,
+                    metadata,
+                    batch,
+                )
+
+                # Wait for recorder to commit the transaction before verification
+                # The recorder processes its queue asynchronously, so we need to give it
+                # time to write and commit the data before we can verify it
+                await asyncio.sleep(1.0)
+
+                # Verify batch was written correctly with non-decreasing sums
+                await self._verify_batch_integrity(
+                    statistic_id, batch, batch_num + 1, total_batches
+                )
+
+                # Throttle between batches to give recorder time to process
+                if batch_num < total_batches - 1:  # Don't delay after last batch
+                    await asyncio.sleep(DELAY_BETWEEN_BATCHES)
 
             _LOGGER.info(
-                "Imported %d CSV statistics for %s (sum: %.2f kWh)",
+                "Imported %d CSV statistics for %s in %d batch(es) (sum: %.2f kWh)",
                 len(stats_list),
                 consumption_type,
+                total_batches,
                 cumulative_sum,
             )
+
+            # Delay between consumption types to allow DB commits
+            if consumption_type != consumption_types[-1]:  # Don't delay after last type
+                await asyncio.sleep(DELAY_BETWEEN_TYPES)
+
+    async def _verify_batch_integrity(  # noqa: PLR0912
+        self,
+        statistic_id: str,
+        batch: list[dict[str, Any]],
+        batch_num: int,
+        total_batches: int,
+    ) -> None:
+        """Verify that batch was written correctly with non-decreasing sums.
+
+        Includes retry logic in case recorder hasn't committed yet.
+
+        Args:
+            statistic_id: Statistic ID to query
+            batch: Batch that was just written
+            batch_num: Current batch number (1-indexed)
+            total_batches: Total number of batches
+        """
+        if not batch:
+            return
+
+        # Get the time range of the batch we just wrote
+        batch_start_time = batch[0]["start"]
+        batch_end_time = batch[-1]["start"]
+
+        # Query what was actually written to the database
+        # Retry up to 3 times in case recorder is still committing
+        max_retries = 3
+        retry_delay = 0.5  # seconds
+
+        for attempt in range(max_retries):
+            try:
+                written_stats = await get_instance(self.hass).async_add_executor_job(
+                    statistics.statistics_during_period,
+                    self.hass,
+                    batch_start_time,
+                    batch_end_time + datetime.timedelta(hours=1),  # Include end hour
+                    {statistic_id},
+                    "hour",
+                    None,
+                    {"sum", "state"},
+                )
+
+                if not written_stats or statistic_id not in written_stats:
+                    if attempt < max_retries - 1:
+                        _LOGGER.debug(
+                            "[VERIFY] Batch %d/%d: No data found (attempt %d/%d), retrying...",
+                            batch_num,
+                            total_batches,
+                            attempt + 1,
+                            max_retries,
+                        )
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    _LOGGER.warning(
+                        "[VERIFY] Batch %d/%d: No statistics found in database after %d attempts",
+                        batch_num,
+                        total_batches,
+                        max_retries,
+                    )
+                    return
+
+                db_stats = written_stats[statistic_id]
+
+                # If we got some data but not all, retry
+                if len(db_stats) < len(batch):
+                    if attempt < max_retries - 1:
+                        _LOGGER.debug(
+                            "[VERIFY] Batch %d/%d: Expected %d records, found %d (attempt %d/%d), retrying...",
+                            batch_num,
+                            total_batches,
+                            len(batch),
+                            len(db_stats),
+                            attempt + 1,
+                            max_retries,
+                        )
+                        await asyncio.sleep(retry_delay)
+                        continue
+                    _LOGGER.warning(
+                        "[VERIFY] Batch %d/%d: Expected %d records, found %d after %d attempts",
+                        batch_num,
+                        total_batches,
+                        len(batch),
+                        len(db_stats),
+                        max_retries,
+                    )
+
+                # Check for non-decreasing sums
+                prev_sum = None
+                corruption_detected = False
+
+                for stat in db_stats:
+                    current_sum = stat.get("sum")
+                    if current_sum is None:
+                        continue
+
+                    if prev_sum is not None and current_sum < prev_sum:
+                        stat_time = datetime.datetime.fromtimestamp(
+                            stat["start"], tz=datetime.UTC
+                        )
+                        _LOGGER.error(
+                            "[VERIFY] Batch %d/%d: Detected DECREASING sum at %s "
+                            "(%.2f → %.2f kWh). Data corruption detected!",
+                            batch_num,
+                            total_batches,
+                            stat_time.isoformat(),
+                            prev_sum,
+                            current_sum,
+                        )
+                        corruption_detected = True
+                        # Don't break - check all records in batch
+
+                    prev_sum = current_sum
+
+                if not corruption_detected:
+                    _LOGGER.debug(
+                        "[VERIFY] Batch %d/%d: ✓ All sums non-decreasing (final: %.2f kWh)",
+                        batch_num,
+                        total_batches,
+                        prev_sum if prev_sum is not None else 0.0,
+                    )
+
+                # Success - break retry loop
+                break
+
+            except Exception as err:
+                if attempt < max_retries - 1:
+                    _LOGGER.debug(
+                        "[VERIFY] Batch %d/%d: Error on attempt %d/%d: %s, retrying...",
+                        batch_num,
+                        total_batches,
+                        attempt + 1,
+                        max_retries,
+                        err,
+                    )
+                    await asyncio.sleep(retry_delay)
+                else:
+                    _LOGGER.warning(
+                        "[VERIFY] Batch %d/%d: Could not verify batch integrity after %d attempts: %s",
+                        batch_num,
+                        total_batches,
+                        max_retries,
+                        err,
+                    )

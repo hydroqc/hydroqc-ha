@@ -21,9 +21,7 @@ from ..const import (
     CONF_PREHEAT_DURATION,
     CONF_RATE,
     CONF_RATE_OPTION,
-    CONF_UPDATE_INTERVAL,
     DEFAULT_PREHEAT_DURATION,
-    DEFAULT_UPDATE_INTERVAL,
 )
 
 
@@ -44,19 +42,6 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
 
         # Build schema based on rate capabilities
         schema_dict: dict[Any, Any] = {
-            vol.Optional(
-                CONF_UPDATE_INTERVAL,
-                default=self.config_entry.options.get(
-                    CONF_UPDATE_INTERVAL, DEFAULT_UPDATE_INTERVAL
-                ),
-            ): NumberSelector(
-                NumberSelectorConfig(
-                    min=30,
-                    max=600,
-                    mode=NumberSelectorMode.BOX,
-                    unit_of_measurement="seconds",
-                )
-            ),
             vol.Optional(
                 CONF_PREHEAT_DURATION,
                 default=self.config_entry.options.get(

@@ -104,6 +104,8 @@
       "cannot_connect": "Error al conectar con Hydro-Québec",
       "invalid_auth": "Nombre de usuario o contraseña inválidos",
       "no_contracts": "No se encontraron contratos para esta cuenta",
+      "portal_unavailable": "El portal de Hydro-Québec no está disponible actualmente. Por favor, inténtelo más tarde.",
+      "portal_maintenance": "El portal de Hydro-Québec está en mantenimiento (Error 500). Por favor, inténtelo en unas horas.",
       "unknown": "Ocurrió un error inesperado"
     },
     "abort": {
@@ -306,8 +308,9 @@
         "name": "Pico mañana mañana"
       },
       "dpc_critical_evening_peak_tomorrow": {
-        "name": "Pico tarde mañana"
-      }
+        "name": "Pico tarde mañana"      },
+      "portal_status": {
+        "name": "Estado del portal"      }
     }
   }
 }

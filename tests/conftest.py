@@ -23,7 +23,6 @@ from custom_components.hydroqc.const import (
     CONF_PREHEAT_DURATION,
     CONF_RATE,
     CONF_RATE_OPTION,
-    CONF_UPDATE_INTERVAL,
     DOMAIN,
 )
 
@@ -48,7 +47,6 @@ def mock_config_entry() -> MockConfigEntry:
             CONF_RATE: "D",
             CONF_RATE_OPTION: "",
             CONF_PREHEAT_DURATION: 120,
-            CONF_UPDATE_INTERVAL: 60,
         },
         unique_id="contract123",
     )
@@ -63,6 +61,7 @@ def mock_webuser() -> MagicMock:
     webuser.close_session = AsyncMock()
     webuser.get_info = AsyncMock()
     webuser.fetch_customers_info = AsyncMock()
+    webuser.check_hq_portal_status = AsyncMock(return_value=True)
     webuser.get_customer = MagicMock()
 
     # Mock customer
@@ -93,6 +92,8 @@ def mock_webuser() -> MagicMock:
     contract.cp_end_date = datetime(2024, 11, 30, tzinfo=EST_TIMEZONE).date()
     contract.get_periods_info = AsyncMock()
     contract.refresh_outages = AsyncMock()
+    contract.get_hourly_consumption = AsyncMock()
+    contract.get_csv_consumption_history = AsyncMock()
 
     # Link objects
     customer.accounts = [account]
@@ -411,7 +412,6 @@ def mock_config_entry_opendata() -> MockConfigEntry:
             CONF_RATE: "DPC",
             CONF_RATE_OPTION: "",
             CONF_PREHEAT_DURATION: 120,
-            CONF_UPDATE_INTERVAL: 60,
         },
         unique_id="opendata_dpc",
     )
@@ -430,7 +430,6 @@ def mock_config_entry_opendata_dcpc() -> MockConfigEntry:
             CONF_RATE: "D",
             CONF_RATE_OPTION: "CPC",
             CONF_PREHEAT_DURATION: 120,
-            CONF_UPDATE_INTERVAL: 60,
         },
         unique_id="opendata_dcpc",
     )

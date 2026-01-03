@@ -101,7 +101,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return await self.async_step_account()
         return await self.async_step_opendata()
 
-    async def async_step_account(
+    async def async_step_account(  # noqa: PLR0912
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle portal mode account setup."""
@@ -113,14 +113,23 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._contract_name = user_input[CONF_CONTRACT_NAME]
 
             try:
-                # Try to login and fetch contracts
-                self._webuser = WebUser(
+                # Check portal status first
+                temp_webuser = WebUser(
                     self._username,
                     self._password,
                     verify_ssl=True,
                     log_level="INFO",
                     http_log_level="WARNING",
                 )
+
+                portal_available = await temp_webuser.check_hq_portal_status()
+                if not portal_available:
+                    errors["base"] = "portal_unavailable"
+                    await temp_webuser.close_session()
+                    raise RuntimeError("Portal unavailable")
+
+                # Try to login and fetch contracts
+                self._webuser = temp_webuser
                 await self._webuser.login()
                 await self._webuser.get_info()
                 await self._webuser.fetch_customers_info()
@@ -147,8 +156,15 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 else:
                     return await self.async_step_select_contract()
 
-            except hydroqc.error.HydroQcHTTPError:
-                errors["base"] = "invalid_auth"
+            except hydroqc.error.HydroQcHTTPError as err:
+                # Check if it's a 500 error (portal maintenance)
+                if hasattr(err, "status_code") and err.status_code == 500:
+                    errors["base"] = "portal_maintenance"
+                else:
+                    errors["base"] = "invalid_auth"
+            except RuntimeError:
+                # Portal unavailable - error already set above
+                pass
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception during login")
                 errors["base"] = "cannot_connect"

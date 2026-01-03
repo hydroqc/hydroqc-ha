@@ -94,8 +94,8 @@ class HydroQcDataCoordinator(
         self._last_portal_update: datetime.datetime | None = None
         self._last_consumption_sync: datetime.datetime | None = None
 
-        # Track peak event count for calendar sync optimization
-        self._last_peak_events_count: int = 0
+        # Track critical peak event count for calendar sync optimization
+        self._last_critical_events_count: int = 0
 
         # Track portal offline status to avoid log spam
         self._portal_last_offline_log: datetime.datetime | None = None
@@ -324,17 +324,23 @@ class HydroQcDataCoordinator(
         else:
             _LOGGER.debug("[OpenData] Skipped (off-season)")
 
-        # Calendar sync: Only run if peak event count changed
+        # Calendar sync: Only run if critical peak count changed
+        # Non-critical peaks are not synced to calendar
         if self._calendar_entity_id and self.public_client.peak_handler:
-            current_peak_count = len(self.public_client.peak_handler._events)
-            if current_peak_count != self._last_peak_events_count:
+            # Only track critical peak count
+            current_critical_count = sum(
+                1 for e in self.public_client.peak_handler._events if e.is_critical
+            )
+            
+            if current_critical_count != self._last_critical_events_count:
                 if self._calendar_sync_task is None or self._calendar_sync_task.done():
                     self._calendar_sync_task = asyncio.create_task(
                         self._async_sync_calendar_events()
                     )
-                    self._last_peak_events_count = current_peak_count
+                    self._last_critical_events_count = current_critical_count
                     _LOGGER.debug(
-                        "Calendar sync triggered (peak events changed: %d)", current_peak_count
+                        "Calendar sync triggered (critical peaks: %d)",
+                        current_critical_count,
                     )
                 else:
                     _LOGGER.debug("Calendar sync already in progress, skipping")

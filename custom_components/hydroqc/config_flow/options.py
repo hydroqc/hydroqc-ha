@@ -88,8 +88,8 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
                     EntitySelector(EntitySelectorConfig(domain="calendar"))
                 )
             else:
-                schema_dict[vol.Optional(CONF_CALENDAR_ENTITY_ID)] = (
-                    EntitySelector(EntitySelectorConfig(domain="calendar"))
+                schema_dict[vol.Optional(CONF_CALENDAR_ENTITY_ID)] = EntitySelector(
+                    EntitySelectorConfig(domain="calendar")
                 )
 
         return self.async_show_form(

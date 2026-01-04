@@ -12,6 +12,8 @@
 
 ## [0.6.0] - 2025-01-04
 
+**Rafraichissez vos Blueprint**
+
 ### 🎯 Points saillants de cette version
 
 Cette version majeure améliore considérablement la performance et la fiabilité de l'intégration avec trois fonctionnalités clés :

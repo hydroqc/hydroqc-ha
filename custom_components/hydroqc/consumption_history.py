@@ -714,9 +714,7 @@ class ConsumptionHistoryImporter:
                         continue
 
                     if prev_sum is not None and current_sum < prev_sum:
-                        stat_time = datetime.datetime.fromtimestamp(
-                            stat["start"], tz=datetime.UTC
-                        )
+                        stat_time = datetime.datetime.fromtimestamp(stat["start"], tz=datetime.UTC)
                         _LOGGER.error(
                             "[VERIFY] Batch %d/%d: Detected DECREASING sum at %s "
                             "(%.2f → %.2f kWh). Data corruption detected!",

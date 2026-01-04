@@ -10,9 +10,32 @@
 
 ---
 
-## [0.6.0] - 2025-01-XX
+## [0.6.0-beta.2] - 2025-01-04
 
-[![GitHub Release Downloads](https://img.shields.io/github/downloads/hydroqc/hydroqc-ha/v0.6.0/total?style=flat-square&logo=github&label=Téléchargements)](https://github.com/hydroqc/hydroqc-ha/releases/tag/v0.6.0)
+### Ajouté
+
+- **Importation CSV par lots avec vérification d'intégrité** (#81)
+  - Traitement par lots de 168 heures (7 jours) pour éviter de surcharger les systèmes lents
+  - Délai de 0.5s entre les lots et 1s entre les types de consommation
+  - Vérification automatique de l'intégrité après chaque lot (3 tentatives avec délai)
+  - Détection des journées de transition DST pour éviter les fausses alertes
+  - Vérification des sommes cumulatives non-décroissantes
+
+### Corrigé
+
+- **Synchronisation du calendrier pour les pointes critiques annoncées** (#80)
+  - Le suivi compte maintenant uniquement les pointes critiques (pas le total)
+  - Les annonces de pointes critiques pour des plages déjà planifiées (DCPC) déclenchent maintenant la synchronisation du calendrier
+  - Corrige le problème où les événements critiques n'apparaissaient pas dans le calendrier jusqu'au redémarrage
+
+- **Détection améliorée des transitions DST lors de l'importation CSV**
+  - Vérification basée sur la date spécifique au lieu de la différence de comptage
+  - Utilise les capacités de fuseau horaire de Python pour identifier les vraies journées de transition DST
+  - Évite les faux positifs tout en capturant les vrais problèmes d'intégrité des données
+
+---
+
+## [0.6.0-beta.1] - 2025-01-03
 
 ### ⚠️ Changements importants
 

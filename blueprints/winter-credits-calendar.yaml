@@ -377,9 +377,6 @@ action:
            | selectattr('description', 'search', 'Tarif: DCPC')
            | selectattr('start', 'search', now().strftime('%Y-%m-%dT16:'))
            | list | length > 0 }}
-      # Determine which peak is next based on current time
-      next_peak_critical: >
-        {{ morning_peak_critical if now().hour < 10 else evening_peak_critical }}
   - choose:
       # ============================================
       # MORNING ANCHOR START (01:00)
@@ -388,13 +385,13 @@ action:
           - condition: trigger
             id: anchor_start_morning
           - condition: template
-            value_template: "{{ next_peak_critical }}"
+            value_template: "{{ morning_peak_critical }}"
         sequence: !input critical_anchor_start_morning_action
       - conditions:
           - condition: trigger
             id: anchor_start_morning
           - condition: template
-            value_template: "{{ not next_peak_critical }}"
+            value_template: "{{ not morning_peak_critical }}"
         sequence: !input regular_anchor_start_morning_action
       
       # ============================================
@@ -404,13 +401,13 @@ action:
           - condition: trigger
             id: anchor_end_morning
           - condition: template
-            value_template: "{{ next_peak_critical }}"
+            value_template: "{{ morning_peak_critical }}"
         sequence: !input critical_anchor_end_morning_action
       - conditions:
           - condition: trigger
             id: anchor_end_morning
           - condition: template
-            value_template: "{{ not next_peak_critical }}"
+            value_template: "{{ not morning_peak_critical }}"
         sequence: !input regular_anchor_end_morning_action
       
       # ============================================
@@ -428,13 +425,13 @@ action:
           - condition: trigger
             id: peak_start_morning
           - condition: template
-            value_template: "{{ next_peak_critical }}"
+            value_template: "{{ morning_peak_critical }}"
         sequence: !input critical_peak_start_action
       - conditions:
           - condition: trigger
             id: peak_start_morning
           - condition: template
-            value_template: "{{ not next_peak_critical }}"
+            value_template: "{{ not morning_peak_critical }}"
         sequence: !input regular_peak_start_action
       
       # ============================================
@@ -444,13 +441,13 @@ action:
           - condition: trigger
             id: peak_end_morning
           - condition: template
-            value_template: "{{ next_peak_critical }}"
+            value_template: "{{ morning_peak_critical }}"
         sequence: !input critical_peak_end_action
       - conditions:
           - condition: trigger
             id: peak_end_morning
           - condition: template
-            value_template: "{{ not next_peak_critical }}"
+            value_template: "{{ not morning_peak_critical }}"
         sequence: !input regular_peak_end_action
       
       # ============================================
@@ -460,13 +457,13 @@ action:
           - condition: trigger
             id: anchor_start_evening
           - condition: template
-            value_template: "{{ next_peak_critical }}"
+            value_template: "{{ evening_peak_critical }}"
         sequence: !input critical_anchor_start_evening_action
       - conditions:
           - condition: trigger
             id: anchor_start_evening
           - condition: template
-            value_template: "{{ not next_peak_critical }}"
+            value_template: "{{ not evening_peak_critical }}"
         sequence: !input regular_anchor_start_evening_action
       
       # ============================================
@@ -476,13 +473,13 @@ action:
           - condition: trigger
             id: anchor_end_evening
           - condition: template
-            value_template: "{{ next_peak_critical }}"
+            value_template: "{{ evening_peak_critical }}"
         sequence: !input critical_anchor_end_evening_action
       - conditions:
           - condition: trigger
             id: anchor_end_evening
           - condition: template
-            value_template: "{{ not next_peak_critical }}"
+            value_template: "{{ not evening_peak_critical }}"
         sequence: !input regular_anchor_end_evening_action
       
       # ============================================
@@ -500,13 +497,13 @@ action:
           - condition: trigger
             id: peak_start_evening
           - condition: template
-            value_template: "{{ next_peak_critical }}"
+            value_template: "{{ evening_peak_critical }}"
         sequence: !input critical_peak_start_action
       - conditions:
           - condition: trigger
             id: peak_start_evening
           - condition: template
-            value_template: "{{ not next_peak_critical }}"
+            value_template: "{{ not evening_peak_critical }}"
         sequence: !input regular_peak_start_action
       
       # ============================================
@@ -516,12 +513,12 @@ action:
           - condition: trigger
             id: peak_end_evening
           - condition: template
-            value_template: "{{ next_peak_critical }}"
+            value_template: "{{ evening_peak_critical }}"
         sequence: !input critical_peak_end_action
       - conditions:
           - condition: trigger
             id: peak_end_evening
           - condition: template
-            value_template: "{{ not next_peak_critical }}"
+            value_template: "{{ not evening_peak_critical }}"
         sequence: !input regular_peak_end_action
 

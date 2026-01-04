@@ -10,32 +10,34 @@
 
 ---
 
-## [0.6.0-beta.2] - 2025-01-04
+## [0.6.0] - 2025-01-04
 
-### Ajouté
+### 🎯 Points saillants de cette version
 
-- **Importation CSV par lots avec vérification d'intégrité** (#81)
-  - Traitement par lots de 168 heures (7 jours) pour éviter de surcharger les systèmes lents
-  - Délai de 0.5s entre les lots et 1s entre les types de consommation
-  - Vérification automatique de l'intégrité après chaque lot (3 tentatives avec délai)
-  - Détection des journées de transition DST pour éviter les fausses alertes
-  - Vérification des sommes cumulatives non-décroissantes
+Cette version majeure améliore considérablement la performance et la fiabilité de l'intégration avec trois fonctionnalités clés :
 
-### Corrigé
+#### 📊 Importation optimisée de l'historique de consommation
+- **Traitement par lots** : Importation par blocs de 7 jours avec pauses entre chaque lot
+- **Vérification d'intégrité** : Détection automatique des données corrompues avec tentatives de récupération
+- **Support DST** : Gestion intelligente des transitions heure d'été/hiver
+- **Fiabilité** : Import en arrière-plan sans bloquer Home Assistant
 
-- **Synchronisation du calendrier pour les pointes critiques annoncées** (#80)
-  - Le suivi compte maintenant uniquement les pointes critiques (pas le total)
-  - Les annonces de pointes critiques pour des plages déjà planifiées (DCPC) déclenchent maintenant la synchronisation du calendrier
-  - Corrige le problème où les événements critiques n'apparaissaient pas dans le calendrier jusqu'au redémarrage
+#### ⏰ Ordonnancement intelligent des mises à jour
+- **Fenêtres temporelles adaptées** aux heures réelles de mise à jour d'Hydro-Québec
+- **Réduction drastique** des appels API inutiles (90% de réduction)
+- **Les capteurs se mettent à jour uniquement** lorsque de nouvelles données sont disponibles
+- **Préservation de l'état** : plus de valeurs "Inconnu" entre les mises à jour
 
-- **Détection améliorée des transitions DST lors de l'importation CSV**
-  - Vérification basée sur la date spécifique au lieu de la différence de comptage
-  - Utilise les capacités de fuseau horaire de Python pour identifier les vraies journées de transition DST
-  - Évite les faux positifs tout en capturant les vrais problèmes d'intégrité des données
+#### 🏷️ Organisation améliorée des capteurs
+- **36 capteurs diagnostiques** : désencombre la liste principale des entités
+- **14 capteurs désactivés par défaut** : activation manuelle selon vos besoins
+- **Attribution des sources** : indication claire de la provenance des données (Portail vs OpenData)
+- **Interface épurée** : focus sur les capteurs les plus importants
 
----
-
-## [0.6.0-beta.1] - 2025-01-03
+#### 🔧 Améliorations de l'expérience utilisateur
+- **Détection du portail hors-ligne** : évite les erreurs pendant les maintenances HQ
+- **Détection des changements de période de facturation** : messages contextuels lors des transitions
+- **Messages contextuels** : explications claires lors d'échecs temporaires de synchronisation de conso
 
 ### ⚠️ Changements importants
 
@@ -46,6 +48,13 @@ L'option "Intervalle de mise à jour" a été retirée de la configuration. Le s
 **Migration automatique** : L'intégration supprimera automatiquement l'ancienne configuration lors de la mise à jour. Aucune action requise de votre part.
 
 ### Ajouté
+
+- **Importation CSV par lots avec vérification d'intégrité** (#30)
+  - Traitement par lots de 168 heures (7 jours) pour éviter de surcharger les systèmes lents
+  - Délai de 0.5s entre les lots et 1s entre les types de consommation
+  - Vérification automatique de l'intégrité après chaque lot (3 tentatives avec délai)
+  - Détection des journées de transition DST pour éviter les fausses alertes
+  - Vérification des sommes cumulatives non-décroissantes
 
 - **Ordonnancement intelligent des mises à jour** (#35)
   - Fenêtres temporelles adaptées aux heures de mise à jour HQ
@@ -59,12 +68,14 @@ L'option "Intervalle de mise à jour" a été retirée de la configuration. Le s
   - Vérifie le statut du portail avant toute opération
   - Évite les erreurs inutiles pendant les maintenances
   - Journalisation limitée (1x par heure maximum)
-  - Nouveau capteur binaire diagnostique montrant la disponibilité du portail
+  - Nouveau capteur binaire diagnostique montrant la disponibilité du portail (#23)
   
 - **Détection des changements de période de facturation**
   - Identifie automatiquement les périodes à risque (±3 jours autour de la fin de période)
-  - Messages d'avertissement contextuels pour problème connu du portail HQ
-  - Aide les utilisateurs à comprendre les échecs temporaires de synchronisation
+  - **Problème connu** : Le portail Hydro-Québec peut être indisponible pendant les transitions de période
+  - **Messages explicites** : Au lieu d'afficher une erreur générique, l'intégration explique maintenant que les données peuvent être temporairement indisponibles pendant les transitions de période
+  - **Exemple de message** : "[Portal] Error during consumption sync (near billing period boundary, consumption data may be temporarily unavailable)"
+  - Réduit la confusion des utilisateurs en expliquant que c'est un problème temporaire du portail HQ
 
 - **Attribution des sources de données**
   - Capteurs du portail : "Espace Client Hydro-Québec"
@@ -102,6 +113,21 @@ L'option "Intervalle de mise à jour" a été retirée de la configuration. Le s
 - Réduction significative de la charge système et des mises à jour inutiles
 
 ### Corrigé
+
+- **Synchronisation du calendrier pour les pointes critiques annoncées**
+  - Le suivi compte maintenant uniquement les pointes critiques (pas le total)
+  - Les annonces de pointes critiques pour des plages déjà planifiées (DCPC) déclenchent maintenant la synchronisation du calendrier
+  - Corrige le problème où les événements critiques n'apparaissaient pas dans le calendrier jusqu'au redémarrage
+
+- **Configuration du calendrier optionnel** (#80)
+  - Le champ calendrier peut maintenant être vidé dans les options sans erreur de validation
+  - Les utilisateurs peuvent désactiver complètement la fonctionnalité calendrier
+  - Les événements existants restent dans le calendrier (gestion manuelle possible)
+
+- **Détection améliorée des transitions DST lors de l'importation CSV**
+  - Vérification basée sur la date spécifique au lieu de la différence de comptage
+  - Utilise les capacités de fuseau horaire de Python pour identifier les vraies journées de transition DST
+  - Évite les faux positifs tout en capturant les vrais problèmes d'intégrité des données
 
 - Gestion des erreurs "No data available" lors de la synchronisation de consommation (données du jour actuel pas encore disponibles)
 - Suppression du délai de démarrage bloquant (améliore le temps de démarrage de HA)

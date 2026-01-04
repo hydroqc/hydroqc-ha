@@ -331,7 +331,7 @@ class HydroQcDataCoordinator(
             current_critical_count = sum(
                 1 for e in self.public_client.peak_handler._events if e.is_critical
             )
-            
+
             if current_critical_count != self._last_critical_events_count:
                 if self._calendar_sync_task is None or self._calendar_sync_task.done():
                     self._calendar_sync_task = asyncio.create_task(

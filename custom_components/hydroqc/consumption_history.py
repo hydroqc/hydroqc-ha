@@ -590,16 +590,16 @@ class ConsumptionHistoryImporter:
         for i in range(len(batch) - 1):
             current_time = batch[i]["start"]
             next_time = batch[i + 1]["start"]
-            
+
             # Normal hourly difference is 1 hour (3600 seconds)
             time_diff = (next_time - current_time).total_seconds()
-            
+
             # Spring forward: 2-hour jump (7200s) when we skip an hour
             # Fall back: 0-hour jump (0s) when we repeat an hour
             # Allow small tolerance for edge cases
             if time_diff <= 0 or time_diff >= 7200:
                 return True
-        
+
         return False
 
     async def _verify_batch_integrity(  # noqa: PLR0912
@@ -679,11 +679,11 @@ class ConsumptionHistoryImporter:
                         )
                         await asyncio.sleep(retry_delay)
                         continue
-                    
+
                     # Check if this is a DST transition day by examining the batch dates
                     diff = len(batch) - len(db_stats)
                     is_dst_transition = self._has_dst_transition(batch)
-                    
+
                     if is_dst_transition and diff in (1, -1):
                         _LOGGER.debug(
                             "[VERIFY] Batch %d/%d: Expected %d records, found %d "

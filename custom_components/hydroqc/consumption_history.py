@@ -572,6 +572,36 @@ class ConsumptionHistoryImporter:
             if consumption_type != consumption_types[-1]:  # Don't delay after last type
                 await asyncio.sleep(DELAY_BETWEEN_TYPES)
 
+    def _has_dst_transition(self, batch: list[dict[str, Any]]) -> bool:
+        """Check if the batch contains a DST transition.
+
+        Detects both spring forward (gap) and fall back (repeated hour) transitions
+        by checking if consecutive hours show unusual time differences.
+
+        Args:
+            batch: List of statistics records with 'start' datetime
+
+        Returns:
+            True if DST transition detected, False otherwise
+        """
+        if len(batch) < 2:
+            return False
+
+        for i in range(len(batch) - 1):
+            current_time = batch[i]["start"]
+            next_time = batch[i + 1]["start"]
+            
+            # Normal hourly difference is 1 hour (3600 seconds)
+            time_diff = (next_time - current_time).total_seconds()
+            
+            # Spring forward: 2-hour jump (7200s) when we skip an hour
+            # Fall back: 0-hour jump (0s) when we repeat an hour
+            # Allow small tolerance for edge cases
+            if time_diff <= 0 or time_diff >= 7200:
+                return True
+        
+        return False
+
     async def _verify_batch_integrity(  # noqa: PLR0912
         self,
         statistic_id: str,
@@ -649,14 +679,30 @@ class ConsumptionHistoryImporter:
                         )
                         await asyncio.sleep(retry_delay)
                         continue
-                    _LOGGER.warning(
-                        "[VERIFY] Batch %d/%d: Expected %d records, found %d after %d attempts",
-                        batch_num,
-                        total_batches,
-                        len(batch),
-                        len(db_stats),
-                        max_retries,
-                    )
+                    
+                    # Check if this is a DST transition day by examining the batch dates
+                    diff = len(batch) - len(db_stats)
+                    is_dst_transition = self._has_dst_transition(batch)
+                    
+                    if is_dst_transition and diff in (1, -1):
+                        _LOGGER.debug(
+                            "[VERIFY] Batch %d/%d: Expected %d records, found %d "
+                            "(DST transition detected - %s)",
+                            batch_num,
+                            total_batches,
+                            len(batch),
+                            len(db_stats),
+                            "spring forward" if diff == 1 else "fall back",
+                        )
+                    else:
+                        _LOGGER.warning(
+                            "[VERIFY] Batch %d/%d: Expected %d records, found %d after %d attempts",
+                            batch_num,
+                            total_batches,
+                            len(batch),
+                            len(db_stats),
+                            max_retries,
+                        )
 
                 # Check for non-decreasing sums
                 prev_sum = None

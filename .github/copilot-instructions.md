@@ -335,7 +335,7 @@ just restart  # Restart HA container to reload integration
 - Offline warnings logged once per hour (prevents spam)
 
 **Calendar & Consumption Sync**:
-- Calendar sync only runs when peak event count changes
+- Calendar sync only runs when critical peak count changes (non-critical peaks not synced to calendar)
 - Consumption sync runs independently from smart scheduling:
   - Triggered at the end of successful portal data fetches (piggybacks on portal updates)
   - Checks if 60+ minutes elapsed since last sync
@@ -584,6 +584,7 @@ Two methods for importing consumption history:
 - **State restoration**: Sensors and binary sensors inherit from `RestoreEntity` - preserve state across restarts
 - **Diagnostic sensors**: Use `EntityCategory.DIAGNOSTIC` for 31 non-essential entities (billing details, peaks, technical info)
 - **Disabled by default**: Use `disabled_by_default=True` for 14 sensors users rarely need (can be manually enabled)
+- **Calendar sync**: Only triggers when critical peak count changes, not total peak count - ensures critical peak announcements for already-scheduled timeslots trigger calendar updates
 
 ## Processus de Release
 

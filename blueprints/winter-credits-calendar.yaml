@@ -416,6 +416,8 @@ action:
       - conditions:
           - condition: trigger
             id: preheat_morning
+          - condition: template
+            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int < 12 }}"
         sequence: !input critical_preheat_morning_action
       
       # ============================================
@@ -488,6 +490,8 @@ action:
       - conditions:
           - condition: trigger
             id: preheat_evening
+          - condition: template
+            value_template: "{{ as_timestamp(trigger.calendar_event.start) | timestamp_custom('%H') | int >= 12 }}"
         sequence: !input critical_preheat_evening_action
       
       # ============================================

@@ -315,7 +315,6 @@ class StatisticsManager:
             "has_sum": True,
             "mean_type": StatisticMeanType.NONE,
             "name": display_name,
-            "unit_class": "energy",
         }
 
     async def get_base_sum(self, consumption_type: str, reference_date: datetime.date) -> float:

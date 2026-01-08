@@ -14,6 +14,8 @@ body:
       label: Liste de vérification
       description: Veuillez confirmer ce qui suit avant de soumettre
       options:
+        - label: Si mon problème concerne des données manquantes ou incorrectes, j'ai vérifié que l'information est disponible dans mon portail client Hydro-Québec ou sur les données ouvertes
+          required: true
         - label: J'ai recherché dans les problèmes existants pour m'assurer qu'il ne s'agit pas d'un doublon
           required: true
         - label: J'utilise la dernière version de l'intégration
@@ -21,30 +23,21 @@ body:
         - label: J'ai consulté la [documentation](https://github.com/hydroqc/hydroqc-ha)
           required: true
 
-  - type: dropdown
+  - type: input
     id: integration-version
     attributes:
       label: Version de l'intégration
       description: Quelle version de l'intégration Hydro-Québec utilisez-vous?
-      options:
-        - Dernière version (depuis HACS)
-        - Version spécifique (veuillez préciser dans la description)
-        - Version de développement (branche main)
+      placeholder: "ex: 0.1.3-beta.1, latest, main"
     validations:
       required: true
 
-  - type: dropdown
+  - type: input
     id: ha-version
     attributes:
       label: Version de Home Assistant
       description: Quelle version de Home Assistant utilisez-vous?
-      options:
-        - Dernière version stable
-        - 2024.12.x
-        - 2024.11.x
-        - 2024.10.x
-        - 2024.9.x ou antérieure
-        - Version de développement/Beta
+      placeholder: "ex: 2024.12.5, 2025.1.0, latest"
     validations:
       required: true
 

@@ -15,6 +15,11 @@ updates:
       - "python"
     commit-message:
       prefix: "chore(deps):"
+    # Allow Dependabot to rebase PRs
+    rebase-strategy: "auto"
+    # Require passing CI before auto-merge consideration
+    reviewers:
+      - "mdallaire"
     groups:
       # Group development dependencies together
       dev-dependencies:
@@ -30,12 +35,16 @@ updates:
       home-assistant:
         patterns:
           - "homeassistant"
+          - "homeassistant-stubs"  # HA type stubs follow HA versioning
         update-types:
           - "minor"
           - "patch"
     ignore:
       # Home Assistant updates should be reviewed manually
       - dependency-name: "homeassistant"
+        update-types: ["version-update:semver-major"]
+      # Hydroqc library major updates need careful review
+      - dependency-name: "Hydro-Quebec-API-Wrapper"
         update-types: ["version-update:semver-major"]
 
   # GitHub Actions

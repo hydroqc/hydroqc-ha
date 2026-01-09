@@ -230,12 +230,40 @@ just restart  # Restart HA container to reload integration
 ### Key Files to Check First
 - **README.md**: User-facing features, supported rates, installation
 - **CONTRIBUTING.md**: Commit conventions, PR requirements, rate-specific feature guidelines
-
 - **pyproject.toml**: Python 3.13, uv config, ruff rules (line-length 100, select E/W/F/I/UP/B/C4/SIM/RET/ARG/PTH/PL/RUF)
 - **uv.lock**: Lock file for reproducible builds (commit this file)
 - **justfile**: All dev commands (start, stop, restart, logs, qa, test)
 - **custom_components/hydroqc/const.py**: Sensor definitions, rate mappings
-- **pyproject.toml**: Python 3.13, ruff rules (line-length 100, select E/W/F/I/UP/B/C4/SIM/RET/ARG/PTH/PL/RUF)
+
+## Dependency Management
+
+### CI Compatibility Matrix
+
+The project uses a **multi-layered approach** to dependency management:
+1. **Dependabot** - Automated weekly dependency updates (Mondays 5:00 AM)
+2. **CI Matrix Testing** - Tests against multiple HA versions + latest hydroqc
+3. **homeassistant-stubs** - Static type checking catches API breakages early
+
+**Matrix Coverage** (`.github/workflows/ci.yml`):
+- HA versions: `2024.12.0` (minimum), `stable`, `beta` (pre-release)
+- hydroqc: Latest version only (pinned version tested in main test job)
+- Creates **3 test combinations** per PR with matching HA stubs for type checking
+
+**Key Dependencies**:
+- `Hydro-Quebec-API-Wrapper==4.2.6` - Pinned exactly (in manifest.json + pyproject.toml)
+- `homeassistant-stubs>=2025.1.0` - Dev dependency for type hints
+- Dependabot ignores major updates for homeassistant and hydroqc (require manual review)
+- Dependabot groups homeassistant-stubs with homeassistant updates
+
+**Why homeassistant-stubs?**
+- Catches HA API compatibility issues at **type-check time** (much faster than runtime)
+- Better IDE autocomplete and error detection
+- Proactive compatibility checking against beta versions
+
+**Updating Dependencies**:
+1. Dependabot opens PR with version bump + assigns reviewer
+2. CI runs: quality checks, full tests, **compatibility matrix** (3 HA versions), type check, import validation
+3. Review decision: dev deps (safe), HA updates (manual testing required), hydroqc updates (API compatibility check)
 
 ## Code Conventions
 

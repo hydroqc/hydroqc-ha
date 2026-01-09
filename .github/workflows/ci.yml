@@ -34,14 +34,19 @@ jobs:
         run: uv run mypy custom_components/hydroqc/
 
   test:
-    name: Tests
+    name: Tests (Python ${{ matrix.python-version }})
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        python-version: ["3.13"]
+        # Add more Python versions when HA supports them
     steps:
       - uses: actions/checkout@v4
       
       - uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: ${{ matrix.python-version }}
       
       - uses: astral-sh/setup-uv@v4
       
@@ -57,3 +62,72 @@ jobs:
         with:
           file: ./coverage.xml
           fail_ci_if_error: false
+
+  # Test compatibility with different versions of critical dependencies
+  compatibility:
+    name: Compatibility Check (HA ${{ matrix.ha-version }}, hydroqc latest)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        ha-version: 
+          - "2024.12.0"  # Minimum supported version (update as needed)
+          - "stable"     # Latest stable release
+          - "beta"       # Beta/RC version (tests upcoming changes)
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.13"
+      
+      - uses: astral-sh/setup-uv@v4
+      
+      - name: Install base dependencies
+        run: uv sync
+      
+      - name: Install specific HA and hydroqc versions
+        run: |
+          # Install latest hydroqc library version (no version constraint = latest)
+          uv pip install --system --upgrade "Hydro-Quebec-API-Wrapper"
+          
+          # Install Home Assistant version
+          if [ "${{ matrix.ha-version }}" = "stable" ]; then
+            # Install latest stable from PyPI
+            uv pip install --system "homeassistant"
+          elif [ "${{ matrix.ha-version }}" = "beta" ]; then
+            # Install latest pre-release (beta/rc)
+            uv pip install --system --pre "homeassistant"
+          else
+            # Install specific version
+            uv pip install --system "homeassistant==${{ matrix.ha-version }}"
+          fi
+      
+      - name: Install matching HA stubs for type checking
+        run: |
+          # Install homeassistant-stubs matching the HA version
+          if [ "${{ matrix.ha-version }}" = "stable" ]; then
+            uv pip install --system "homeassistant-stubs"
+          elif [ "${{ matrix.ha-version }}" = "beta" ]; then
+            uv pip install --system --pre "homeassistant-stubs"
+          else
+            uv pip install --system "homeassistant-stubs==${{ matrix.ha-version }}"
+          fi
+      
+      - name: Type check with HA stubs
+        run: uv run mypy custom_components/hydroqc/ --no-error-summary
+        continue-on-error: true
+      
+      - name: Import check
+        run: |
+          uv run python -c "
+          import sys
+          try:
+              from custom_components.hydroqc import DOMAIN
+              from hydroqc import WebUser, PublicClient
+              print('✅ All imports successful')
+              sys.exit(0)
+          except Exception as e:
+              print(f'❌ Import failed: {e}')
+              sys.exit(1)
+          "

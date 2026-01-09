@@ -10,7 +10,7 @@ import zoneinfo
 from collections.abc import Callable, Sequence
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.recorder import get_instance, statistics  # type: ignore[attr-defined]
+from homeassistant.components.recorder import get_instance, statistics
 from homeassistant.core import HomeAssistant
 
 if TYPE_CHECKING:

@@ -9,7 +9,7 @@ import zoneinfo
 from collections.abc import Callable
 from typing import TYPE_CHECKING, Any
 
-from homeassistant.components.recorder import get_instance, statistics  # type: ignore[attr-defined]
+from homeassistant.components.recorder import get_instance, statistics
 from homeassistant.components.recorder.models import StatisticMeanType
 from homeassistant.helpers.update_coordinator import UpdateFailed
 

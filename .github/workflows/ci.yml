@@ -13,7 +13,7 @@ jobs:
     name: Code Quality
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - uses: actions/setup-python@v5
         with:
@@ -42,7 +42,7 @@ jobs:
         python-version: ["3.13"]
         # Add more Python versions when HA supports them
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - uses: actions/setup-python@v5
         with:
@@ -74,7 +74,7 @@ jobs:
           - "stable"     # Latest stable release
           - "beta"       # Beta/RC version (tests upcoming changes)
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
       
       - uses: actions/setup-python@v5
         with:

@@ -19,7 +19,7 @@ jobs:
         with:
           python-version: "3.13"
       
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v7
       
       - name: Install dependencies
         run: uv sync
@@ -48,7 +48,7 @@ jobs:
         with:
           python-version: ${{ matrix.python-version }}
       
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v7
       
       - name: Install dependencies
         run: uv sync
@@ -80,7 +80,7 @@ jobs:
         with:
           python-version: "3.13"
       
-      - uses: astral-sh/setup-uv@v4
+      - uses: astral-sh/setup-uv@v7
       
       - name: Install base dependencies
         run: uv sync

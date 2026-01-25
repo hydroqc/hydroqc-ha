@@ -282,7 +282,7 @@ blueprint:
           selector:
             action: {}
   source_url: https://github.com/hydroqc/hydroqc-ha/blob/main/blueprints/winter-credits-calendar.yaml
-mode: single
+mode: parallel
 max_exceeded: silent
 trigger:
   # === CALENDAR TRIGGERS (Critical peaks only - with offsets) ===

@@ -95,7 +95,7 @@ async def async_create_peak_event(
         uid=uid,
     )
 
-    # Prepare service data (no uid field - not supported by HA calendar service)
+    # Prepare service data
     # Use location field to store rate for easy filtering in automations
     service_data = {
         "summary": title,

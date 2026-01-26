@@ -345,6 +345,11 @@ class HydroQcDataCoordinator(
                 else:
                     _LOGGER.debug("Calendar sync already in progress, skipping")
 
+        # Load peak events from calendar for sensors (calendar is source of truth)
+        # This runs on every update to refresh sensor data from calendar
+        if self.calendar_peak_handler:
+            await self.async_load_calendar_peak_events()
+
         # If in OpenData-only mode, return early
         if self.is_opendata_mode:
             _LOGGER.debug("OpenData mode: skipping portal data fetch")

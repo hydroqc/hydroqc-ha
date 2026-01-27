@@ -97,6 +97,12 @@ class HydroQcDataCoordinator(
         # Using signature instead of count to detect additions, removals, and time changes
         self._last_critical_events_signature: str = ""
 
+        # Calculate random minute and second offsets based on integration start time
+        # This distributes API calls across users to avoid thundering herd
+        _now = datetime.datetime.now()
+        self._schedule_offset_minutes = _now.minute % 15
+        self._schedule_offset_seconds = _now.second
+
         # Track portal offline status to avoid log spam
         self._portal_last_offline_log: datetime.datetime | None = None
 
@@ -131,12 +137,14 @@ class HydroQcDataCoordinator(
         self._init_calendar_sync()
 
         # Set up scheduled update triggers
-        # OpenData: Every 5 minutes during active window (11-18h), hourly otherwise
+        # OpenData: Every 15 minutes during active window (10:30-15:00), hourly otherwise
+        # Use offset based on start time to distribute API calls across users
+        opendata_minutes = [(self._schedule_offset_minutes + i * 15) % 60 for i in range(4)]
         async_track_time_change(
             hass,
             self._async_scheduled_opendata_update,
-            minute=list(range(0, 60, 5)),  # Every 5 minutes
-            second=0,
+            minute=opendata_minutes,  # Every 15 minutes with offset
+            second=self._schedule_offset_seconds,
         )
 
         # Portal: Hourly during active window (0-8h), every 3 hours otherwise
@@ -281,9 +289,7 @@ class HydroQcDataCoordinator(
             (e for e in self.public_client.peak_handler._events if e.is_critical),
             key=lambda e: e.start_date,
         )
-        return "|".join(
-            f"{e.start_date.isoformat()}_{e.end_date.isoformat()}" for e in events
-        )
+        return "|".join(f"{e.start_date.isoformat()}_{e.end_date.isoformat()}" for e in events)
 
     def _is_opendata_active_window(self) -> bool:
         """Check if currently in OpenData active hours (10:30-15:00 EST).
@@ -316,10 +322,10 @@ class HydroQcDataCoordinator(
         now = datetime.datetime.now(ZoneInfo("America/Toronto"))
         elapsed = (now - self._last_opendata_update).total_seconds()
 
-        # Active window: 5 minutes, Inactive: 60 minutes
+        # Active window: 15 minutes, Inactive: 60 minutes
         # Note: Hourly updates are handled by async_track_time_change trigger
         if self._is_opendata_active_window():
-            return elapsed >= 300  # 5 minutes
+            return elapsed >= 900  # 15 minutes
         return elapsed >= 3600  # 60 minutes
 
     def _should_update_portal(self) -> bool:

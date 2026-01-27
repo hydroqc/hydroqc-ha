@@ -427,16 +427,23 @@ class TestHydroQcDataCoordinator:
             patch("custom_components.hydroqc.coordinator.base.PublicDataClient") as mock_client,
         ):
             mock_peak_handler = MagicMock()
-            # Start with 1 event, will increment each iteration to trigger calendar sync
-            mock_peak_handler._events = [MagicMock()]
+            # Create mock events with proper date attributes for sorting
+            def create_mock_event(idx: int) -> MagicMock:
+                event = MagicMock()
+                event.is_critical = True
+                event.start_date = datetime(2026, 1, 28, 6 + idx, 0, 0, tzinfo=ZoneInfo("America/Toronto"))
+                event.end_date = datetime(2026, 1, 28, 9 + idx, 0, 0, tzinfo=ZoneInfo("America/Toronto"))
+                return event
+            
+            mock_peak_handler._events = [create_mock_event(0)]
             mock_client.return_value.peak_handler = mock_peak_handler
 
             coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
             
             # Retry 10 times (max_validation_attempts = 10)
             for i in range(10):
-                # Change event count each time to trigger calendar sync
-                mock_peak_handler._events = [MagicMock() for _ in range(i + 2)]
+                # Change events each time to trigger calendar sync (different signature)
+                mock_peak_handler._events = [create_mock_event(j) for j in range(i + 2)]
                 
                 await coordinator.async_refresh()
                 if hasattr(coordinator, "_calendar_sync_task") and coordinator._calendar_sync_task:

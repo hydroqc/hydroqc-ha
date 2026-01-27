@@ -246,7 +246,7 @@ class HydroQcDataCoordinator(
             try:
                 _LOGGER.debug("[Calendar] Waiting for pending sync task to complete")
                 await asyncio.wait_for(self._calendar_sync_task, timeout=30.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 _LOGGER.warning("[Calendar] Calendar sync task timed out, proceeding anyway")
             except Exception as err:
                 _LOGGER.warning("[Calendar] Calendar sync task failed: %s, proceeding anyway", err)

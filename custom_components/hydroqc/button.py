@@ -115,7 +115,7 @@ class HydroQcRefreshPeakDataButton(
             try:
                 _LOGGER.debug("[Button] Waiting for calendar sync to complete")
                 await asyncio.wait_for(self.coordinator._calendar_sync_task, timeout=30.0)
-            except asyncio.TimeoutError:
+            except TimeoutError:
                 _LOGGER.warning("[Button] Calendar sync timed out, proceeding anyway")
             except Exception as err:
                 _LOGGER.warning("[Button] Calendar sync failed: %s, proceeding anyway", err)

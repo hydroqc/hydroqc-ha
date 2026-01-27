@@ -88,7 +88,7 @@ class HydroQcRefreshPeakDataButton(
         if self.coordinator.public_client:
             try:
                 _LOGGER.debug("[Button] Fetching OpenData peak data")
-                await self.coordinator.public_client.async_fetch_peaks()
+                await self.coordinator.public_client.fetch_peak_data()
                 _LOGGER.debug("[Button] OpenData peak data fetched successfully")
 
                 # Sync to calendar if events changed (signature-based detection)

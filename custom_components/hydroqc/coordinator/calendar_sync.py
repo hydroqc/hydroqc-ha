@@ -161,9 +161,7 @@ class CalendarSyncMixin:
             # Winter season is December 1 to March 31
             today = datetime.date.today()
             # In season if December-March
-            if today.month in (12, 1, 2, 3):
-                return True
-            return False
+            return today.month in (12, 1, 2, 3)
 
         if "peak_handler" not in data_source or self.rate_option != "CPC":
             return True  # Not a seasonal sensor

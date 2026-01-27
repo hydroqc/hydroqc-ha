@@ -12,11 +12,11 @@ import datetime
 import logging
 import re
 import zoneinfo
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.calendar import CalendarEntity
 
-from .public_data.models import AnchorPeriod, PeakEvent
+from .public_data.models import AnchorPeriod
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -66,7 +66,7 @@ class CalendarPeakEvent:
         return self._is_critical
 
     @property
-    def preheat(self) -> "PreHeatPeriod":
+    def preheat(self) -> PreHeatPeriod:
         """Get pre-heat period for this peak."""
         return PreHeatPeriod(self.start_date, self._preheat_duration)
 
@@ -153,7 +153,7 @@ class CalendarPeakHandler:
                 return False
 
             # Store calendar friendly name for attribution
-            self._calendar_name = calendar_entity.name or self.calendar_entity_id
+            self._calendar_name = str(calendar_entity.name) if calendar_entity.name else self.calendar_entity_id
 
             # Query calendar for next 7 days
             now = datetime.datetime.now(TZ)
@@ -211,7 +211,7 @@ class CalendarPeakHandler:
             _LOGGER.warning("Failed to load events from calendar: %s", err)
             return False
 
-    def _parse_calendar_event(self, event) -> CalendarPeakEvent | None:
+    def _parse_calendar_event(self, event: Any) -> CalendarPeakEvent | None:
         """Parse a calendar event to extract hydroqc peak data.
 
         Args:

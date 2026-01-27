@@ -69,6 +69,7 @@ select = [
 ]
 ignore = [
     "E501",     # line too long (handled by formatter)
+    "PLR0911",  # too many return statements (complex conditionals)
     "PLR0913",  # too many arguments
     "PLR2004",  # magic value comparison
     "RET504",   # unnecessary assignment before return

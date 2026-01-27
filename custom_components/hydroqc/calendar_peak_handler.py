@@ -153,15 +153,15 @@ class CalendarPeakHandler:
                 return False
 
             # Store calendar friendly name for attribution
-            self._calendar_name = str(calendar_entity.name) if calendar_entity.name else self.calendar_entity_id
+            self._calendar_name = (
+                str(calendar_entity.name) if calendar_entity.name else self.calendar_entity_id
+            )
 
             # Query calendar for next 7 days
             now = datetime.datetime.now(TZ)
             end_date = now + datetime.timedelta(days=7)
 
-            calendar_events = await calendar_entity.async_get_events(
-                self.hass, now, end_date
-            )
+            calendar_events = await calendar_entity.async_get_events(self.hass, now, end_date)
 
             # Parse calendar events to extract hydroqc peak events
             critical_events: list[CalendarPeakEvent] = []
@@ -181,9 +181,7 @@ class CalendarPeakHandler:
                 generated_peaks = self._generate_dcpc_schedule()
 
                 # Track critical event date+timeslot for deduplication
-                critical_slots = {
-                    (e.start_date.date(), e.time_slot) for e in critical_events
-                }
+                critical_slots = {(e.start_date.date(), e.time_slot) for e in critical_events}
 
                 # Merge: critical events from calendar + non-critical generated
                 merged_events: list[CalendarPeakEvent] = list(critical_events)
@@ -295,12 +293,8 @@ class CalendarPeakHandler:
             target_date = today + datetime.timedelta(days=day_offset)
 
             # Morning peak: 6:00-10:00
-            morning_start = datetime.datetime.combine(
-                target_date, datetime.time(6, 0), tzinfo=TZ
-            )
-            morning_end = datetime.datetime.combine(
-                target_date, datetime.time(10, 0), tzinfo=TZ
-            )
+            morning_start = datetime.datetime.combine(target_date, datetime.time(6, 0), tzinfo=TZ)
+            morning_end = datetime.datetime.combine(target_date, datetime.time(10, 0), tzinfo=TZ)
             generated_peaks.append(
                 CalendarPeakEvent(
                     start_date=morning_start,
@@ -312,12 +306,8 @@ class CalendarPeakHandler:
             )
 
             # Evening peak: 16:00-20:00
-            evening_start = datetime.datetime.combine(
-                target_date, datetime.time(16, 0), tzinfo=TZ
-            )
-            evening_end = datetime.datetime.combine(
-                target_date, datetime.time(20, 0), tzinfo=TZ
-            )
+            evening_start = datetime.datetime.combine(target_date, datetime.time(16, 0), tzinfo=TZ)
+            evening_end = datetime.datetime.combine(target_date, datetime.time(20, 0), tzinfo=TZ)
             generated_peaks.append(
                 CalendarPeakEvent(
                     start_date=evening_start,
@@ -403,9 +393,7 @@ class CalendarPeakHandler:
         if not next_event:
             return False
 
-        preheat_start = next_event.start_date - datetime.timedelta(
-            minutes=self.preheat_duration
-        )
+        preheat_start = next_event.start_date - datetime.timedelta(minutes=self.preheat_duration)
         return preheat_start <= now < next_event.start_date
 
     @property
@@ -418,9 +406,7 @@ class CalendarPeakHandler:
         """Check if any critical peak is coming."""
         return self.next_critical_peak is not None
 
-    def _get_peak_for_period(
-        self, period_start: datetime.datetime
-    ) -> CalendarPeakEvent | None:
+    def _get_peak_for_period(self, period_start: datetime.datetime) -> CalendarPeakEvent | None:
         """Get peak event for a specific period."""
         # Ensure timezone-aware
         if period_start.tzinfo is None:

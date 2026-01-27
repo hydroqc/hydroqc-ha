@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 class SensorDataMixin:
     """Mixin for sensor data access functionality."""
 
-    def get_sensor_value(self, data_source: str) -> Any:  # noqa: PLR0911, PLR0912
+    def get_sensor_value(self, data_source: str) -> Any:  # noqa: PLR0912
         """Extract sensor value from data using dot-notation path.
 
         Example: "contract.cp_current_bill" -> walks the object graph.
@@ -191,9 +191,7 @@ class SensorDataMixin:
                 return None
             try:
                 if not hasattr(obj, part):
-                    _LOGGER.debug(
-                        "Attribute %s not found in %s", part, type(obj).__name__
-                    )
+                    _LOGGER.debug("Attribute %s not found in %s", part, type(obj).__name__)
                     if data_source.endswith(".is_critical"):
                         return False
                     return None

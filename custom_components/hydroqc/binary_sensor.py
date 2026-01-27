@@ -107,7 +107,9 @@ class HydroQcBinarySensor(
 
         # Set attribution based on data source
         # Calendar-based sensors show calendar name, others show data source
-        if isinstance(self._data_source, str) and self._data_source.startswith("calendar_peak_handler."):
+        if isinstance(self._data_source, str) and self._data_source.startswith(
+            "calendar_peak_handler."
+        ):
             # Attribution will be set dynamically in extra_state_attributes
             # since calendar name may not be available at init time
             self._attr_attribution = None
@@ -212,7 +214,10 @@ class HydroQcBinarySensor(
         if self._data_source.startswith("calendar_peak_handler."):
             attributes["data_source"] = "calendar"
             # Set attribution dynamically based on calendar name
-            if hasattr(self.coordinator, "calendar_peak_handler") and self.coordinator.calendar_peak_handler:
+            if (
+                hasattr(self.coordinator, "calendar_peak_handler")
+                and self.coordinator.calendar_peak_handler
+            ):
                 calendar_name = self.coordinator.calendar_peak_handler.calendar_name
                 if calendar_name:
                     attributes["attribution"] = f"Calendrier {calendar_name}"

@@ -93,8 +93,9 @@ class HydroQcDataCoordinator(
         self._last_portal_update: datetime.datetime | None = None
         self._last_consumption_sync: datetime.datetime | None = None
 
-        # Track critical peak event count for calendar sync optimization
-        self._last_critical_events_count: int = 0
+        # Track critical peak events signature for calendar sync optimization
+        # Using signature instead of count to detect additions, removals, and time changes
+        self._last_critical_events_signature: str = ""
 
         # Track portal offline status to avoid log spam
         self._portal_last_offline_log: datetime.datetime | None = None
@@ -263,6 +264,27 @@ class HydroQcDataCoordinator(
         # Winter season: December (12), January (1), February (2), March (3)
         return month in (12, 1, 2, 3)
 
+    def _get_critical_events_signature(self) -> str:
+        """Get signature of critical events for change detection.
+
+        Returns a string hash of all critical events sorted by start time.
+        This detects:
+        - New events added (any position)
+        - Events removed
+        - Event times modified
+        - Event replacements (same count, different events)
+        """
+        if not self.public_client or not self.public_client.peak_handler:
+            return ""
+
+        events = sorted(
+            (e for e in self.public_client.peak_handler._events if e.is_critical),
+            key=lambda e: e.start_date,
+        )
+        return "|".join(
+            f"{e.start_date.isoformat()}_{e.end_date.isoformat()}" for e in events
+        )
+
     def _is_opendata_active_window(self) -> bool:
         """Check if currently in OpenData active hours (10:30-15:00 EST).
 
@@ -350,23 +372,20 @@ class HydroQcDataCoordinator(
         else:
             _LOGGER.debug("[OpenData] Skipped (off-season)")
 
-        # Calendar sync: Only run if critical peak count changed
-        # Non-critical peaks are not synced to calendar
+        # Calendar sync: Only run if critical peak events changed
+        # Uses signature to detect additions, removals, and time changes
         if self._calendar_entity_id and self.public_client.peak_handler:
-            # Only track critical peak count
-            current_critical_count = sum(
-                1 for e in self.public_client.peak_handler._events if e.is_critical
-            )
+            current_signature = self._get_critical_events_signature()
 
-            if current_critical_count != self._last_critical_events_count:
+            if current_signature != self._last_critical_events_signature:
                 if self._calendar_sync_task is None or self._calendar_sync_task.done():
                     self._calendar_sync_task = asyncio.create_task(
                         self._async_sync_calendar_events()
                     )
-                    self._last_critical_events_count = current_critical_count
+                    self._last_critical_events_signature = current_signature
                     _LOGGER.debug(
-                        "Calendar sync triggered (critical peaks: %d)",
-                        current_critical_count,
+                        "Calendar sync triggered (signature changed: %s)",
+                        current_signature[:50] if current_signature else "empty",
                     )
                 else:
                     _LOGGER.debug("Calendar sync already in progress, skipping")

@@ -91,12 +91,10 @@ class HydroQcRefreshPeakDataButton(
                 await self.coordinator.public_client.async_fetch_peaks()
                 _LOGGER.debug("[Button] OpenData peak data fetched successfully")
 
-                # Sync to calendar if new peaks detected
+                # Sync to calendar if events changed (signature-based detection)
                 if self.coordinator._calendar_entity_id and self.coordinator.public_client.peak_handler:
-                    current_critical_count = sum(
-                        1 for e in self.coordinator.public_client.peak_handler._events if e.is_critical
-                    )
-                    if current_critical_count != self.coordinator._last_critical_events_count:
+                    current_signature = self.coordinator._get_critical_events_signature()
+                    if current_signature != self.coordinator._last_critical_events_signature:
                         if (
                             self.coordinator._calendar_sync_task is None
                             or self.coordinator._calendar_sync_task.done()
@@ -104,10 +102,9 @@ class HydroQcRefreshPeakDataButton(
                             self.coordinator._calendar_sync_task = asyncio.create_task(
                                 self.coordinator._async_sync_calendar_events()
                             )
-                            self.coordinator._last_critical_events_count = current_critical_count
+                            self.coordinator._last_critical_events_signature = current_signature
                             _LOGGER.debug(
-                                "[Button] Calendar sync triggered (critical peaks: %d)",
-                                current_critical_count,
+                                "[Button] Calendar sync triggered (signature changed)",
                             )
 
             except Exception as err:

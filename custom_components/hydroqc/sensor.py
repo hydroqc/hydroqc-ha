@@ -146,7 +146,13 @@ class HydroQcSensor(CoordinatorEntity[HydroQcDataCoordinator], RestoreEntity, Se
             # Try to restore the numeric state
             try:
                 if last_state.state not in ("unknown", "unavailable"):
-                    self._restored_value = last_state.state
+                    # For timestamp sensors, parse the ISO string back to datetime
+                    if self._attr_device_class == "timestamp":
+                        self._restored_value = datetime.datetime.fromisoformat(
+                            last_state.state
+                        )
+                    else:
+                        self._restored_value = last_state.state
                     _LOGGER.debug(
                         "Restored sensor %s state: %s",
                         self.entity_id,

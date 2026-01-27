@@ -12,7 +12,6 @@ from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.event import (
-    async_track_point_in_time,
     async_track_time_change,
 )
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
@@ -147,11 +146,12 @@ class HydroQcDataCoordinator(
             second=0,
         )
 
-        # Peak events: Hourly update at XX:00:00 sharp
+        # Calendar: Every 15 minutes to catch manual event changes
+        # Independent of OpenData - only refreshes calendar-based sensor data
         async_track_time_change(
             hass,
-            self._async_hourly_peak_update,
-            minute=0,
+            self._async_scheduled_calendar_refresh,
+            minute=[0, 15, 30, 45],
             second=0,
         )
 
@@ -225,17 +225,36 @@ class HydroQcDataCoordinator(
         else:
             _LOGGER.debug("[Portal] Scheduled update skipped (not needed)")
 
-    async def _async_hourly_peak_update(self, now: datetime.datetime) -> None:
-        """Force coordinator refresh at top of each hour for peak accuracy.
+    async def _async_scheduled_calendar_refresh(self, _now: datetime.datetime) -> None:
+        """Scheduled callback for Calendar data refresh.
 
-        Called by async_track_time_change at XX:00:00 exactly.
-        Only runs during winter season for peak event sensors.
+        Runs every 15 minutes to catch manual calendar event changes.
+        Independent of OpenData/Portal - only refreshes calendar-based sensor data.
+        Does not trigger a full coordinator refresh.
         """
-        if not self._is_winter_season():
-            return
+        if not self.calendar_peak_handler:
+            return  # No calendar configured
 
-        _LOGGER.debug("[OpenData] Hourly peak trigger at %02d:00:00 - forcing update", now.hour)
-        await self.async_request_refresh()
+        if not self._is_winter_season():
+            return  # Off-season, skip calendar refresh
+
+        _LOGGER.debug("[Calendar] Scheduled 15-min calendar refresh")
+
+        # Wait for any pending calendar sync to complete first
+        if self._calendar_sync_task and not self._calendar_sync_task.done():
+            try:
+                _LOGGER.debug("[Calendar] Waiting for pending sync task to complete")
+                await asyncio.wait_for(self._calendar_sync_task, timeout=30.0)
+            except asyncio.TimeoutError:
+                _LOGGER.warning("[Calendar] Calendar sync task timed out, proceeding anyway")
+            except Exception as err:
+                _LOGGER.warning("[Calendar] Calendar sync task failed: %s, proceeding anyway", err)
+
+        # Refresh calendar-based sensor data directly (no full coordinator refresh)
+        await self.async_load_calendar_peak_events()
+
+        # Notify listeners of updated data without fetching all data sources
+        self.async_set_updated_data(self.data)
 
     def _is_winter_season(self) -> bool:
         """Check if currently in winter season (Dec 1 - Mar 31)."""
@@ -245,9 +264,16 @@ class HydroQcDataCoordinator(
         return month in (12, 1, 2, 3)
 
     def _is_opendata_active_window(self) -> bool:
-        """Check if currently in OpenData active hours (11:00-18:00 EST)."""
+        """Check if currently in OpenData active hours (10:30-15:00 EST).
+
+        This is the window when Hydro-Québec typically announces critical peaks.
+        """
         now = datetime.datetime.now(ZoneInfo("America/Toronto"))
-        return 11 <= now.hour < 18
+        # Active window: 10:30 to 15:00
+        # At 10:30 or later, but before 15:00
+        if now.hour == 10:
+            return now.minute >= 30  # Only from 10:30
+        return 11 <= now.hour < 15
 
     def _is_portal_active_window(self) -> bool:
         """Check if currently in Portal active hours (00:00-08:00 EST)."""
@@ -503,24 +529,3 @@ class HydroQcDataCoordinator(
         if self._webuser:
             await self._webuser.close_session()
         await self.public_client.close_session()
-
-    def _schedule_hourly_update(self) -> None:
-        """Schedule the next update at the top of the hour for peak sensors."""
-        now = datetime.datetime.now()
-        # Schedule for the next hour
-        next_hour = (now + datetime.timedelta(hours=1)).replace(minute=0, second=0, microsecond=0)
-
-        _LOGGER.debug("Scheduling next peak update at %s", next_hour)
-
-        async_track_point_in_time(
-            self.hass,
-            self._async_hourly_update,
-            next_hour,
-        )
-
-    async def _async_hourly_update(self, _now: datetime.datetime) -> None:
-        """Perform hourly update for peak sensors."""
-        _LOGGER.debug("Triggering hourly peak sensor update")
-        await self.async_request_refresh()
-        # Schedule the next hourly update
-        self._schedule_hourly_update()

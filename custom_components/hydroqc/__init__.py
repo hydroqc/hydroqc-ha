@@ -22,6 +22,7 @@ _LOGGER = logging.getLogger(__name__)
 PLATFORMS: list[Platform] = [
     Platform.SENSOR,
     Platform.BINARY_SENSOR,
+    Platform.BUTTON,
 ]
 
 # Service constants
@@ -70,9 +71,6 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     # Mark first refresh as done
     coordinator._first_refresh_done = True
-
-    # Schedule hourly updates for peak sensors to ensure accurate state transitions
-    coordinator._schedule_hourly_update()
 
     # Register options update listener for immediate calendar sync
     async def _async_options_updated(hass: HomeAssistant, config_entry: ConfigEntry) -> None:

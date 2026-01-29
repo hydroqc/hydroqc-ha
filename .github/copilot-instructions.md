@@ -26,7 +26,7 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
    - Instead of automatic polling every X seconds, uses explicit time-based triggers with `async_track_time_change()`
    - **Three independent schedulers**:
      - **OpenData**: Every 15 minutes with random offset (checks time windows before fetching)
-     - **Portal**: Every hour at top of hour (checks time windows before fetching)
+     - **Portal**: Every hour with random offset (checks time windows before fetching)
      - **Calendar**: Every 15 minutes at fixed intervals (refreshes calendar-based sensor data)
    - **Smart time windows**:
      - OpenData: 10:30-15:00 EST (15 min interval) / other times (60 min) / off-season (disabled)
@@ -383,9 +383,10 @@ The project uses a **multi-layered approach** to dependency management:
    - **Anti-thundering herd**: Random minute offset (`now.minute % 15`) and second offset (`now.second`) calculated at integration startup distributes API calls across users
 
 2. **Portal Scheduler** (`_async_scheduled_portal_update`):
-   - **Interval**: Every hour at top of hour (minute=0, second=0)
+   - **Interval**: Every hour with random offset (minute=offset, second=offset)
    - **Active window**: 00:00-08:00 EST (60 min interval)
    - **Inactive interval**: 180 minutes (3 hours)
+   - **Anti-thundering herd**: Same random minute/second offset as OpenData
    - **Checks**: `_should_update_portal()` based on elapsed time and window
 
 3. **Calendar Scheduler** (`_async_scheduled_calendar_refresh`):

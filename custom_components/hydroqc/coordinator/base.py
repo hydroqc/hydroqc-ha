@@ -148,11 +148,12 @@ class HydroQcDataCoordinator(
         )
 
         # Portal: Hourly during active window (0-8h), every 3 hours otherwise
+        # Use offset based on start time to distribute API calls across users
         async_track_time_change(
             hass,
             self._async_scheduled_portal_update,
-            minute=0,  # Top of hour
-            second=0,
+            minute=self._schedule_offset_minutes,  # Random minute within the hour
+            second=self._schedule_offset_seconds,
         )
 
         # Calendar: Every 15 minutes to catch manual event changes

@@ -43,9 +43,7 @@ async def async_setup_entry(
         _LOGGER.debug("Added %d button entities", len(entities))
 
 
-class HydroQcRefreshPeakDataButton(
-    CoordinatorEntity[HydroQcDataCoordinator], ButtonEntity
-):
+class HydroQcRefreshPeakDataButton(CoordinatorEntity[HydroQcDataCoordinator], ButtonEntity):
     """Button to manually refresh peak data from OpenData and calendar."""
 
     _attr_has_entity_name = True
@@ -92,7 +90,10 @@ class HydroQcRefreshPeakDataButton(
                 _LOGGER.debug("[Button] OpenData peak data fetched successfully")
 
                 # Sync to calendar if events changed (signature-based detection)
-                if self.coordinator._calendar_entity_id and self.coordinator.public_client.peak_handler:
+                if (
+                    self.coordinator._calendar_entity_id
+                    and self.coordinator.public_client.peak_handler
+                ):
                     current_signature = self.coordinator._get_critical_events_signature()
                     if current_signature != self.coordinator._last_critical_events_signature:
                         if (

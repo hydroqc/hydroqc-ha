@@ -18,6 +18,7 @@ from ..calendar_peak_handler import CalendarPeakHandler
 from ..const import (
     CONF_CALENDAR_ENTITY_ID,
 )
+from ..utils import is_winter_season
 
 if TYPE_CHECKING:
     pass
@@ -158,10 +159,7 @@ class CalendarSyncMixin:
             if self.rate_option != "CPC":
                 return True  # DPC is not seasonal
             # For DCPC, check if we're in winter season
-            # Winter season is December 1 to March 31
-            today = datetime.date.today()
-            # In season if December-March
-            return today.month in (12, 1, 2, 3)
+            return is_winter_season()
 
         if "peak_handler" not in data_source or self.rate_option != "CPC":
             return True  # Not a seasonal sensor

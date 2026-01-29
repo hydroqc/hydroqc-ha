@@ -21,6 +21,7 @@
 ### Modifié
 
 - Refactorisation : Extraction de `is_winter_season` vers `utils.py` (suggestion de revue @lit-af)
+- Refactorisation : Utilisation de `is_winter_season()` dans `calendar_sync.py` et `public_data/peak_handler.py`
 - Renommage du capteur "Économie vs Tarif D" → "Différence Flex D vs Tarif D" (#88)
   - Clarifie que les valeurs négatives = économies (coût Flex D - coût Tarif D)
   - Mis à jour dans les trois langues (EN/FR/ES)

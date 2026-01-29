@@ -7,6 +7,7 @@ import logging
 import zoneinfo
 from typing import Any
 
+from ..utils import get_winter_season_bounds, is_winter_season
 from .models import AnchorPeriod, PeakEvent
 
 _LOGGER = logging.getLogger(__name__)
@@ -132,18 +133,11 @@ class PeakHandler:
         """
         tz = zoneinfo.ZoneInfo("America/Toronto")
         now = datetime.datetime.now(tz)
+        today = now.date()
 
         # Check if we're in winter season (Dec 1 - Mar 31)
-        today = now.date()
-        winter_start = datetime.date(today.year, 12, 1)
-        winter_end = datetime.date(today.year + 1, 3, 31)
-
-        # Handle year boundary - if today is before March 31, check previous year's Dec 1
-        if today.month < 12:
-            winter_start = datetime.date(today.year - 1, 12, 1)
-            winter_end = datetime.date(today.year, 3, 31)
-
-        if not (winter_start <= today <= winter_end):
+        if not is_winter_season(today):
+            winter_start, winter_end = get_winter_season_bounds(today)
             _LOGGER.debug(
                 "[OpenData] Outside winter season (%s to %s), no DCPC schedule generated",
                 winter_start,

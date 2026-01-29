@@ -24,6 +24,8 @@ from hydroqc.contract.common import Contract
 from hydroqc.customer import Customer
 from hydroqc.webuser import WebUser
 
+from ..utils import is_winter_season
+
 try:
     HYDROQC_VERSION = hydroqc.__version__  # type: ignore[attr-defined]
 except AttributeError:
@@ -245,7 +247,7 @@ class HydroQcDataCoordinator(
         if not self.calendar_peak_handler:
             return  # No calendar configured
 
-        if not self._is_winter_season():
+        if not is_winter_season():
             return  # Off-season, skip calendar refresh
 
         _LOGGER.debug("[Calendar] Scheduled 15-min calendar refresh")
@@ -265,13 +267,6 @@ class HydroQcDataCoordinator(
 
         # Notify listeners of updated data without fetching all data sources
         self.async_set_updated_data(self.data)
-
-    def _is_winter_season(self) -> bool:
-        """Check if currently in winter season (Dec 1 - Mar 31)."""
-        now = datetime.datetime.now(ZoneInfo("America/Toronto"))
-        month = now.month
-        # Winter season: December (12), January (1), February (2), March (3)
-        return month in (12, 1, 2, 3)
 
     def _get_critical_events_signature(self) -> str:
         """Get signature of critical events for change detection.
@@ -312,7 +307,7 @@ class HydroQcDataCoordinator(
     def _should_update_opendata(self) -> bool:
         """Determine if OpenData should be updated based on time elapsed and window."""
         # Skip if off-season
-        if not self._is_winter_season():
+        if not is_winter_season():
             return False
 
         # First update always runs
@@ -361,7 +356,7 @@ class HydroQcDataCoordinator(
         data_fetched = False  # Track if any new data was actually fetched
 
         # OpenData: Fetch public peak data
-        if self._is_winter_season():
+        if is_winter_season():
             try:
                 await self.public_client.fetch_peak_data()
                 self._last_opendata_update = datetime.datetime.now(ZoneInfo("America/Toronto"))

@@ -17,6 +17,7 @@ from typing import TYPE_CHECKING, Any
 from homeassistant.components.calendar import CalendarEntity
 
 from .public_data.models import AnchorPeriod
+from .utils import get_winter_season_bounds, is_winter_season
 
 if TYPE_CHECKING:
     from homeassistant.core import HomeAssistant
@@ -271,15 +272,8 @@ class CalendarPeakHandler:
         today = now.date()
 
         # Check if we're in winter season (Dec 1 - Mar 31)
-        winter_start = datetime.date(today.year, 12, 1)
-        winter_end = datetime.date(today.year + 1, 3, 31)
-
-        # Handle year boundary
-        if today.month < 12:
-            winter_start = datetime.date(today.year - 1, 12, 1)
-            winter_end = datetime.date(today.year, 3, 31)
-
-        if not (winter_start <= today <= winter_end):
+        if not is_winter_season(today):
+            winter_start, winter_end = get_winter_season_bounds(today)
             _LOGGER.debug(
                 "[Calendar] Outside winter season (%s to %s), no DCPC schedule generated",
                 winter_start,
@@ -362,7 +356,7 @@ class CalendarPeakHandler:
         now = datetime.datetime.now(TZ)
 
         # Check if we're in winter season (Dec 1 - Mar 31)
-        if not ((now.month, now.day) >= (12, 1) or (now.month, now.day) <= (3, 31)):
+        if not is_winter_season(now):
             return "off_season"
 
         # Check if currently in a peak

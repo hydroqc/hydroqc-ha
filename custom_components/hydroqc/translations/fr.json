@@ -173,7 +173,7 @@
         "name": "Conso. prix inférieur"
       },
       "amount_saved_vs_base_rate": {
-        "name": "Économie vs Tarif D"
+        "name": "Différence Flex D vs Tarif D"
       },
       "dpc_state": {
         "name": "État DPC"

@@ -183,7 +183,7 @@
         "name": "Consumo precio bajo"
       },
       "amount_saved_vs_base_rate": {
-        "name": "Ahorro vs Tarifa D"
+        "name": "Diferencia Flex D vs Tarifa D"
       },
       "dpc_state": {
         "name": "Estado DPC"

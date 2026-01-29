@@ -183,7 +183,7 @@
         "name": "Low Price Consumption"
       },
       "amount_saved_vs_base_rate": {
-        "name": "Savings vs Rate D"
+        "name": "Flex D vs Rate D Difference"
       },
       "dpc_state": {
         "name": "DPC Status"

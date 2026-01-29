@@ -10,6 +10,27 @@
 
 ---
 
+## [0.7.0-beta.2] - 2026-01-29
+
+### Ajouté
+
+- `utils.py` : Nouveau module utilitaire avec fonctions de saison d'hiver (#102)
+  - `is_winter_season(dt)` : Vérifie si une date est en saison hivernale (1er déc - 31 mars)
+  - `get_winter_season_bounds(date)` : Retourne les bornes de la saison d'hiver
+
+### Modifié
+
+- Refactorisation : Extraction de `is_winter_season` vers `utils.py` (suggestion de revue @lit-af)
+- Renommage du capteur "Économie vs Tarif D" → "Différence Flex D vs Tarif D" (#88)
+  - Clarifie que les valeurs négatives = économies (coût Flex D - coût Tarif D)
+  - Mis à jour dans les trois langues (EN/FR/ES)
+
+### Corrigé
+
+- Correction du formatage dans `button.py` et `sensor.py`
+
+---
+
 ## [0.7.0-beta.1] - 2026-01-29
 
 ### 🎯 Points saillants de cette version

@@ -115,8 +115,11 @@ class TestHydroQcSensor:
         mock_contract_dpc: MagicMock,
         mock_integration_version: MagicMock,
     ) -> None:
-        """Test sensor setup for Flex-D (DPC) contract."""
-        # Update config to use DPC rate
+        """Test sensor setup for Flex-D (DPC) contract without calendar.
+
+        Without a calendar configured, calendar-based sensors should NOT be created.
+        """
+        # Update config to use DPC rate (no calendar)
         dpc_config = MockConfigEntry(
             domain=DOMAIN,
             data={**mock_config_entry.data, "rate": "DPC"},
@@ -146,9 +149,10 @@ class TestHydroQcSensor:
             entities = async_add_entities.call_args[0][0]
             sensor_keys = [entity._sensor_key for entity in entities]
 
-            # Should have Flex-D sensors
-            assert "dpc_state" in sensor_keys
-            assert "dpc_next_peak_start" in sensor_keys
+            # Calendar-based Flex-D sensors should NOT be created without calendar
+            assert "dpc_state" not in sensor_keys
+            assert "dpc_next_peak_start" not in sensor_keys
+            # Portal-based sensors should still be created
             assert "dpc_critical_hours_count" in sensor_keys
 
     async def test_sensor_state_value(

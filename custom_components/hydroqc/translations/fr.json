@@ -36,23 +36,23 @@
         }
       },
       "calendar": {
-        "title": "Intégration calendrier (optionnel)",
-        "description": "Créer automatiquement des événements de calendrier pour les périodes de pointe critique pour {contract_name}. Les événements utilisent des titres français standardisés pour la compatibilité avec les blueprints.",
+        "title": "Configuration du calendrier (requis)",
+        "description": "Un **calendrier dédié est requis** pour les capteurs de pointe de {contract_name}.\n\nTous les capteurs d'événements de pointe (état, prochaines pointes, préchauffage) lisent leurs données depuis ce calendrier.\n\n⚠️ **Important**: Utilisez un calendrier dédié pour HydroQc - n'utilisez pas un calendrier partagé.\n\n📅 Vous n'avez pas de calendrier? [Créer un calendrier local](/config/integrations/integration/local_calendar)",
         "data": {
-          "calendar_entity_id": "Entité calendrier (optionnel)"
+          "calendar_entity_id": "Entité calendrier"
         },
         "data_description": {
-          "calendar_entity_id": "Sélectionnez une entité calendrier pour créer les événements de pointe. Laissez vide pour ignorer l'intégration calendrier."
+          "calendar_entity_id": "Sélectionnez une entité calendrier dédiée pour les événements de pointe. Ce calendrier stockera toutes les périodes de pointe."
         }
       },
       "calendar_opendata": {
-        "title": "Intégration calendrier (optionnel)",
-        "description": "Créer automatiquement des événements de calendrier pour les périodes de pointe critique pour {contract_name}. Les événements utilisent des titres français standardisés pour la compatibilité avec les blueprints.",
+        "title": "Configuration du calendrier (requis)",
+        "description": "Un **calendrier dédié est requis** pour les capteurs de pointe de {contract_name}.\n\nTous les capteurs d'événements de pointe (état, prochaines pointes, préchauffage) lisent leurs données depuis ce calendrier.\n\n⚠️ **Important**: Utilisez un calendrier dédié pour HydroQc - n'utilisez pas un calendrier partagé.\n\n📅 Vous n'avez pas de calendrier? [Créer un calendrier local](/config/integrations/integration/local_calendar)",
         "data": {
-          "calendar_entity_id": "Entité calendrier (optionnel)"
+          "calendar_entity_id": "Entité calendrier"
         },
         "data_description": {
-          "calendar_entity_id": "Sélectionnez une entité calendrier pour créer les événements de pointe. Laissez vide pour ignorer l'intégration calendrier."
+          "calendar_entity_id": "Sélectionnez une entité calendrier dédiée pour les événements de pointe. Ce calendrier stockera toutes les périodes de pointe."
         }
       },
       "import_history": {
@@ -96,6 +96,8 @@
       "no_contracts": "Aucun contrat trouvé pour ce compte",
       "portal_unavailable": "Le portail Hydro-Québec est actuellement indisponible. Veuillez réessayer plus tard.",
       "portal_maintenance": "Le portail Hydro-Québec est en maintenance (Erreur 500). Veuillez réessayer dans quelques heures.",
+      "calendar_required": "Un calendrier est requis pour les tarifs DPC/DCPC. Tous les capteurs de pointe dépendent des événements du calendrier.",
+      "calendar_not_found": "Entité calendrier non trouvée. Veuillez d'abord créer un calendrier.",
       "unknown": "Erreur inattendue"
     },
     "abort": {
@@ -111,15 +113,19 @@
           "update_interval": "Intervalle de mise à jour (secondes)",
           "preheat_duration_minutes": "Durée de préchauffage (minutes)",
           "enable_consumption_sync": "Activer la synchronisation de consommation",
-          "calendar_entity_id": "Entité calendrier (optionnel)"
+          "calendar_entity_id": "Entité calendrier"
         },
         "data_description": {
           "update_interval": "Fréquence de récupération des données d'Hydro-Québec (30-600 secondes)",
           "preheat_duration_minutes": "Durée avant les événements de pointe critique pour déclencher le préchauffage (0-240 minutes)",
           "enable_consumption_sync": "Activer pour synchroniser les données de consommation horaire pour le tableau de bord énergétique. Nécessite un rechargement de l'intégration pour prendre effet.",
-          "calendar_entity_id": "Entité calendrier pour les événements de pointe (tarifs DPC/DCPC seulement). Laissez vide pour désactiver."
+          "calendar_entity_id": "Entité calendrier pour les événements de pointe (tarifs DPC/DCPC seulement). Requis pour le fonctionnement des capteurs de pointe."
         }
       }
+    },
+    "error": {
+      "calendar_required": "Un calendrier est requis pour les tarifs DPC/DCPC. Tous les capteurs de pointe dépendent des événements du calendrier.",
+      "calendar_not_found": "Entité calendrier non trouvée. Veuillez d'abord créer un calendrier."
     }
   },
   "entity": {

@@ -46,23 +46,23 @@
         }
       },
       "calendar": {
-        "title": "Calendar Integration (Optional)",
-        "description": "Automatically create calendar events for critical peak periods for {contract_name}. Events will use standardized French titles for blueprint compatibility.",
+        "title": "Calendar Configuration (Required)",
+        "description": "A **dedicated calendar is required** for peak sensors on {contract_name}.\n\nAll peak event sensors (state, next peak times, preheat) read their data from this calendar.\n\n⚠️ **Important**: Use a dedicated calendar for HydroQc - do not use a shared calendar.\n\n📅 Don't have a calendar yet? [Create a Local Calendar](/config/integrations/integration/local_calendar)",
         "data": {
-          "calendar_entity_id": "Calendar Entity (optional)"
+          "calendar_entity_id": "Calendar Entity"
         },
         "data_description": {
-          "calendar_entity_id": "Select a calendar entity to create peak events. Leave empty to skip calendar integration."
+          "calendar_entity_id": "Select a dedicated calendar entity for peak events. This calendar will store all peak periods."
         }
       },
       "calendar_opendata": {
-        "title": "Calendar Integration (Optional)",
-        "description": "Automatically create calendar events for critical peak periods for {contract_name}. Events will use standardized French titles for blueprint compatibility.",
+        "title": "Calendar Configuration (Required)",
+        "description": "A **dedicated calendar is required** for peak sensors on {contract_name}.\n\nAll peak event sensors (state, next peak times, preheat) read their data from this calendar.\n\n⚠️ **Important**: Use a dedicated calendar for HydroQc - do not use a shared calendar.\n\n📅 Don't have a calendar yet? [Create a Local Calendar](/config/integrations/integration/local_calendar)",
         "data": {
-          "calendar_entity_id": "Calendar Entity (optional)"
+          "calendar_entity_id": "Calendar Entity"
         },
         "data_description": {
-          "calendar_entity_id": "Select a calendar entity to create peak events. Leave empty to skip calendar integration."
+          "calendar_entity_id": "Select a dedicated calendar entity for peak events. This calendar will store all peak periods."
         }
       },
       "import_history": {
@@ -106,6 +106,8 @@
       "no_contracts": "No contracts found for this account",
       "portal_unavailable": "Hydro-Québec portal is currently unavailable. Please try again later.",
       "portal_maintenance": "Hydro-Québec portal is under maintenance (Error 500). Please try again in a few hours.",
+      "calendar_required": "A calendar is required for DPC/DCPC rates. All peak sensors depend on calendar events.",
+      "calendar_not_found": "Calendar entity not found. Please create a calendar first.",
       "unknown": "Unexpected error occurred"
     },
     "abort": {
@@ -121,15 +123,19 @@
           "update_interval": "Update Interval (seconds)",
           "preheat_duration_minutes": "Pre-heat Duration (minutes)",
           "enable_consumption_sync": "Enable consumption synchronization",
-          "calendar_entity_id": "Calendar Entity (optional)"
+          "calendar_entity_id": "Calendar Entity"
         },
         "data_description": {
           "update_interval": "How often to fetch data from Hydro-Québec (30-600 seconds)",
           "preheat_duration_minutes": "Duration before critical peak events to trigger pre-heating (0-240 minutes)",
           "enable_consumption_sync": "Enable to sync hourly consumption data for the energy dashboard. Requires integration reload to take effect.",
-          "calendar_entity_id": "Calendar entity for peak events (DPC/DCPC rates only). Leave empty to disable."
+          "calendar_entity_id": "Calendar entity for peak events (DPC/DCPC rates only). Required for peak sensors to work."
         }
       }
+    },
+    "error": {
+      "calendar_required": "A calendar is required for DPC/DCPC rates. All peak sensors depend on calendar events.",
+      "calendar_not_found": "Calendar entity not found. Please create a calendar first."
     }
   },
   "entity": {

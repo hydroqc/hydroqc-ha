@@ -61,6 +61,17 @@ async def async_setup_entry(
         if "contract.peak_handler." in data_source_str and coordinator.rate_option != "CPC":
             continue
 
+        # Skip calendar-based sensors if no calendar is configured
+        if (
+            data_source_str.startswith("calendar_peak_handler.")
+            and not coordinator.calendar_peak_handler
+        ):
+            _LOGGER.debug(
+                "Skipping sensor %s (no calendar configured)",
+                sensor_key,
+            )
+            continue
+
         entities.append(HydroQcSensor(coordinator, entry, sensor_key, sensor_config, version))
 
     async_add_entities(entities)

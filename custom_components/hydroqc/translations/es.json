@@ -46,23 +46,23 @@
         }
       },
       "calendar": {
-        "title": "Integración de calendario (Opcional)",
-        "description": "Crear automáticamente eventos de calendario para períodos de pico crítico para {contract_name}. Los eventos usarán títulos estandarizados en francés para compatibilidad con blueprints.",
+        "title": "Configuración de calendario (Requerido)",
+        "description": "Se **requiere un calendario dedicado** para los sensores de pico de {contract_name}.\n\nTodos los sensores de eventos de pico (estado, próximos picos, precalentamiento) leen sus datos de este calendario.\n\n⚠️ **Importante**: Use un calendario dedicado para HydroQc - no use un calendario compartido.\n\n📅 ¿No tiene un calendario? [Crear un calendario local](/config/integrations/integration/local_calendar)",
         "data": {
-          "calendar_entity_id": "Entidad de calendario (opcional)"
+          "calendar_entity_id": "Entidad de calendario"
         },
         "data_description": {
-          "calendar_entity_id": "Seleccione una entidad de calendario para crear eventos de pico. Deje vacío para omitir la integración de calendario."
+          "calendar_entity_id": "Seleccione una entidad de calendario dedicada para eventos de pico. Este calendario almacenará todos los períodos de pico."
         }
       },
       "calendar_opendata": {
-        "title": "Integración de calendario (Opcional)",
-        "description": "Crear automáticamente eventos de calendario para períodos de pico crítico para {contract_name}. Los eventos usarán títulos estandarizados en francés para compatibilidad con blueprints.",
+        "title": "Configuración de calendario (Requerido)",
+        "description": "Se **requiere un calendario dedicado** para los sensores de pico de {contract_name}.\n\nTodos los sensores de eventos de pico (estado, próximos picos, precalentamiento) leen sus datos de este calendario.\n\n⚠️ **Importante**: Use un calendario dedicado para HydroQc - no use un calendario compartido.\n\n📅 ¿No tiene un calendario? [Crear un calendario local](/config/integrations/integration/local_calendar)",
         "data": {
-          "calendar_entity_id": "Entidad de calendario (opcional)"
+          "calendar_entity_id": "Entidad de calendario"
         },
         "data_description": {
-          "calendar_entity_id": "Seleccione una entidad de calendario para crear eventos de pico. Deje vacío para omitir la integración de calendario."
+          "calendar_entity_id": "Seleccione una entidad de calendario dedicada para eventos de pico. Este calendario almacenará todos los períodos de pico."
         }
       },
       "import_history": {
@@ -106,6 +106,8 @@
       "no_contracts": "No se encontraron contratos para esta cuenta",
       "portal_unavailable": "El portal de Hydro-Québec no está disponible actualmente. Por favor, inténtelo más tarde.",
       "portal_maintenance": "El portal de Hydro-Québec está en mantenimiento (Error 500). Por favor, inténtelo en unas horas.",
+      "calendar_required": "Se requiere un calendario para las tarifas DPC/DCPC. Todos los sensores de pico dependen de los eventos del calendario.",
+      "calendar_not_found": "No se encontró la entidad de calendario. Por favor, cree un calendario primero.",
       "unknown": "Ocurrió un error inesperado"
     },
     "abort": {
@@ -121,15 +123,19 @@
           "update_interval": "Intervalo de actualización (segundos)",
           "preheat_duration_minutes": "Duración de precalentamiento (minutos)",
           "enable_consumption_sync": "Habilitar sincronización de consumo",
-          "calendar_entity_id": "Entidad de calendario (opcional)"
+          "calendar_entity_id": "Entidad de calendario"
         },
         "data_description": {
           "update_interval": "Con qué frecuencia obtener datos de Hydro-Québec (30-600 segundos)",
           "preheat_duration_minutes": "Duración antes de eventos de pico crítico para activar precalentamiento (0-240 minutos)",
           "enable_consumption_sync": "Habilitar para sincronizar datos de consumo por hora para el panel de energía. Requiere recargar la integración para tener efecto.",
-          "calendar_entity_id": "Entidad de calendario para eventos de pico (solo tarifas DPC/DCPC). Deje vacío para deshabilitar."
+          "calendar_entity_id": "Entidad de calendario para eventos de pico (solo tarifas DPC/DCPC). Requerido para el funcionamiento de los sensores de pico."
         }
       }
+    },
+    "error": {
+      "calendar_required": "Se requiere un calendario para las tarifas DPC/DCPC. Todos los sensores de pico dependen de los eventos del calendario.",
+      "calendar_not_found": "No se encontró la entidad de calendario. Por favor, cree un calendario primero."
     }
   },
   "entity": {

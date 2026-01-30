@@ -30,13 +30,25 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
 
     async def async_step_init(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Manage the options."""
+        errors: dict[str, str] = {}
+
         if user_input is not None:
-            # Filter out empty calendar entity ID (calendar is optional)
-            if CONF_CALENDAR_ENTITY_ID in user_input:
+            # Check if rate supports calendar configuration
+            rate = self.config_entry.data.get(CONF_RATE, "")
+            rate_option = self.config_entry.data.get(CONF_RATE_OPTION, "")
+            rate_with_option = f"{rate}{rate_option}"
+            supports_calendar = rate_with_option in ["DPC", "DCPC"]
+
+            # Validate calendar for DPC/DCPC rates
+            if supports_calendar:
                 calendar_id = user_input.get(CONF_CALENDAR_ENTITY_ID, "").strip()
                 if not calendar_id:
-                    user_input.pop(CONF_CALENDAR_ENTITY_ID, None)
-            return self.async_create_entry(title="", data=user_input)
+                    errors["base"] = "calendar_required"
+                elif not self.hass.states.get(calendar_id):
+                    errors[CONF_CALENDAR_ENTITY_ID] = "calendar_not_found"
+
+            if not errors:
+                return self.async_create_entry(title="", data=user_input)
 
         # Check if rate supports calendar configuration
         rate = self.config_entry.data.get(CONF_RATE, "")
@@ -75,24 +87,24 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
                 )
             ] = bool
 
-        # Add calendar options for DPC/DCPC rates
+        # Add calendar options for DPC/DCPC rates (required)
         if supports_calendar:
             current_calendar = self.config_entry.options.get(
                 CONF_CALENDAR_ENTITY_ID,
                 self.config_entry.data.get(CONF_CALENDAR_ENTITY_ID, ""),
             )
-            # Only set default if calendar is actually configured (not empty)
-            # This prevents EntitySelector validation errors with empty strings
+            # Calendar is required for DPC/DCPC rates
             if current_calendar:
-                schema_dict[vol.Optional(CONF_CALENDAR_ENTITY_ID, default=current_calendar)] = (
+                schema_dict[vol.Required(CONF_CALENDAR_ENTITY_ID, default=current_calendar)] = (
                     EntitySelector(EntitySelectorConfig(domain="calendar"))
                 )
             else:
-                schema_dict[vol.Optional(CONF_CALENDAR_ENTITY_ID)] = EntitySelector(
+                schema_dict[vol.Required(CONF_CALENDAR_ENTITY_ID)] = EntitySelector(
                     EntitySelectorConfig(domain="calendar")
                 )
 
         return self.async_show_form(
             step_id="init",
             data_schema=vol.Schema(schema_dict),
+            errors=errors,
         )

@@ -234,25 +234,32 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if self._selected_contract is None:
             return self.async_abort(reason="missing_contract")
 
-        if user_input is not None:
-            # Store calendar configuration
-            calendar_entity_id = user_input.get(CONF_CALENDAR_ENTITY_ID, "").strip()
-            if calendar_entity_id:
-                self._selected_contract["calendar_entity_id"] = calendar_entity_id
+        errors: dict[str, str] = {}
 
-            # Proceed to import history step
-            return await self.async_step_import_history()
+        if user_input is not None:
+            # Calendar is required for DPC/DCPC rates
+            calendar_entity_id = user_input.get(CONF_CALENDAR_ENTITY_ID, "").strip()
+            if not calendar_entity_id:
+                errors["base"] = "calendar_required"
+            elif not self.hass.states.get(calendar_entity_id):
+                errors[CONF_CALENDAR_ENTITY_ID] = "calendar_not_found"
+            else:
+                # Store calendar configuration
+                self._selected_contract["calendar_entity_id"] = calendar_entity_id
+                # Proceed to import history step
+                return await self.async_step_import_history()
 
         # Show calendar configuration form
         return self.async_show_form(
             step_id="calendar",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(CONF_CALENDAR_ENTITY_ID): EntitySelector(
+                    vol.Required(CONF_CALENDAR_ENTITY_ID): EntitySelector(
                         EntitySelectorConfig(domain="calendar")
                     ),
                 }
             ),
+            errors=errors,
             description_placeholders={"contract_name": self._contract_name or "Contract"},
         )
 
@@ -443,49 +450,53 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if self._selected_contract is None or self._contract_name is None:
             return self.async_abort(reason="missing_contract")
 
+        errors: dict[str, str] = {}
+
         if user_input is not None:
-            # Use contract name as unique ID for opendata mode
-            await self.async_set_unique_id(
-                f"opendata_{self._contract_name.lower().replace(' ', '_')}"
-            )
-            self._abort_if_unique_id_configured()
-
-            # Store calendar configuration
+            # Calendar is required for DPC/DCPC rates
             calendar_entity_id = user_input.get(CONF_CALENDAR_ENTITY_ID, "").strip()
+            if not calendar_entity_id:
+                errors["base"] = "calendar_required"
+            elif not self.hass.states.get(calendar_entity_id):
+                errors[CONF_CALENDAR_ENTITY_ID] = "calendar_not_found"
+            else:
+                # Use contract name as unique ID for opendata mode
+                await self.async_set_unique_id(
+                    f"opendata_{self._contract_name.lower().replace(' ', '_')}"
+                )
+                self._abort_if_unique_id_configured()
 
-            entry_data: dict[str, Any] = {
-                CONF_AUTH_MODE: AUTH_MODE_OPENDATA,
-                CONF_CONTRACT_NAME: self._contract_name,
-                CONF_RATE: self._selected_contract["rate"],
-                CONF_RATE_OPTION: self._selected_contract["rate_option"],
-                CONF_PREHEAT_DURATION: DEFAULT_PREHEAT_DURATION,
-            }
+                entry_data: dict[str, Any] = {
+                    CONF_AUTH_MODE: AUTH_MODE_OPENDATA,
+                    CONF_CONTRACT_NAME: self._contract_name,
+                    CONF_RATE: self._selected_contract["rate"],
+                    CONF_RATE_OPTION: self._selected_contract["rate_option"],
+                    CONF_PREHEAT_DURATION: DEFAULT_PREHEAT_DURATION,
+                    CONF_CALENDAR_ENTITY_ID: calendar_entity_id,
+                }
 
-            # Add calendar configuration if provided
-            if calendar_entity_id:
-                entry_data[CONF_CALENDAR_ENTITY_ID] = calendar_entity_id
+                sector_label = (
+                    SECTOR_MAPPING.get(self._selected_sector, self._selected_sector)
+                    if self._selected_sector
+                    else "Unknown"
+                )
 
-            sector_label = (
-                SECTOR_MAPPING.get(self._selected_sector, self._selected_sector)
-                if self._selected_sector
-                else "Unknown"
-            )
-
-            return self.async_create_entry(
-                title=f"{self._contract_name} ({sector_label} - {self._selected_contract['rate']}{self._selected_contract['rate_option']})",
-                data=entry_data,
-            )
+                return self.async_create_entry(
+                    title=f"{self._contract_name} ({sector_label} - {self._selected_contract['rate']}{self._selected_contract['rate_option']})",
+                    data=entry_data,
+                )
 
         # Show calendar configuration form
         return self.async_show_form(
             step_id="calendar_opendata",
             data_schema=vol.Schema(
                 {
-                    vol.Optional(CONF_CALENDAR_ENTITY_ID): EntitySelector(
+                    vol.Required(CONF_CALENDAR_ENTITY_ID): EntitySelector(
                         EntitySelectorConfig(domain="calendar")
                     ),
                 }
             ),
+            errors=errors,
             description_placeholders={"contract_name": self._contract_name or "Contract"},
         )
 

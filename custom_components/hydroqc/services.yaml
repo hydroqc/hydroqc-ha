@@ -29,10 +29,14 @@ sync_consumption_history:
 create_peak_event:
   name: Create peak event
   description: Manually create a critical peak event in the calendar. Useful when you want to prepare for an upcoming peak before the official announcement. If the same event is later announced by Hydro-Québec, it will be automatically matched.
-  target:
-    device:
-      integration: hydroqc
   fields:
+    device_id:
+      name: Device
+      description: The HydroQc device (contract) to create the event for
+      required: true
+      selector:
+        device:
+          integration: hydroqc
     date:
       name: Date
       description: The date of the peak event

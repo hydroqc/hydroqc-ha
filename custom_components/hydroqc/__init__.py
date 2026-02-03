@@ -49,7 +49,7 @@ SERVICE_SYNC_HISTORY_SCHEMA = cv.make_entity_service_schema(
 
 SERVICE_CREATE_PEAK_EVENT_SCHEMA = vol.Schema(
     {
-        vol.Required("device_id"): vol.All(cv.ensure_list, [cv.string]),
+        vol.Required("device_id"): vol.Any(cv.string, vol.All(cv.ensure_list, [cv.string])),
         vol.Required(ATTR_DATE): cv.date,
         vol.Required(ATTR_TIME_SLOT): vol.In(["AM", "PM"]),
     }
@@ -258,9 +258,15 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         Creates a manual critical peak event in the calendar for the specified
         date and time slot. Uses the same UID format as OpenData events.
         """
-        device_ids = call.data.get("device_id")
+        device_id_input = call.data.get("device_id")
         event_date: datetime.date = call.data.get(ATTR_DATE)
         time_slot: str = call.data.get(ATTR_TIME_SLOT)
+
+        # Normalize device_id to a list
+        if isinstance(device_id_input, str):
+            device_ids = [device_id_input]
+        else:
+            device_ids = device_id_input or []
 
         if not device_ids:
             raise HomeAssistantError("No device_id provided for create_peak_event service")

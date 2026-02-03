@@ -49,7 +49,7 @@ class StatisticsManager:
         self._get_statistic_id = get_statistic_id_func
         self._contract_name = contract_name
 
-    async def determine_sync_start_date(  # noqa: PLR0915
+    async def determine_sync_start_date(
         self,
     ) -> tuple[bool, datetime.date | None]:
         """Determine the start date for syncing consumption data.

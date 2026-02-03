@@ -4,7 +4,7 @@ from __future__ import annotations
 
 import datetime
 import logging
-from typing import Any
+from typing import TYPE_CHECKING, Any
 from zoneinfo import ZoneInfo
 
 import homeassistant.helpers.config_validation as cv
@@ -15,9 +15,12 @@ from homeassistant.core import HomeAssistant, ServiceCall
 from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
+from . import calendar_manager
 from .const import DOMAIN
 from .coordinator import HydroQcDataCoordinator
-from . import calendar_manager
+
+if TYPE_CHECKING:
+    pass
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -329,10 +332,15 @@ async def _async_register_services(hass: HomeAssistant) -> None:
                         continue
 
                     # Create a simple object with required attributes for async_create_peak_event
+                    # Use default args to capture current values and avoid B023 loop variable issue
                     class ManualPeakEvent:
-                        def __init__(self) -> None:
-                            self.start_date = start_dt
-                            self.end_date = end_dt
+                        def __init__(
+                            self,
+                            _start: datetime.datetime = start_dt,
+                            _end: datetime.datetime = end_dt,
+                        ) -> None:
+                            self.start_date = _start
+                            self.end_date = _end
                             self.is_critical = True
 
                     # Create the event using existing function
@@ -370,7 +378,7 @@ async def _async_register_services(hass: HomeAssistant) -> None:
 
         if errors and events_created == 0:
             raise HomeAssistantError("; ".join(errors))
-        elif errors:
+        if errors:
             _LOGGER.warning("Some events could not be created: %s", "; ".join(errors))
 
     hass.services.async_register(

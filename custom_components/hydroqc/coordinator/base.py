@@ -339,7 +339,7 @@ class HydroQcDataCoordinator(
             return elapsed >= 3600  # 60 minutes
         return elapsed >= 10800  # 180 minutes
 
-    async def _async_update_data(self) -> dict[str, Any]:  # noqa: PLR0912, PLR0915
+    async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Hydro-Québec API.
 
         Called by async_request_refresh() triggered by scheduled callbacks.

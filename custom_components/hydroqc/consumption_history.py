@@ -49,7 +49,7 @@ class ConsumptionHistoryImporter:
         self._get_statistic_id = get_statistic_id_func
         self._statistics_manager = statistics_manager
 
-    async def import_csv_history(self, days_back: int) -> None:  # noqa: PLR0912, PLR0915
+    async def import_csv_history(self, days_back: int) -> None:
         """Import historical consumption data from CSV using iterative approach.
 
         Process:
@@ -602,7 +602,7 @@ class ConsumptionHistoryImporter:
 
         return False
 
-    async def _verify_batch_integrity(  # noqa: PLR0912
+    async def _verify_batch_integrity(
         self,
         statistic_id: str,
         batch: list[dict[str, Any]],

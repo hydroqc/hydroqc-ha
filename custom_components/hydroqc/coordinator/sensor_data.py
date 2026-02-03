@@ -16,7 +16,7 @@ _LOGGER = logging.getLogger(__name__)
 class SensorDataMixin:
     """Mixin for sensor data access functionality."""
 
-    def get_sensor_value(self, data_source: str) -> Any:  # noqa: PLR0912
+    def get_sensor_value(self, data_source: str) -> Any:
         """Extract sensor value from data using dot-notation path.
 
         Example: "contract.cp_current_bill" -> walks the object graph.

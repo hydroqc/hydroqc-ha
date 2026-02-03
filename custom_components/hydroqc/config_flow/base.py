@@ -101,7 +101,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return await self.async_step_account()
         return await self.async_step_opendata()
 
-    async def async_step_account(  # noqa: PLR0912
+    async def async_step_account(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle portal mode account setup."""

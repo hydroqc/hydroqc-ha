@@ -10,6 +10,41 @@
 
 ---
 
+## [0.7.0-beta.3] - 2026-02-03
+
+### ⚠️ CHANGEMENT MAJEUR
+
+**Le calendrier est maintenant obligatoire pour les tarifs DPC/DCPC.**
+
+Les utilisateurs avec un tarif DPC ou DCPC qui n'avaient pas configuré de calendrier devront en configurer un. Les capteurs de pointe ne seront pas créés sans calendrier.
+
+Pour migrer :
+1. Créez une intégration Calendrier Local si vous n'en avez pas
+2. Reconfigurez HydroQc pour sélectionner l'entité calendrier
+
+### Ajouté
+
+- **Service `hydroqc.create_peak_event`** : Création manuelle d'événements de pointe critique (#108)
+  - Paramètre `date` : Date de l'événement (sélecteur de date)
+  - Paramètre `time_slot` : Matin (AM: 6h-10h) ou Soir (PM: 16h-20h)
+  - Utilise le même format d'UID que les événements OpenData
+  - Rafraîchit immédiatement les capteurs après création
+  - Vérifie les doublons avant création
+- Validation du calendrier dans le flux de configuration
+- Lien pour créer un Calendrier Local directement depuis le flux de configuration
+
+### Modifié
+
+- Le calendrier est maintenant **obligatoire** (non optionnel) pour les tarifs DPC/DCPC
+- Les capteurs basés sur le calendrier sont ignorés si aucun calendrier n'est configuré
+- Mises à jour des traductions EN/FR/ES avec les nouvelles instructions
+
+### Corrigé
+
+- Correction des références `datetime.datetime.now()` dans `calendar_manager.py`
+
+---
+
 ## [0.7.0-beta.2] - 2026-01-29
 
 ### Ajouté

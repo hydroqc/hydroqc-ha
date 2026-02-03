@@ -36,7 +36,7 @@ Pour migrer :
 ### Modifié
 
 - Le calendrier est maintenant **obligatoire** (non optionnel) pour les tarifs DPC/DCPC
-- Les capteurs basés sur le calendrier sont ignorés si aucun calendrier n'est configuré
+- Les capteurs de pointe sont ignorés si aucun calendrier n'est configuré
 - Mises à jour des traductions EN/FR/ES avec les nouvelles instructions
 
 ### Corrigé

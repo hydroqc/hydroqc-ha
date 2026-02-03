@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import asyncio
+import datetime
 import logging
-from datetime import datetime
 from typing import TYPE_CHECKING
 from zoneinfo import ZoneInfo
 
@@ -83,7 +83,7 @@ async def async_create_peak_event(
     end_str = peak_event.end_date.strftime("%H:%M")
     # Use local timezone (America/Toronto) for creation timestamp
     local_tz = ZoneInfo("America/Toronto")
-    created_at = datetime.now(local_tz).strftime("%Y-%m-%d %H:%M:%S %Z")
+    created_at = datetime.datetime.now(local_tz).strftime("%Y-%m-%d %H:%M:%S %Z")
     critical_str = "Oui" if peak_event.is_critical else "Non"
 
     description = DESCRIPTION_TEMPLATE.format(
@@ -233,7 +233,7 @@ async def async_sync_events(
     critical_peaks = [p for p in peaks if p.is_critical]
 
     # Filter to future peaks only (skip past events)
-    now = datetime.now(peaks[0].start_date.tzinfo if peaks else None)
+    now = datetime.datetime.now(peaks[0].start_date.tzinfo if peaks else None)
     future_peaks = [p for p in critical_peaks if p.end_date > now]
 
     if not future_peaks:

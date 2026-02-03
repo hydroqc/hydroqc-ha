@@ -5,6 +5,7 @@ from __future__ import annotations
 import datetime
 import logging
 from typing import Any
+from zoneinfo import ZoneInfo
 
 import homeassistant.helpers.config_validation as cv
 import voluptuous as vol
@@ -16,6 +17,7 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from .const import DOMAIN
 from .coordinator import HydroQcDataCoordinator
+from . import calendar_manager
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -28,14 +30,25 @@ PLATFORMS: list[Platform] = [
 # Service constants
 SERVICE_REFRESH_DATA = "refresh_data"
 SERVICE_SYNC_HISTORY = "sync_consumption_history"
+SERVICE_CREATE_PEAK_EVENT = "create_peak_event"
 
 ATTR_DAYS_BACK = "days_back"
+ATTR_DATE = "date"
+ATTR_TIME_SLOT = "time_slot"
 
 SERVICE_REFRESH_SCHEMA = cv.make_entity_service_schema({})
 
 SERVICE_SYNC_HISTORY_SCHEMA = cv.make_entity_service_schema(
     {
         vol.Optional(ATTR_DAYS_BACK, default=731): cv.positive_int,
+    }
+)
+
+SERVICE_CREATE_PEAK_EVENT_SCHEMA = vol.Schema(
+    {
+        vol.Required("device_id"): vol.All(cv.ensure_list, [cv.string]),
+        vol.Required(ATTR_DATE): cv.date,
+        vol.Required(ATTR_TIME_SLOT): vol.In(["AM", "PM"]),
     }
 )
 
@@ -236,6 +249,130 @@ async def _async_register_services(hass: HomeAssistant) -> None:
                         device.name or device_id,
                     )
 
+    async def handle_create_peak_event(call: ServiceCall) -> None:
+        """Handle create_peak_event service call.
+
+        Creates a manual critical peak event in the calendar for the specified
+        date and time slot. Uses the same UID format as OpenData events.
+        """
+        device_ids = call.data.get("device_id")
+        event_date: datetime.date = call.data.get(ATTR_DATE)
+        time_slot: str = call.data.get(ATTR_TIME_SLOT)
+
+        if not device_ids:
+            raise HomeAssistantError("No device_id provided for create_peak_event service")
+
+        if not event_date:
+            raise HomeAssistantError("No date provided for create_peak_event service")
+
+        if not time_slot:
+            raise HomeAssistantError("No time_slot provided for create_peak_event service")
+
+        # Get device registry
+        dev_reg = dr.async_get(hass)
+
+        events_created = 0
+        errors = []
+
+        for device_id in device_ids:
+            device = dev_reg.async_get(device_id)
+            if not device:
+                errors.append(f"Device {device_id} not found")
+                continue
+
+            # Find config entry for this device
+            for config_entry_id in device.config_entries:
+                coordinator: HydroQcDataCoordinator = hass.data[DOMAIN].get(config_entry_id)
+                if not coordinator:
+                    continue
+
+                # Check if calendar is configured
+                calendar_entity_id = coordinator._calendar_entity_id
+                if not calendar_entity_id:
+                    errors.append(
+                        f"No calendar configured for {coordinator.contract_name}. "
+                        "Configure a calendar in the integration options."
+                    )
+                    continue
+
+                # Check rate supports peaks
+                if coordinator.rate_with_option not in ("DPC", "DCPC"):
+                    errors.append(
+                        f"{coordinator.contract_name} has rate {coordinator.rate_with_option}, "
+                        "peak events only apply to DPC/DCPC rates."
+                    )
+                    continue
+
+                try:
+                    # Build start/end times based on time slot
+                    tz = ZoneInfo("America/Toronto")
+                    if time_slot == "AM":
+                        start_time = datetime.time(6, 0)
+                        end_time = datetime.time(10, 0)
+                    else:
+                        start_time = datetime.time(16, 0)
+                        end_time = datetime.time(20, 0)
+
+                    start_dt = datetime.datetime.combine(event_date, start_time, tzinfo=tz)
+                    end_dt = datetime.datetime.combine(event_date, end_time, tzinfo=tz)
+
+                    # Check if event already exists
+                    existing_events = await calendar_manager.async_get_existing_event_uids(
+                        hass, calendar_entity_id, start_dt, end_dt
+                    )
+                    uid = calendar_manager.generate_event_uid(coordinator.contract_id, start_dt)
+                    if uid in existing_events:
+                        errors.append(
+                            f"{coordinator.contract_name}: Event already exists for "
+                            f"{event_date} {time_slot}"
+                        )
+                        continue
+
+                    # Create a simple object with required attributes for async_create_peak_event
+                    class ManualPeakEvent:
+                        def __init__(self) -> None:
+                            self.start_date = start_dt
+                            self.end_date = end_dt
+                            self.is_critical = True
+
+                    # Create the event using existing function
+                    uid = await calendar_manager.async_create_peak_event(
+                        hass=hass,
+                        calendar_id=calendar_entity_id,
+                        peak_event=ManualPeakEvent(),
+                        contract_id=coordinator.contract_id,
+                        contract_name=coordinator.contract_name,
+                        rate=coordinator.rate_with_option,
+                    )
+
+                    # Add UID to coordinator's tracked events
+                    coordinator._created_event_uids.add(uid)
+                    await coordinator.async_save_calendar_uids()
+
+                    # Refresh calendar sensors immediately
+                    await coordinator.async_load_calendar_peak_events()
+                    coordinator.async_set_updated_data(coordinator.data)
+
+                    events_created += 1
+                    _LOGGER.info(
+                        "Created manual peak event for %s on %s %s (UID: %s)",
+                        coordinator.contract_name,
+                        event_date,
+                        time_slot,
+                        uid,
+                    )
+
+                except ValueError as err:
+                    # Event already exists or invalid time_slot
+                    errors.append(f"{coordinator.contract_name}: {err}")
+                except Exception as err:
+                    errors.append(f"{coordinator.contract_name}: Failed to create event - {err}")
+
+        if errors and events_created == 0:
+            raise HomeAssistantError("; ".join(errors))
+        elif errors:
+            _LOGGER.warning("Some events could not be created: %s", "; ".join(errors))
+
     hass.services.async_register(
         DOMAIN,
         SERVICE_REFRESH_DATA,
@@ -248,6 +385,13 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         SERVICE_SYNC_HISTORY,
         handle_sync_consumption_history,
         schema=SERVICE_SYNC_HISTORY_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_CREATE_PEAK_EVENT,
+        handle_create_peak_event,
+        schema=SERVICE_CREATE_PEAK_EVENT_SCHEMA,
     )
 
 

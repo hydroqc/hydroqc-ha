@@ -25,3 +25,30 @@ sync_consumption_history:
           min: 1
           max: 2000
           mode: box
+
+create_peak_event:
+  name: Create peak event
+  description: Manually create a critical peak event in the calendar. Useful when you want to prepare for an upcoming peak before the official announcement. If the same event is later announced by Hydro-Québec, it will be automatically matched.
+  target:
+    device:
+      integration: hydroqc
+  fields:
+    date:
+      name: Date
+      description: The date of the peak event
+      required: true
+      example: "2026-01-15"
+      selector:
+        date:
+    time_slot:
+      name: Time slot
+      description: Morning (6h-10h) or Evening (16h-20h) peak period
+      required: true
+      example: "AM"
+      selector:
+        select:
+          options:
+            - label: "Morning (6h-10h)"
+              value: "AM"
+            - label: "Evening (16h-20h)"
+              value: "PM"

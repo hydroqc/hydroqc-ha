@@ -18,6 +18,8 @@
 
 Depuis la version 0.7.0, les capteurs de pointe utilisent le calendrier comme source de vérité. Sans calendrier configuré, les capteurs de pointe ne seront pas créés.
 
+**Réimportez les blueprints! Des améliorations ont été fait depuis la versin 0.6.0**
+
 #### Migration depuis une version antérieure
 
 1. **Créez un calendrier local** dans Home Assistant si vous n'en avez pas :

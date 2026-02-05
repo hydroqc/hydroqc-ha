@@ -128,29 +128,56 @@ Uniquement les **alertes de pointe** sans identifiants
 3. Sélectionnez votre tarif
 4. Les alertes de pointe sont actives !
 
-### Configuration du calendrier (Recommandé pour fiabilité maximale)
+### Configuration du calendrier (Obligatoire pour DPC/DCPC)
 
-Le calendrier augmente la fiabilité de vos automatisations :
+Le calendrier est **obligatoire** pour les tarifs DPC (Flex-D) et DCPC (Crédits hivernaux). Les capteurs de pointe dépendent du calendrier pour fonctionner.
 
 **Étape 1 : Créer un calendrier local**
 
+[![Ajouter Calendrier Local](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=local_calendar)
+
+Ou manuellement :
 1. **Paramètres** → **Intégrations** → **+ Ajouter**
 2. Recherchez **"Calendrier local"** (Local Calendar)
-3. Créez un calendrier (ex: "HQ Pointes")
-4. [Documentation HA](https://www.home-assistant.io/integrations/local_calendar/)
+3. Créez un calendrier dédié (ex: "HQ Pointes")
 
-**Étape 2 : Activer dans Hydro-Québec**
+> ⚠️ **Important** : Utilisez un calendrier dédié. Ne partagez pas avec d'autres intégrations.
+
+**Étape 2 : Configurer dans Hydro-Québec**
 
 1. **Hydro-Québec** → **Options** (⚙️) → **Configurer**
-2. Cochez **"Synchroniser vers calendrier"**
-3. Sélectionnez votre calendrier
-4. Les événements sont synchronisés automatiquement !
+2. Sélectionnez votre calendrier dédié
+3. Les événements de pointe sont synchronisés automatiquement !
 
-> **Astuce** : Vous pouvez créer des événements manuellement si l'API est indisponible
+---
 
-**Création manuelle d'événements** (fallback en cas de problème) :
+## Services disponibles
 
-Consultez la section [Tester vos blueprints](#tester-vos-blueprints) pour des exemples d'événements pour DCPC et DPC.
+### Service `hydroqc.create_peak_event`
+
+Créez manuellement un événement de pointe critique dans le calendrier. Utile pour :
+- Préparer vos automatisations avant l'annonce officielle (météo extrême prévue)
+- Tester vos blueprints avec un événement réel
+- Fallback si l'API est indisponible
+
+**Paramètres** :
+| Paramètre | Description | Requis |
+|-----------|-------------|--------|
+| `device_id` | L'appareil HydroQc (contrat) | Oui |
+| `date` | Date de l'événement | Oui |
+| `time_slot` | `AM` (6h-10h) ou `PM` (16h-20h) | Oui |
+
+**Exemple d'appel** :
+```yaml
+action: hydroqc.create_peak_event
+data:
+  date: "2026-02-15"
+  time_slot: "PM"
+target:
+  device_id: abc123def456
+```
+
+> **Note** : L'événement utilise le même format d'UID que les événements OpenData. Si Hydro-Québec annonce ensuite la même pointe, l'événement existant sera conservé (pas de doublon).
 
 ---
 
@@ -165,10 +192,19 @@ Pour les utilisateurs du tarif D avec Crédits hivernaux (CPC).
 [![Importer le blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fhydroqc%2Fhydroqc-ha%2Fblob%2Fmain%2Fblueprints%2Fwinter-credits-calendar.yaml)
 
 **Fonctionnalités** :
-- Pré-chauffage avant pointes critiques (délai configurable)
-- Actions distinctes pointes critiques vs régulières
+- Déclencheurs calendrier pour pointes critiques + horaire fixe pour pointes régulières
+- Pré-chauffage avant pointes critiques (par défaut 1h45 avant)
+- Actions distinctes : pointes critiques vs régulières
 - Gestion des périodes d'ancrage (matin et soir)
-- Filtres automatiques par tarif et criticité
+- Délai aléatoire intégré en fin de pointe (30s-5min)
+
+**Horaire quotidien (pointes régulières)** :
+| Période | Horaire |
+|---------|---------|
+| Ancrage matin | 01h-04h |
+| Pointe matin | 06h-10h |
+| Ancrage soir | 12h-14h |
+| Pointe soir | 16h-20h |
 
 ### Blueprint Flex-D (DPC)
 
@@ -177,44 +213,34 @@ Pour les utilisateurs du tarif Flex-D (DPC).
 [![Importer le blueprint](https://my.home-assistant.io/badges/blueprint_import.svg)](https://my.home-assistant.io/redirect/blueprint_import/?blueprint_url=https%3A%2F%2Fgithub.com%2Fhydroqc%2Fhydroqc-ha%2Fblob%2Fmain%2Fblueprints%2Fflex-d-calendar.yaml)
 
 **Fonctionnalités** :
-- Pré-chauffage configurable
+- Déclencheurs calendrier uniquement (pointes critiques)
+- Pré-chauffage configurable (par défaut 2h avant)
 - Actions de début et fin de pointe
-- Filtres DPC uniquement
+- Délai aléatoire intégré en fin de pointe (30s-5min)
 
 ### Tester vos blueprints
 
-Après avoir importé un blueprint et créé votre automatisation, **nous recommandons fortement de créer un événement de test** dans votre calendrier pour valider que tout fonctionne correctement.
+Après avoir importé un blueprint et créé votre automatisation, **créez un événement de test** dans votre calendrier pour valider que tout fonctionne :
 
-**Exemple d'événement de test - Crédits hivernaux (DCPC)** :
-```yaml
-Titre: 🔴 Pointe critique TEST
-Date de début: 2025-12-06 15:10
-Date de fin: 2025-12-06 15:15
-Description:
-  Tarif: DCPC
-  Critique: Oui
-```
-
-**Exemple d'événement de test - Flex-D (DPC)** :
-```yaml
-Titre: 🔴 Pointe critique TEST
-Date de début: 2025-12-06 15:10
-Date de fin: 2025-12-06 15:15
-Description:
-  Tarif: DPC
-  Critique: Oui
-```
-
+1. Utilisez le service `hydroqc.create_peak_event` pour créer un événement
+2. Vérifiez que vos actions se déclenchent correctement
+3. Vous pouvez supprimez l'événement de test après validation
 
 ### Comprendre les paramètres des blueprints
 
-#### Délai avant début pointe critique (Pre-critical peak start offset)
+#### Délai de pré-chauffage
+
+Configurez séparément le pré-chauffage pour les pointes du matin et du soir.
+
+**Format** : `-HH:MM:SS` (négatif = avant l'événement)
+
+#### Délai avant début pointe (Flex-D uniquement)
 
 - **Par défaut** : `-00:01:00` (1 minute avant)
 - **Utilité** : Permet à vos appareils de se stabiliser avant la pointe
 - **Exemple** : Pointe à 18:00 → actions à 17:59
 
-#### Actions en parallèle (Parallel action calls)
+#### Actions en parallèle
 
 Les actions s'exécutent simultanément plutôt que séquentiellement.
 
@@ -232,12 +258,13 @@ Les actions s'exécutent simultanément plutôt que séquentiellement.
         entity_id: switch.chauffe_eau
 ```
 
-#### Délai aléatoire en fin de pointe (Random delay on critical peak end)
+#### Délai aléatoire en fin de pointe
 
-- **Par défaut** : 30 secondes à 5 minutes
+Les blueprints incluent automatiquement un délai aléatoire (30 secondes à 5 minutes) à la fin des pointes.
+
 - **Raison** : Évite une surcharge du réseau électrique
-- **Impact** : Des milliers d'appareils ne redémarrent pas simultanément
-- **Recommandation** : Conservez ce délai pour être un bon citoyen du réseau
+- **Impact** : Les appareils ne redémarrent pas tous simultanément
+- **Recommandation** : Conservez ce délai dans vos actions personnalisées
 
 ---
 

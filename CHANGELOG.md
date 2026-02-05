@@ -10,6 +10,58 @@
 
 ---
 
+## [0.7.0] - 2026-02-05
+
+### ⚠️ CHANGEMENT MAJEUR - Calendrier obligatoire
+
+**Le calendrier est maintenant OBLIGATOIRE pour les tarifs DPC (Flex-D) et DCPC (Crédits hivernaux).**
+
+Depuis la version 0.7.0, les capteurs de pointe utilisent le calendrier comme source de vérité. Sans calendrier configuré, les capteurs de pointe ne seront pas créés.
+
+#### Migration depuis une version antérieure
+
+1. **Créez un calendrier local** dans Home Assistant si vous n'en avez pas :
+   
+   [![Ajouter Calendrier Local](https://my.home-assistant.io/badges/config_flow_start.svg)](https://my.home-assistant.io/redirect/config_flow_start/?domain=local_calendar)
+   
+   Ou manuellement : Paramètres → Intégrations → Ajouter → "Calendrier local"
+   
+2. **Reconfigurez HydroQc** :
+   - Allez dans les options de l'intégration
+   - Sélectionnez votre calendrier
+
+### Ajouté
+
+- **Service `hydroqc.create_peak_event`** : Création manuelle d'événements de pointe critique
+  - Paramètre `date` : Date de l'événement
+  - Paramètre `time_slot` : Matin (AM: 6h-10h) ou Soir (PM: 16h-20h)
+  - Utilise le même format d'UID que les événements OpenData (pas de doublons)
+  - Rafraîchit immédiatement les capteurs après création
+- Validation du calendrier dans le flux de configuration
+- Lien pour créer un Calendrier Local directement depuis le flux de configuration
+- Architecture calendrier comme source de vérité (v0.7.0-beta.1)
+- Trois ordonnanceurs indépendants : OpenData, Portail, Calendrier
+- Protection anti-thundering herd avec décalage aléatoire
+- Bouton de rafraîchissement manuel pour DPC/DCPC
+- Module `utils.py` avec fonctions de saison d'hiver
+
+### Modifié
+
+- Le calendrier est maintenant **obligatoire** pour les tarifs DPC/DCPC
+- Les capteurs de pointe ne sont pas créés si aucun calendrier n'est configuré
+- Renommage du capteur "Économie vs Tarif D" → "Différence Flex D vs Tarif D"
+- Fenêtre active OpenData : 10h30-15h00 EST (au lieu de 11h00-18h00)
+- Intervalle OpenData : 15 minutes (au lieu de 5 minutes)
+- Mises à jour des traductions EN/FR/ES
+
+### Corrigé
+
+- Mode blueprint changé de "single" à "parallel" pour crédits hivernaux (#100)
+- Conflits de déclencheurs pré-chauffage matin/soir (#86)
+- Références `datetime.datetime.now()` dans `calendar_manager.py`
+
+---
+
 ## [0.7.0-beta.3] - 2026-02-03
 
 ### ⚠️ CHANGEMENT MAJEUR

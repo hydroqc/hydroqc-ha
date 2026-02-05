@@ -38,16 +38,8 @@ blueprint:
 
     ### Création manuelle d'événements
 
-    Si l'intégration ne crée pas automatiquement les événements (API indisponible, problème de configuration), vous pouvez créer manuellement des événements dans votre calendrier :
+    Si l'intégration ne crée pas automatiquement les événements (API indisponible, problème de configuration), vous pouvez les créer en utilisant le service `hydroqc.create_peak_event` avec la date et le créneau (AM ou PM).
 
-    1. Créez un événement pour la période de pointe critique annoncée par Hydro-Québec dans le calendrier.
-    2. Titre: 🔴 Pointe critique
-    3. Description:
-    ```
-    Tarif: DPC
-    Critique: Oui
-    ```
-  
 
     Vous trouverez plus de détails sur les logiques applicables pour Flex-D dans la [documentation Hydroqc](https://hydroqc.ca/fr/docs/tarification-dynamique/).
 

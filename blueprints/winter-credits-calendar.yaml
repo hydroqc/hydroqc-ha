@@ -48,11 +48,8 @@ blueprint:
 
     ### Création manuelle d'événements
 
-    Si l'intégration ne crée pas automatiquement les événements, vous pouvez les créer manuellement :
+    Si l'intégration ne crée pas automatiquement les événements (API indisponible, problème de configuration), vous pouvez les créer en utilisant le service `hydroqc.create_peak_event` avec la date et le créneau (AM ou PM).
 
-    1. Créez un événement le jour de la pointe critique (6h-10h ou 16h-20h)
-    2. Titre: contient "pointe" (ex: "🔴 Pointe critique")
-    3. Description (optionnel): `Tarif: DCPC` et `Critique: Oui`
  
     Plus de détails sur les [crédits hivernaux](https://hydroqc.ca/fr/docs/tarification-dynamique/).
   domain: automation

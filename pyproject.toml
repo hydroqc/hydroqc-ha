@@ -38,7 +38,7 @@ packages = ["custom_components"]
 dev = [
     "Hydro-Quebec-API-Wrapper==4.2.6",
     "homeassistant-stubs>=2025.1.0",  # Type stubs for HA API compatibility checking
-    "ruff>=0.8.0",
+    "ruff>=0.15.10",
     "mypy>=1.13.0",
     "pytest>=8.3.0",
     "pytest-asyncio>=0.24.0",

@@ -5,10 +5,12 @@
         "title": "Elegir modo de conexión",
         "description": "Seleccione cómo desea conectarse a Hydro-Québec",
         "data": {
-          "auth_mode": "Modo de conexión"
+          "auth_mode": "Modo de conexión",
+          "force_ipv4": "Forzar IPv4"
         },
         "data_description": {
-          "auth_mode": "Modo Portal: Inicie sesión para acceso completo a la cuenta. Modo Datos Abiertos: Use solo datos públicos (no requiere inicio de sesión)"
+          "auth_mode": "Modo Portal: Inicie sesión para acceso completo a la cuenta. Modo Datos Abiertos: Use solo datos públicos (no requiere inicio de sesión)",
+          "force_ipv4": "Todas las direcciones IP deben originarse en Canadá/Quebec. En hosts de doble pila, el tráfico IPv6 puede enrutarse a través de una ruta no canadiense y ser bloqueado geográficamente por los servidores de Hydro-Québec, causando tiempos de espera. Forzar IPv4 garantiza que el tráfico use su dirección IPv4 canadiense."
         }
       },
       "account": {
@@ -123,13 +125,15 @@
           "update_interval": "Intervalo de actualización (segundos)",
           "preheat_duration_minutes": "Duración de precalentamiento (minutos)",
           "enable_consumption_sync": "Habilitar sincronización de consumo",
-          "calendar_entity_id": "Entidad de calendario"
+          "calendar_entity_id": "Entidad de calendario",
+          "force_ipv4": "Forzar IPv4"
         },
         "data_description": {
           "update_interval": "Con qué frecuencia obtener datos de Hydro-Québec (30-600 segundos)",
           "preheat_duration_minutes": "Duración antes de eventos de pico crítico para activar precalentamiento (0-240 minutos)",
           "enable_consumption_sync": "Habilitar para sincronizar datos de consumo por hora para el panel de energía. Requiere recargar la integración para tener efecto.",
-          "calendar_entity_id": "Entidad de calendario para eventos de pico (solo tarifas DPC/DCPC). Requerido para el funcionamiento de los sensores de pico."
+          "calendar_entity_id": "Entidad de calendario para eventos de pico (solo tarifas DPC/DCPC). Requerido para el funcionamiento de los sensores de pico.",
+          "force_ipv4": "Todas las direcciones IP deben originarse en Canadá/Quebec. En hosts de doble pila, el tráfico IPv6 puede enrutarse a través de una ruta no canadiense y ser bloqueado geográficamente por los servidores de Hydro-Québec, causando tiempos de espera. Forzar IPv4 garantiza que el tráfico use su dirección IPv4 canadiense."
         }
       }
     },
@@ -314,9 +318,11 @@
         "name": "Pico mañana mañana"
       },
       "dpc_critical_evening_peak_tomorrow": {
-        "name": "Pico tarde mañana"      },
+        "name": "Pico tarde mañana"
+      },
       "portal_status": {
-        "name": "Estado del portal"      }
+        "name": "Estado del portal"
+      }
     }
   }
 }

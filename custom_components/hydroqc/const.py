@@ -16,6 +16,7 @@ CONF_PREHEAT_DURATION: Final = "preheat_duration_minutes"
 CONF_HISTORY_DAYS: Final = "history_days"
 CONF_CALENDAR_ENTITY_ID: Final = "calendar_entity_id"
 CONF_ENABLE_CONSUMPTION_SYNC: Final = "enable_consumption_sync"
+CONF_FORCE_IPV4: Final = "force_ipv4"
 
 # Auth modes
 AUTH_MODE_PORTAL: Final = "portal"

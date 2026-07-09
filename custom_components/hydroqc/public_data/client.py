@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import datetime
 import logging
+import socket
 import zoneinfo
 
 import aiohttp
@@ -21,22 +22,30 @@ WINTER_PEAKS_URL = f"{WINTER_PEAKS_API_BASE}/catalog/datasets/{WINTER_PEAKS_DATA
 class PublicDataClient:
     """Client for Hydro-Québec public open data API."""
 
-    def __init__(self, rate_code: str, preheat_duration: int = 120) -> None:
+    def __init__(self, rate_code: str, preheat_duration: int = 120, force_ipv4: bool = False) -> None:
         """Initialize public data client.
 
         Args:
             rate_code: Rate code (DCPC, DPC, M-GDP, etc.)
             preheat_duration: Pre-heat duration in minutes (default 120)
+            force_ipv4: When True, restricts the aiohttp session to IPv4
+                only (family=socket.AF_INET). Useful on dual-stack hosts
+                where Hydro-Québec servers are not reachable over IPv6.
         """
         self.rate_code = rate_code
         self.peak_handler = PeakHandler(rate_code, preheat_duration)
+        self._force_ipv4 = force_ipv4
         self._session: aiohttp.ClientSession | None = None
         self._last_fetch: datetime.datetime | None = None
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
         if self._session is None or self._session.closed:
-            self._session = aiohttp.ClientSession()
+            if self._force_ipv4:
+                connector = aiohttp.TCPConnector(family=socket.AF_INET)
+                self._session = aiohttp.ClientSession(connector=connector)
+            else:
+                self._session = aiohttp.ClientSession()
         return self._session
 
     async def fetch_peak_data(self) -> None:

@@ -5,8 +5,11 @@ from __future__ import annotations
 import asyncio
 import datetime
 import logging
+import socket
 from typing import Any
 from zoneinfo import ZoneInfo
+
+import aiohttp
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
@@ -39,6 +42,7 @@ from ..const import (
     CONF_CONTRACT_ID,
     CONF_CONTRACT_NAME,
     CONF_CUSTOMER_ID,
+    CONF_FORCE_IPV4,
     CONF_PREHEAT_DURATION,
     CONF_RATE,
     CONF_RATE_OPTION,
@@ -77,8 +81,11 @@ class HydroQcDataCoordinator(
 
         # Public data client for peak data (always used)
         rate_for_client = f"{self._rate}{self._rate_option}"
+        force_ipv4 = entry.data.get(CONF_FORCE_IPV4, False)
         self.public_client = PublicDataClient(
-            rate_code=rate_for_client, preheat_duration=self._preheat_duration
+            rate_code=rate_for_client,
+            preheat_duration=self._preheat_duration,
+            force_ipv4=force_ipv4,
         )
 
         # Track last successful update time
@@ -113,12 +120,22 @@ class HydroQcDataCoordinator(
 
         # Initialize webuser if in portal mode
         if self._auth_mode == AUTH_MODE_PORTAL:
+            portal_session: aiohttp.ClientSession | None = None
+            if force_ipv4:
+                _connector = aiohttp.TCPConnector(family=socket.AF_INET)
+                _cookie_jar = aiohttp.CookieJar(quote_cookie=False, unsafe=True)
+                portal_session = aiohttp.ClientSession(
+                    connector=_connector,
+                    cookie_jar=_cookie_jar,
+                    requote_redirect_url=False,
+                )
             self._webuser = WebUser(
                 entry.data[CONF_USERNAME],
                 entry.data[CONF_PASSWORD],
                 verify_ssl=True,
                 log_level="INFO",
                 http_log_level="WARNING",
+                session=portal_session,
             )
             self._customer_id = entry.data[CONF_CUSTOMER_ID]
             self._account_id = entry.data[CONF_ACCOUNT_ID]

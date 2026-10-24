@@ -5,10 +5,12 @@
         "title": "Choisir le mode de connexion",
         "description": "Sélectionnez comment vous voulez vous connecter à Hydro-Québec",
         "data": {
-          "auth_mode": "Mode de connexion"
+          "auth_mode": "Mode de connexion",
+          "force_ipv4": "Forcer IPv4"
         },
         "data_description": {
-          "auth_mode": "Mode Portail : Connectez-vous pour un accès complet au compte. Mode Données Ouvertes : Utilisez les données publiques uniquement (sans connexion requise)"
+          "auth_mode": "Mode Portail : Connectez-vous pour un accès complet au compte. Mode Données Ouvertes : Utilisez les données publiques uniquement (sans connexion requise)",
+          "force_ipv4": "Toutes les adresses IP doivent provenir du Canada/Québec. Sur les hôtes double-pile, le trafic IPv6 peut transiter par un chemin non canadien et être bloqué géographiquement par les serveurs d'Hydro-Québec, causant des délais d'expiration. Forcer IPv4 garantit que le trafic utilise votre adresse IPv4 canadienne."
         }
       },
       "account": {
@@ -113,13 +115,15 @@
           "update_interval": "Intervalle de mise à jour (secondes)",
           "preheat_duration_minutes": "Durée de préchauffage (minutes)",
           "enable_consumption_sync": "Activer la synchronisation de consommation",
-          "calendar_entity_id": "Entité calendrier"
+          "calendar_entity_id": "Entité calendrier",
+          "force_ipv4": "Forcer IPv4"
         },
         "data_description": {
           "update_interval": "Fréquence de récupération des données d'Hydro-Québec (30-600 secondes)",
           "preheat_duration_minutes": "Durée avant les événements de pointe critique pour déclencher le préchauffage (0-240 minutes)",
           "enable_consumption_sync": "Activer pour synchroniser les données de consommation horaire pour le tableau de bord énergétique. Nécessite un rechargement de l'intégration pour prendre effet.",
-          "calendar_entity_id": "Entité calendrier pour les événements de pointe (tarifs DPC/DCPC seulement). Requis pour le fonctionnement des capteurs de pointe."
+          "calendar_entity_id": "Entité calendrier pour les événements de pointe (tarifs DPC/DCPC seulement). Requis pour le fonctionnement des capteurs de pointe.",
+          "force_ipv4": "Toutes les adresses IP doivent provenir du Canada/Québec. Sur les hôtes double-pile, le trafic IPv6 peut transiter par un chemin non canadien et être bloqué géographiquement par les serveurs d'Hydro-Québec, causant des délais d'expiration. Forcer IPv4 garantit que le trafic utilise votre adresse IPv4 canadienne."
         }
       }
     },
@@ -304,9 +308,11 @@
         "name": "Pointe matin demain"
       },
       "dpc_critical_evening_peak_tomorrow": {
-        "name": "Pointe soir demain"      },
+        "name": "Pointe soir demain"
+      },
       "portal_status": {
-        "name": "Statut du portail"      }
+        "name": "Statut du portail"
+      }
     }
   }
 }

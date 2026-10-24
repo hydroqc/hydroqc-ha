@@ -3,7 +3,10 @@
 from __future__ import annotations
 
 import logging
+import socket
 from typing import Any, cast
+
+import aiohttp
 
 import voluptuous as vol
 from homeassistant import config_entries
@@ -35,6 +38,7 @@ from ..const import (
     CONF_CONTRACT_NAME,
     CONF_CUSTOMER_ID,
     CONF_ENABLE_CONSUMPTION_SYNC,
+    CONF_FORCE_IPV4,
     CONF_HISTORY_DAYS,
     CONF_PREHEAT_DURATION,
     CONF_RATE,
@@ -65,6 +69,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._available_sectors: list[str] = []
         self._selected_sector: str | None = None
         self._available_rates: list[dict[str, str]] = []
+        self._force_ipv4: bool = False
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the initial step - choose auth mode."""
@@ -90,12 +95,14 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 ),
                                 mode=SelectSelectorMode.LIST,
                             )
-                        )
+                        ),
+                        vol.Optional(CONF_FORCE_IPV4, default=False): bool,
                     }
                 ),
             )
 
         self._auth_mode = user_input[CONF_AUTH_MODE]
+        self._force_ipv4 = user_input.get(CONF_FORCE_IPV4, False)
 
         if self._auth_mode == AUTH_MODE_PORTAL:
             return await self.async_step_account()
@@ -114,12 +121,26 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             try:
                 # Check portal status first
+                _LOGGER.debug(
+                    "Creating temp WebUser for login (force_ipv4=%s)", self._force_ipv4
+                )
+                _temp_session: aiohttp.ClientSession | None = None
+                if self._force_ipv4:
+                    _connector = aiohttp.TCPConnector(family=socket.AF_INET)
+                    _cookie_jar = aiohttp.CookieJar(quote_cookie=False, unsafe=True)
+                    _temp_session = aiohttp.ClientSession(
+                        connector=_connector,
+                        cookie_jar=_cookie_jar,
+                        requote_redirect_url=False,
+                    )
+                    _LOGGER.debug("Force IPv4: created IPv4-only session for login")
                 temp_webuser = WebUser(
                     self._username,
                     self._password,
                     verify_ssl=True,
                     log_level="INFO",
                     http_log_level="WARNING",
+                    session=_temp_session,
                 )
 
                 portal_available = await temp_webuser.check_hq_portal_status()
@@ -157,13 +178,18 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     return await self.async_step_select_contract()
 
             except hydroqc.error.HydroQcHTTPError as err:
-                # Check if it's a 500 error (portal maintenance)
+                _LOGGER.error(
+                    "HTTP error during login for %s: %s (status=%s)",
+                    self._username,
+                    err,
+                    getattr(err, "status_code", "unknown"),
+                )
                 if hasattr(err, "status_code") and err.status_code == 500:
                     errors["base"] = "portal_maintenance"
                 else:
                     errors["base"] = "invalid_auth"
-            except RuntimeError:
-                # Portal unavailable - error already set above
+            except RuntimeError as err:
+                _LOGGER.warning("Portal unavailable during login: %s", err)
                 pass
             except Exception:  # pylint: disable=broad-except
                 _LOGGER.exception("Unexpected exception during login")
@@ -294,6 +320,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_PREHEAT_DURATION: preheat_duration,
                 CONF_ENABLE_CONSUMPTION_SYNC: enable_consumption_sync,
                 CONF_HISTORY_DAYS: history_days if enable_consumption_sync else 0,
+                CONF_FORCE_IPV4: self._force_ipv4,
             }
 
             # Add calendar configuration if provided
@@ -338,7 +365,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             # Store selected sector and move to offer selection
             self._selected_sector = user_input["sector"]
-            return await self.async_step_opendata_rate()
+            return await self.async_step_opendata_offer()
 
         # Build sector selection dropdown
         sector_options = [
@@ -361,7 +388,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_opendata_rate(
+    async def async_step_opendata_offer(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle opendata mode setup - select offer for chosen sector."""
@@ -415,6 +442,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_RATE: rate,
                     CONF_RATE_OPTION: rate_option,
                     CONF_PREHEAT_DURATION: preheat_duration,
+                    CONF_FORCE_IPV4: self._force_ipv4,
                 },
             )
 
@@ -427,7 +455,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else "Unknown"
         )
         return self.async_show_form(
-            step_id="opendata_rate",
+            step_id="opendata_offer",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_CONTRACT_NAME, default="Home"): TextSelector(),
@@ -473,6 +501,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_RATE_OPTION: self._selected_contract["rate_option"],
                     CONF_PREHEAT_DURATION: DEFAULT_PREHEAT_DURATION,
                     CONF_CALENDAR_ENTITY_ID: calendar_entity_id,
+                    CONF_FORCE_IPV4: self._force_ipv4,
                 }
 
                 sector_label = (

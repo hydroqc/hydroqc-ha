@@ -2,9 +2,13 @@
 
 ### Ajouté
 
+- **Reconfiguration du mode Portail** : l'action « Reconfigurer » d'une entrée permet de changer d'identifiants ou de contrat (par exemple quand Hydro-Québec attribue un nouveau numéro de contrat). L'appareil et les entités existantes sont transférés au nouveau contrat, leurs `entity_id` sont conservés, et le nom du contrat, qui détermine les statistiques de consommation, ne change pas.
+
 ### Modifié
 
 ### Corrigé
+
+- **Nouveau contrat sans portrait de consommation** : Hydro-Québec répond HTTP 400 aux périodes de consommation pendant environ 10 jours après le début d'un contrat. Pour un contrat de moins de 30 jours, cette réponse ne fait plus échouer la mise à jour : un seul avertissement est journalisé, le solde et les pannes continuent d'être mis à jour, les capteurs de facturation restent inconnus et les périodes sont redemandées une fois par heure. La synchronisation de la consommation horaire, refusée elle aussi, attend que les périodes soient disponibles.
 
 ### Retiré
 

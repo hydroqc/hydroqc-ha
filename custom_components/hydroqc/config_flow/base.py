@@ -9,6 +9,8 @@ import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
+from homeassistant.core import HomeAssistant, callback
+from homeassistant.helpers import device_registry as dr, entity_registry as er
 from homeassistant.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
@@ -46,6 +48,30 @@ from .helpers import SECTOR_MAPPING, fetch_available_sectors, fetch_offers_for_s
 from .options import HydroQcOptionsFlow
 
 _LOGGER = logging.getLogger(__name__)
+
+
+@callback
+def _async_migrate_contract_registries(
+    hass: HomeAssistant, entry_id: str, old_contract_id: str, new_contract_id: str
+) -> None:
+    """Move the entry's device and entities to the new contract id.
+
+    Entity unique ids and the device identifier are built from the contract id,
+    without this the reload would create a second set of entities (suffixed _2).
+    """
+    ent_reg = er.async_get(hass)
+    old_prefix = f"{old_contract_id}_"
+    for entity in er.async_entries_for_config_entry(ent_reg, entry_id):
+        if entity.unique_id.startswith(old_prefix):
+            ent_reg.async_update_entity(
+                entity.entity_id,
+                new_unique_id=f"{new_contract_id}_{entity.unique_id.removeprefix(old_prefix)}",
+            )
+
+    dev_reg = dr.async_get(hass)
+    for device in dr.async_entries_for_config_entry(dev_reg, entry_id):
+        if (DOMAIN, old_contract_id) in device.identifiers:
+            dev_reg.async_update_device(device.id, new_identifiers={(DOMAIN, new_contract_id)})
 
 
 class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
@@ -112,65 +138,9 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._password = user_input[CONF_PASSWORD]
             self._contract_name = user_input[CONF_CONTRACT_NAME]
 
-            try:
-                # Check portal status first
-                temp_webuser = WebUser(
-                    self._username,
-                    self._password,
-                    verify_ssl=True,
-                    log_level="INFO",
-                    http_log_level="WARNING",
-                )
-
-                portal_available = await temp_webuser.check_hq_portal_status()
-                if not portal_available:
-                    errors["base"] = "portal_unavailable"
-                    await temp_webuser.close_session()
-                    raise RuntimeError("Portal unavailable")
-
-                # Try to login and fetch contracts
-                self._webuser = temp_webuser
-                await self._webuser.login()
-                await self._webuser.get_info()
-                await self._webuser.fetch_customers_info()
-
-                # Collect all contracts from all customers/accounts
-                self._contracts = []
-                for customer in self._webuser.customers:
-                    await customer.get_info()
-                    for account in customer.accounts:
-                        for contract in account.contracts:
-                            self._contracts.append(
-                                {
-                                    "customer_id": customer.customer_id,
-                                    "account_id": account.account_id,
-                                    "contract_id": contract.contract_id,
-                                    "rate": contract.rate,
-                                    "rate_option": contract.rate_option or "",
-                                    "label": f"Contract {contract.contract_id} - {contract.rate}{contract.rate_option or ''}",
-                                }
-                            )
-
-                if not self._contracts:
-                    errors["base"] = "no_contracts"
-                else:
-                    return await self.async_step_select_contract()
-
-            except hydroqc.error.HydroQcHTTPError as err:
-                # Check if it's a 500 error (portal maintenance)
-                if hasattr(err, "status_code") and err.status_code == 500:
-                    errors["base"] = "portal_maintenance"
-                else:
-                    errors["base"] = "invalid_auth"
-            except RuntimeError:
-                # Portal unavailable - error already set above
-                pass
-            except Exception:  # pylint: disable=broad-except
-                _LOGGER.exception("Unexpected exception during login")
-                errors["base"] = "cannot_connect"
-            finally:
-                if self._webuser:
-                    await self._webuser.close_session()
+            errors = await self._async_fetch_contracts()
+            if not errors:
+                return await self.async_step_select_contract()
 
         return self.async_show_form(
             step_id="account",
@@ -183,6 +153,75 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
             errors=errors,
         )
+
+    async def _async_fetch_contracts(self) -> dict[str, str]:
+        """Log in to the portal and collect every contract of the account.
+
+        Returns the form errors, empty on success.
+        """
+        errors: dict[str, str] = {}
+        assert self._username is not None
+        assert self._password is not None
+
+        try:
+            # Check portal status first
+            temp_webuser = WebUser(
+                self._username,
+                self._password,
+                verify_ssl=True,
+                log_level="INFO",
+                http_log_level="WARNING",
+            )
+
+            portal_available = await temp_webuser.check_hq_portal_status()
+            if not portal_available:
+                errors["base"] = "portal_unavailable"
+                await temp_webuser.close_session()
+                raise RuntimeError("Portal unavailable")
+
+            # Try to login and fetch contracts
+            self._webuser = temp_webuser
+            await self._webuser.login()
+            await self._webuser.get_info()
+            await self._webuser.fetch_customers_info()
+
+            # Collect all contracts from all customers/accounts
+            self._contracts = []
+            for customer in self._webuser.customers:
+                await customer.get_info()
+                for account in customer.accounts:
+                    for contract in account.contracts:
+                        self._contracts.append(
+                            {
+                                "customer_id": customer.customer_id,
+                                "account_id": account.account_id,
+                                "contract_id": contract.contract_id,
+                                "rate": contract.rate,
+                                "rate_option": contract.rate_option or "",
+                                "label": f"Contract {contract.contract_id} - {contract.rate}{contract.rate_option or ''}",
+                            }
+                        )
+
+            if not self._contracts:
+                errors["base"] = "no_contracts"
+
+        except hydroqc.error.HydroQcHTTPError as err:
+            # Check if it's a 500 error (portal maintenance)
+            if hasattr(err, "status_code") and err.status_code == 500:
+                errors["base"] = "portal_maintenance"
+            else:
+                errors["base"] = "invalid_auth"
+        except RuntimeError:
+            # Portal unavailable - error already set above
+            pass
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.exception("Unexpected exception during login")
+            errors["base"] = "cannot_connect"
+        finally:
+            if self._webuser:
+                await self._webuser.close_session()
+
+        return errors
 
     async def async_step_select_contract(
         self, user_input: dict[str, Any] | None = None
@@ -498,6 +537,100 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
             errors=errors,
             description_placeholders={"contract_name": self._contract_name or "Contract"},
+        )
+
+    async def async_step_reconfigure(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Re-enter portal credentials, then pick the contract again."""
+        entry = self._get_reconfigure_entry()
+        if entry.data.get(CONF_AUTH_MODE) != AUTH_MODE_PORTAL:
+            return self.async_abort(reason="reconfigure_portal_only")
+
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            self._username = user_input[CONF_USERNAME]
+            # A blank password keeps the stored one
+            self._password = user_input.get(CONF_PASSWORD) or entry.data[CONF_PASSWORD]
+
+            errors = await self._async_fetch_contracts()
+            if not errors:
+                return await self.async_step_reconfigure_contract()
+
+        return self.async_show_form(
+            step_id="reconfigure",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_USERNAME, default=entry.data.get(CONF_USERNAME, "")): str,
+                    vol.Optional(CONF_PASSWORD): str,
+                }
+            ),
+            errors=errors,
+            description_placeholders={"contract_id": entry.data.get(CONF_CONTRACT_ID, "")},
+        )
+
+    async def async_step_reconfigure_contract(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Point the entry at the selected contract, keeping its entities and name."""
+        entry = self._get_reconfigure_entry()
+        old_contract_id = entry.data[CONF_CONTRACT_ID]
+
+        if user_input is not None:
+            selected = next(
+                (c for c in self._contracts if c["contract_id"] == user_input["contract"]),
+                None,
+            )
+            if selected is None:
+                return self.async_abort(reason="missing_contract")
+
+            new_contract_id = selected["contract_id"]
+            if new_contract_id != old_contract_id:
+                if any(
+                    e.unique_id == new_contract_id and e.entry_id != entry.entry_id
+                    for e in self._async_current_entries(include_ignore=False)
+                ):
+                    return self.async_abort(reason="already_configured")
+                _async_migrate_contract_registries(
+                    self.hass, entry.entry_id, old_contract_id, new_contract_id
+                )
+
+            contract_name = entry.data[CONF_CONTRACT_NAME]
+            return self.async_update_reload_and_abort(
+                entry,
+                unique_id=new_contract_id,
+                title=f"{contract_name} ({selected['rate']}{selected['rate_option']})",
+                data_updates={
+                    CONF_USERNAME: self._username,
+                    CONF_PASSWORD: self._password,
+                    CONF_CUSTOMER_ID: selected["customer_id"],
+                    CONF_ACCOUNT_ID: selected["account_id"],
+                    CONF_CONTRACT_ID: new_contract_id,
+                    CONF_RATE: selected["rate"],
+                    CONF_RATE_OPTION: selected["rate_option"],
+                },
+            )
+
+        contract_options = [
+            {"value": c["contract_id"], "label": c["label"]} for c in self._contracts
+        ]
+        contract_ids = [c["contract_id"] for c in self._contracts]
+        default_contract = old_contract_id if old_contract_id in contract_ids else contract_ids[0]
+
+        return self.async_show_form(
+            step_id="reconfigure_contract",
+            data_schema=vol.Schema(
+                {
+                    vol.Required("contract", default=default_contract): SelectSelector(
+                        SelectSelectorConfig(
+                            options=cast(list[SelectOptionDict], contract_options),
+                            mode=SelectSelectorMode.DROPDOWN,
+                        )
+                    ),
+                }
+            ),
+            description_placeholders={"contract_id": old_contract_id},
         )
 
     @staticmethod

@@ -24,6 +24,11 @@ AUTH_MODE_OPENDATA: Final = "opendata"
 # Defaults
 DEFAULT_PREHEAT_DURATION: Final = 120  # minutes
 
+# Hydro-Québec only exposes consumption periods 10 days after the contract start,
+# or after the move-in notice when it comes later, hence the margin.
+NEW_CONTRACT_GRACE_DAYS: Final = 30
+NEW_CONTRACT_PERIODS_RETRY_HOURS: Final = 1
+
 # Supported rates
 RATE_D: Final = "D"
 RATE_DT: Final = "DT"

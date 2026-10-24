@@ -98,6 +98,28 @@
           "rate_selection": "Seleccione su plan de tarifa eléctrica de las opciones disponibles",
           "preheat_duration_minutes": "Duración antes de eventos de pico crítico para activar precalentamiento (0-240 minutos, predeterminado: 120)"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigurar la cuenta del portal",
+        "description": "Actualice las credenciales de Hydro-Québec y luego seleccione de nuevo el contrato (actualmente {contract_id}). Se conservan el nombre del contrato, las entidades y el historial.",
+        "data": {
+          "username": "Usuario (correo electrónico)",
+          "password": "Contraseña"
+        },
+        "data_description": {
+          "username": "La dirección de correo de su cuenta de Hydro-Québec",
+          "password": "Déjelo vacío para conservar la contraseña actual"
+        }
+      },
+      "reconfigure_contract": {
+        "title": "Seleccionar contrato",
+        "description": "Elija el contrato que debe seguir esta entrada (actualmente {contract_id}). Las entidades existentes se transfieren al contrato seleccionado.",
+        "data": {
+          "contract": "Contrato"
+        },
+        "data_description": {
+          "contract": "Elija el nuevo número de contrato si Hydro-Québec lo cambió"
+        }
       }
     },
     "error": {
@@ -111,7 +133,10 @@
       "unknown": "Ocurrió un error inesperado"
     },
     "abort": {
-      "already_configured": "Este contrato ya está configurado"
+      "already_configured": "Este contrato ya está configurado",
+      "reconfigure_successful": "Reconfiguración exitosa",
+      "reconfigure_portal_only": "Solo las entradas en modo Portal pueden reconfigurarse",
+      "missing_contract": "No se encontró el contrato seleccionado"
     }
   },
   "options": {
@@ -314,9 +339,11 @@
         "name": "Pico mañana mañana"
       },
       "dpc_critical_evening_peak_tomorrow": {
-        "name": "Pico tarde mañana"      },
+        "name": "Pico tarde mañana"
+      },
       "portal_status": {
-        "name": "Estado del portal"      }
+        "name": "Estado del portal"
+      }
     }
   }
 }

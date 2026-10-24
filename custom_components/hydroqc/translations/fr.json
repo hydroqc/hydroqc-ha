@@ -88,6 +88,28 @@
           "contract_name": "Un nom convivial pour cette configuration (ex: 'Maison', 'Chalet')",
           "rate_selection": "Sélectionnez votre tarif d'électricité parmi les options disponibles"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigurer le compte du portail",
+        "description": "Mettez à jour les identifiants Hydro-Québec, puis sélectionnez de nouveau le contrat (actuellement {contract_id}). Le nom du contrat, les entités et l'historique sont conservés.",
+        "data": {
+          "username": "Nom d'utilisateur (courriel)",
+          "password": "Mot de passe"
+        },
+        "data_description": {
+          "username": "L'adresse courriel de votre compte Hydro-Québec",
+          "password": "Laissez vide pour garder le mot de passe actuel"
+        }
+      },
+      "reconfigure_contract": {
+        "title": "Sélectionner le contrat",
+        "description": "Choisissez le contrat que cette entrée doit suivre (actuellement {contract_id}). Les entités existantes sont transférées au contrat sélectionné.",
+        "data": {
+          "contract": "Contrat"
+        },
+        "data_description": {
+          "contract": "Choisissez le nouveau numéro de contrat si Hydro-Québec l'a changé"
+        }
       }
     },
     "error": {
@@ -101,7 +123,10 @@
       "unknown": "Erreur inattendue"
     },
     "abort": {
-      "already_configured": "Ce contrat est déjà configuré"
+      "already_configured": "Ce contrat est déjà configuré",
+      "reconfigure_successful": "Reconfiguration réussie",
+      "reconfigure_portal_only": "Seules les entrées en mode Portail peuvent être reconfigurées",
+      "missing_contract": "Le contrat sélectionné est introuvable"
     }
   },
   "options": {
@@ -304,9 +329,11 @@
         "name": "Pointe matin demain"
       },
       "dpc_critical_evening_peak_tomorrow": {
-        "name": "Pointe soir demain"      },
+        "name": "Pointe soir demain"
+      },
       "portal_status": {
-        "name": "Statut du portail"      }
+        "name": "Statut du portail"
+      }
     }
   }
 }

@@ -42,10 +42,13 @@ from ..const import (
     DEFAULT_PREHEAT_DURATION,
     DOMAIN,
 )
+from ..hydroqc_patches import apply_patches
 from .helpers import SECTOR_MAPPING, fetch_available_sectors, fetch_offers_for_sector
 from .options import HydroQcOptionsFlow
 
 _LOGGER = logging.getLogger(__name__)
+
+apply_patches()
 
 
 class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):

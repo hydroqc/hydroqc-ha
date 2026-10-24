@@ -18,6 +18,9 @@ from homeassistant.helpers import device_registry as dr, entity_registry as er
 from . import calendar_manager
 from .const import DOMAIN
 from .coordinator import HydroQcDataCoordinator
+from .hydroqc_patches import apply_patches
+
+apply_patches()
 
 if TYPE_CHECKING:
     pass

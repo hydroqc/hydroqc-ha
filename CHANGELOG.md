@@ -6,6 +6,8 @@
 
 ### Corrigé
 
+- Connexion en mode portail : « Échec de connexion à Hydro-Québec » après une connexion réussie pour certains comptes, notamment avec un nom accentué. Le jeton d'identité est maintenant décodé en base64url, comme le prévoit la norme JWT (correctif temporaire de Hydro-Quebec-API-Wrapper 4.2.6)
+
 ### Retiré
 
 ---

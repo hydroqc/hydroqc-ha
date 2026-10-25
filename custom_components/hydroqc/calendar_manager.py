@@ -59,6 +59,7 @@ async def async_create_peak_event(
     hass: HomeAssistant,
     calendar_id: str,
     peak_event: PeakEventProtocol,
+    *,
     contract_id: str,
     contract_name: str,
     rate: str,
@@ -213,6 +214,7 @@ async def async_sync_events(
     calendar_id: str,
     peaks: list[PeakEventProtocol],
     stored_uids: set[str],
+    *,
     contract_id: str,
     contract_name: str,
     rate: str,
@@ -293,7 +295,12 @@ async def async_sync_events(
         try:
             # Create event
             created_uid = await async_create_peak_event(
-                hass, calendar_id, peak, contract_id, contract_name, rate
+                hass,
+                calendar_id,
+                peak,
+                contract_id=contract_id,
+                contract_name=contract_name,
+                rate=rate,
             )
             new_uids.add(created_uid)
             events_created += 1

@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.event import (
     async_track_time_change,
 )
@@ -43,6 +44,8 @@ from ..const import (
     CONF_RATE,
     CONF_RATE_OPTION,
     DOMAIN,
+    NEW_CONTRACT_GRACE_DAYS,
+    NEW_CONTRACT_PERIODS_RETRY_HOURS,
 )
 from ..public_data_client import PublicDataClient
 from .calendar_sync import CalendarSyncMixin
@@ -110,6 +113,9 @@ class HydroQcDataCoordinator(
 
         # Track portal availability status
         self._portal_available: bool | None = None
+
+        # Set while a new contract has no consumption periods yet (see NEW_CONTRACT_GRACE_DAYS)
+        self._periods_retry_after: datetime.datetime | None = None
 
         # Initialize webuser if in portal mode
         if self._auth_mode == AUTH_MODE_PORTAL:
@@ -339,6 +345,20 @@ class HydroQcDataCoordinator(
             return elapsed >= 3600  # 60 minutes
         return elapsed >= 10800  # 180 minutes
 
+    async def _async_login(self) -> None:
+        """Log in, raising ConfigEntryAuthFailed when Hydro-Québec rejects the credentials."""
+        assert self._webuser is not None
+        try:
+            # login() returns False instead of raising when the credentials are refused
+            logged_in = await self._webuser.login()
+        except hydroqc.error.HydroQcHTTPError as err:
+            # A password change request breaks the login redirect chain with a non 5xx status
+            if err.status_code is not None and err.status_code >= 500:
+                raise
+            raise ConfigEntryAuthFailed(f"Hydro-Québec login failed: {err}") from err
+        if not logged_in:
+            raise ConfigEntryAuthFailed("Hydro-Québec rejected the credentials")
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Hydro-Québec API.
 
@@ -432,7 +452,7 @@ class HydroQcDataCoordinator(
             # Login if session expired
             if self._webuser and self._webuser.session_expired:
                 _LOGGER.debug("Session expired, re-authenticating")
-                await self._webuser.login()
+                await self._async_login()
 
             # Fetch contract hierarchy
             if self._webuser:
@@ -445,8 +465,7 @@ class HydroQcDataCoordinator(
                 self._account = self._customer.get_account(self._account_id)
                 self._contract = self._account.get_contract(self._contract_id)
 
-                # Fetch period data
-                await self._contract.get_periods_info()
+                await self._async_fetch_periods(self._contract)
 
                 # Fetch outages
                 await self._contract.refresh_outages()
@@ -484,6 +503,8 @@ class HydroQcDataCoordinator(
                 self._last_portal_update = datetime.datetime.now(ZoneInfo("America/Toronto"))
                 _LOGGER.debug("[Portal] Successfully fetched authenticated contract data")
 
+        except ConfigEntryAuthFailed:
+            raise
         except hydroqc.error.HydroQcHTTPError as err:
             _LOGGER.error("HTTP error fetching Hydro-Québec data: %s", err)
             raise UpdateFailed(f"Error fetching Hydro-Québec data: {err}") from err
@@ -525,6 +546,51 @@ class HydroQcDataCoordinator(
                 self._last_consumption_sync = now
 
         return data
+
+    @property
+    def periods_unavailable(self) -> bool:
+        """Return True while the new contract has no consumption periods yet."""
+        return self._periods_retry_after is not None
+
+    async def _async_fetch_periods(self, contract: Contract) -> None:
+        """Fetch billing periods, tolerating the delay Hydro-Québec imposes on new contracts.
+
+        The portal answers HTTP 400 until the consumption portrait is ready. For a
+        recent contract this is expected: warn once, keep the rest of the update and
+        retry hourly instead of on every refresh.
+        """
+        now = datetime.datetime.now(ZoneInfo("America/Toronto"))
+        if self._periods_retry_after is not None and now < self._periods_retry_after:
+            return
+
+        try:
+            await contract.get_periods_info()
+        except hydroqc.error.HydroQcHTTPError as err:
+            start_date = contract.start_date if err.status_code == 400 else None
+            if (
+                not isinstance(start_date, datetime.date)
+                or (now.date() - start_date).days > NEW_CONTRACT_GRACE_DAYS
+            ):
+                raise
+            if self._periods_retry_after is None:
+                _LOGGER.warning(
+                    "[Portal] Consumption periods are not available yet for contract %s "
+                    "(started %s). Hydro-Québec needs about 10 days after a new contract "
+                    "before exposing them, billing sensors stay unknown until then",
+                    contract.contract_id,
+                    start_date,
+                )
+            self._periods_retry_after = now + datetime.timedelta(
+                hours=NEW_CONTRACT_PERIODS_RETRY_HOURS
+            )
+            return
+
+        if self._periods_retry_after is not None:
+            _LOGGER.info(
+                "[Portal] Consumption periods are now available for contract %s",
+                contract.contract_id,
+            )
+            self._periods_retry_after = None
 
     async def async_shutdown(self) -> None:
         """Shutdown coordinator and close sessions."""

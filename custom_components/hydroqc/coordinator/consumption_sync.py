@@ -78,7 +78,7 @@ class ConsumptionSyncMixin:
         Returns:
             bool: True if within 3 days of billing period boundary
         """
-        if not self._contract:
+        if not self._contract or self.periods_unavailable:
             return False
 
         try:
@@ -109,6 +109,11 @@ class ConsumptionSyncMixin:
         - Skips if CSV import is running or portal is offline
         """
         if not self.is_portal_mode:
+            return
+
+        # Hourly consumption of a new contract is refused like its periods, retry next hour
+        if self.periods_unavailable:
+            _LOGGER.debug("Consumption periods not available yet, skipping consumption sync")
             return
 
         # Check portal status before attempting sync

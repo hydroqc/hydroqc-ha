@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.event import (
     async_track_time_change,
 )
@@ -344,6 +345,20 @@ class HydroQcDataCoordinator(
             return elapsed >= 3600  # 60 minutes
         return elapsed >= 10800  # 180 minutes
 
+    async def _async_login(self) -> None:
+        """Log in, raising ConfigEntryAuthFailed when Hydro-Québec rejects the credentials."""
+        assert self._webuser is not None
+        try:
+            # login() returns False instead of raising when the credentials are refused
+            logged_in = await self._webuser.login()
+        except hydroqc.error.HydroQcHTTPError as err:
+            # A password change request breaks the login redirect chain with a non 5xx status
+            if err.status_code is not None and err.status_code >= 500:
+                raise
+            raise ConfigEntryAuthFailed(f"Hydro-Québec login failed: {err}") from err
+        if not logged_in:
+            raise ConfigEntryAuthFailed("Hydro-Québec rejected the credentials")
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Hydro-Québec API.
 
@@ -437,7 +452,7 @@ class HydroQcDataCoordinator(
             # Login if session expired
             if self._webuser and self._webuser.session_expired:
                 _LOGGER.debug("Session expired, re-authenticating")
-                await self._webuser.login()
+                await self._async_login()
 
             # Fetch contract hierarchy
             if self._webuser:
@@ -488,6 +503,8 @@ class HydroQcDataCoordinator(
                 self._last_portal_update = datetime.datetime.now(ZoneInfo("America/Toronto"))
                 _LOGGER.debug("[Portal] Successfully fetched authenticated contract data")
 
+        except ConfigEntryAuthFailed:
+            raise
         except hydroqc.error.HydroQcHTTPError as err:
             _LOGGER.error("HTTP error fetching Hydro-Québec data: %s", err)
             raise UpdateFailed(f"Error fetching Hydro-Québec data: {err}") from err

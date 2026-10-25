@@ -52,6 +52,7 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
    - **`config_flow.py`**: Root-level re-export for backward compatibility
    - Step 1: Choose `AUTH_MODE_PORTAL` or `AUTH_MODE_OPENDATA`
    - Step 2a (Portal mode): Login → fetch customers → select account → select contract → import history (0-800 days) → create entry
+   - **Reauth** (Portal mode): `HydroQcDataCoordinator._async_login()` raises `ConfigEntryAuthFailed` when `WebUser.login()` returns `False` (it does not raise on refused credentials) or fails with a non 5xx `HydroQcHTTPError`. HA then starts `async_step_reauth` → `reauth_confirm`, which validates the new password through `_async_fetch_contracts()` and stores it. `ConfigEntryAuthFailed` must be re-raised before any broad `except Exception`.
    - Step 2b (OpenData mode): Select sector (Residentiel/Affaires) → select rate and option (with preheat field) → create entry
    - **History import** (Portal mode only): `NumberSelector` for 0-800 days of consumption history
      - 0-30 days: Regular sync only (efficient for recent data)

@@ -4,6 +4,8 @@
 
 - **Reconfiguration du mode Portail** : l'action « Reconfigurer » d'une entrée permet de changer d'identifiants ou de contrat (par exemple quand Hydro-Québec attribue un nouveau numéro de contrat). L'appareil et les entités existantes sont transférés au nouveau contrat, leurs `entity_id` sont conservés, et le nom du contrat, qui détermine les statistiques de consommation, ne change pas.
 
+- **Réauthentification** : quand Hydro-Québec refuse le mot de passe enregistré (connexion refusée ou demande de changement de mot de passe), Home Assistant affiche « Réauthentification requise » au lieu d'une erreur de connexion générique. Le nouveau mot de passe s'entre directement dans l'intégration, sans la supprimer.
+
 ### Modifié
 
 ### Corrigé

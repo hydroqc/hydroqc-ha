@@ -234,6 +234,8 @@ Configurez séparément le pré-chauffage pour les pointes du matin et du soir.
 
 **Format** : `-HH:MM:SS` (négatif = avant l'événement)
 
+Pour un guide détaillé sur les stratégies de pré-chauffage, le stockage thermique (eau chaude, thermostats) et l'automatisation avec déclencheurs calendrier, consultez le [Guide d'automatisation du pré-chauffage](docs/preheat_automation_recipe.md).
+
 #### Délai avant début pointe (Flex-D uniquement)
 
 - **Par défaut** : `-00:01:00` (1 minute avant)

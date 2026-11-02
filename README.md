@@ -139,6 +139,10 @@ Hydro-Québec attribue un nouveau numéro de contrat à chaque changement de res
 
 Les entités gardent leur `entity_id` et l'historique de consommation est conservé. Pour un nouveau contrat, les données de facturation n'arrivent qu'après une dizaine de jours (voir la FAQ).
 
+### Mot de passe refusé ou à changer
+
+Quand Hydro-Québec refuse le mot de passe enregistré (par exemple quand le portail exige un nouveau mot de passe), l'intégration cesse ses mises à jour et Home Assistant affiche **Réauthentification requise** dans **Paramètres** → **Appareils et services**. Changez d'abord le mot de passe sur le site d'Hydro-Québec, puis cliquez sur **Réauthentifier** et entrez le nouveau.
+
 ### Configuration du calendrier (Obligatoire pour DPC/DCPC)
 
 Le calendrier est **obligatoire** pour les tarifs DPC (Flex-D) et DCPC (Crédits hivernaux). Les capteurs de pointe dépendent du calendrier pour fonctionner.

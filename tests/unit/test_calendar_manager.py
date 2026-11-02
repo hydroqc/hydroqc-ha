@@ -101,7 +101,7 @@ async def test_create_peak_event_critical(
     contract_name = "Home"
 
     uid = await calendar_manager.async_create_peak_event(
-        mock_hass, calendar_id, sample_critical_peak, contract_id, contract_name, "DCPC"
+        mock_hass, calendar_id, sample_critical_peak, contract_id=contract_id, contract_name=contract_name, rate="DCPC"
     )
 
     # Verify service call
@@ -136,7 +136,7 @@ async def test_create_peak_event_non_critical_still_uses_critical_title(
     contract_name = "Cottage"
 
     uid = await calendar_manager.async_create_peak_event(
-        mock_hass, calendar_id, sample_regular_peak, contract_id, contract_name, "DCPC"
+        mock_hass, calendar_id, sample_regular_peak, contract_id=contract_id, contract_name=contract_name, rate="DCPC"
     )
 
     call_args = mock_hass.services.async_call.call_args
@@ -161,9 +161,9 @@ async def test_create_peak_event_service_failure(
             mock_hass,
             "calendar.test",
             sample_critical_peak,
-            "contract_123",
-            "Home",
-            "DPC",
+            contract_id="contract_123",
+            contract_name="Home",
+            rate="DPC",
         )
 
 
@@ -192,9 +192,9 @@ async def test_sync_events_creates_future_events_only(
         "calendar.test",
         peaks,
         set(),
-        "contract_123",
-        "Home",
-        "DCPC",
+        contract_id="contract_123",
+        contract_name="Home",
+        rate="DCPC",
     )
 
     # Should create only 1 event (future critical one, non-critical and past filtered)
@@ -215,9 +215,9 @@ async def test_sync_events_filters_by_criticality(
         "calendar.test",
         peaks,
         set(),
-        "contract_123",
-        "Home",
-        "DCPC",
+        contract_id="contract_123",
+        contract_name="Home",
+        rate="DCPC",
     )
 
     # Should create only 1 event (critical one, non-critical filtered out)
@@ -254,9 +254,9 @@ async def test_sync_events_skips_existing(
         "calendar.test",
         [sample_critical_peak],
         stored_uids,
-        "contract_123",
-        "Home",
-        "DCPC",
+        contract_id="contract_123",
+        contract_name="Home",
+        rate="DCPC",
     )
 
     # Should not create any events (already exists with same criticality)
@@ -277,9 +277,9 @@ async def test_sync_events_sequential_with_delay(
             "calendar.test",
             peaks,
             set(),
-            "contract_123",
-            "Home",
-            "DCPC",
+            contract_id="contract_123",
+            contract_name="Home",
+            rate="DCPC",
         )
 
         # Should not sleep (only one critical event created)
@@ -304,9 +304,9 @@ async def test_sync_events_continues_on_individual_failure(
         "calendar.test",
         peaks,
         set(),
-        "contract_123",
-        "Home",
-        "DCPC",
+        contract_id="contract_123",
+        contract_name="Home",
+        rate="DCPC",
     )
 
     # Should attempt to create only 1 event (critical one)
@@ -323,9 +323,9 @@ async def test_sync_events_empty_list(mock_hass: MagicMock) -> None:
         "calendar.test",
         [],
         set(),
-        "contract_123",
-        "Home",
-        "DCPC",
+        contract_id="contract_123",
+        contract_name="Home",
+        rate="DCPC",
     )
 
     mock_hass.services.async_call.assert_not_called()
@@ -344,9 +344,9 @@ async def test_sync_events_includes_all_when_flag_true(
         "calendar.test",
         peaks,
         set(),
-        "contract_123",
-        "Home",
-        "DCPC",
+        contract_id="contract_123",
+        contract_name="Home",
+        rate="DCPC",
     )
 
     # Should create only 1 event (critical only, non-critical filtered)
@@ -512,9 +512,9 @@ async def test_sync_events_dpc_only_critical(
         "calendar.test",
         peaks,
         set(),
-        "contract_dpc",
-        "Home",
-        "DPC",  # Default setting
+        contract_id="contract_dpc",
+        contract_name="Home",
+        rate="DPC",  # Default setting
     )
 
     # Should create 1 event (critical DPC peak)
@@ -572,9 +572,9 @@ async def test_sync_events_merges_stored_and_calendar_uids(
         "calendar.test",
         peaks,
         stored_uids,
-        "contract_123",
-        "Home",
-        "DCPC",
+        contract_id="contract_123",
+        contract_name="Home",
+        rate="DCPC",
     )
 
     # Should not create any events (both already exist - one in storage, one in calendar)
@@ -613,9 +613,9 @@ async def test_sync_events_different_contracts_same_calendar(
         "calendar.shared",
         [peak1],
         set(),
-        "contract_home",
-        "Home",
-        "DCPC",
+        contract_id="contract_home",
+        contract_name="Home",
+        rate="DCPC",
     )
 
     # Second contract syncs (same calendar, different contract ID)
@@ -624,9 +624,9 @@ async def test_sync_events_different_contracts_same_calendar(
         "calendar.shared",
         [peak2],
         set(),
-        "contract_cottage",
-        "Cottage",
-        "DCPC",
+        contract_id="contract_cottage",
+        contract_name="Cottage",
+        rate="DCPC",
     )
 
     # Each contract should create its own event (different UIDs due to different contract IDs)

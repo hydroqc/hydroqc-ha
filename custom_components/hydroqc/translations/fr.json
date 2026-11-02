@@ -110,6 +110,13 @@
         "data_description": {
           "contract": "Choisissez le nouveau numéro de contrat si Hydro-Québec l'a changé"
         }
+      },
+      "reauth_confirm": {
+        "title": "Réauthentifier le compte du portail",
+        "description": "Hydro-Québec a refusé le mot de passe de {username}. Si le portail vous a demandé de le changer, définissez d'abord le nouveau mot de passe sur le site d'Hydro-Québec, puis entrez-le ici.",
+        "data": {
+          "password": "Mot de passe"
+        }
       }
     },
     "error": {
@@ -126,7 +133,8 @@
       "already_configured": "Ce contrat est déjà configuré",
       "reconfigure_successful": "Reconfiguration réussie",
       "reconfigure_portal_only": "Seules les entrées en mode Portail peuvent être reconfigurées",
-      "missing_contract": "Le contrat sélectionné est introuvable"
+      "missing_contract": "Le contrat sélectionné est introuvable",
+      "reauth_successful": "Réauthentification réussie"
     }
   },
   "options": {

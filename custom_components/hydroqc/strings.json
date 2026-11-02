@@ -110,6 +110,13 @@
         "data_description": {
           "contract": "Pick the new contract number if Hydro-Québec changed it"
         }
+      },
+      "reauth_confirm": {
+        "title": "Reauthenticate Portal Account",
+        "description": "Hydro-Québec refused the password for {username}. If the portal asked you to change it, set the new password on the Hydro-Québec website first, then enter it here.",
+        "data": {
+          "password": "Password"
+        }
       }
     },
     "error": {
@@ -124,7 +131,8 @@
       "already_configured": "This contract is already configured",
       "reconfigure_successful": "Reconfiguration successful",
       "reconfigure_portal_only": "Only Portal Mode entries can be reconfigured",
-      "missing_contract": "The selected contract was not found"
+      "missing_contract": "The selected contract was not found",
+      "reauth_successful": "Reauthentication successful"
     }
   },
   "options": {

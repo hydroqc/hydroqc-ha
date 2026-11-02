@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import logging
+from collections.abc import Mapping
 from typing import Any, cast
 
 import voluptuous as vol
@@ -181,7 +182,9 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             # Try to login and fetch contracts
             self._webuser = temp_webuser
-            await self._webuser.login()
+            if not await self._webuser.login():
+                errors["base"] = "invalid_auth"
+                return errors
             await self._webuser.get_info()
             await self._webuser.fetch_customers_info()
 
@@ -568,6 +571,34 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             ),
             errors=errors,
             description_placeholders={"contract_id": entry.data.get(CONF_CONTRACT_ID, "")},
+        )
+
+    async def async_step_reauth(self, _entry_data: Mapping[str, Any]) -> ConfigFlowResult:
+        """Start reauthentication after Hydro-Québec refused the stored credentials."""
+        return await self.async_step_reauth_confirm()
+
+    async def async_step_reauth_confirm(
+        self, user_input: dict[str, Any] | None = None
+    ) -> ConfigFlowResult:
+        """Ask for the new portal password."""
+        entry = self._get_reauth_entry()
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            self._username = entry.data[CONF_USERNAME]
+            self._password = user_input[CONF_PASSWORD]
+
+            errors = await self._async_fetch_contracts()
+            if not errors:
+                return self.async_update_reload_and_abort(
+                    entry, data_updates={CONF_PASSWORD: self._password}
+                )
+
+        return self.async_show_form(
+            step_id="reauth_confirm",
+            data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}),
+            errors=errors,
+            description_placeholders={"username": entry.data[CONF_USERNAME]},
         )
 
     async def async_step_reconfigure_contract(

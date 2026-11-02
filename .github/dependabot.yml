@@ -35,7 +35,6 @@ updates:
       home-assistant:
         patterns:
           - "homeassistant"
-          - "homeassistant-stubs"  # HA type stubs follow HA versioning
         update-types:
           - "minor"
           - "patch"

@@ -52,6 +52,7 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
    - **`config_flow.py`**: Root-level re-export for backward compatibility
    - Step 1: Choose `AUTH_MODE_PORTAL` or `AUTH_MODE_OPENDATA`
    - Step 2a (Portal mode): Login → fetch customers → select account → select contract → import history (0-800 days) → create entry
+   - **Reauth** (Portal mode): `HydroQcDataCoordinator._async_login()` raises `ConfigEntryAuthFailed` when `WebUser.login()` returns `False` (it does not raise on refused credentials) or fails with a non 5xx `HydroQcHTTPError`. HA then starts `async_step_reauth` → `reauth_confirm`, which validates the new password through `_async_fetch_contracts()` and stores it. `ConfigEntryAuthFailed` must be re-raised before any broad `except Exception`.
    - Step 2b (OpenData mode): Select sector (Residentiel/Affaires) → select rate and option (with preheat field) → create entry
    - **History import** (Portal mode only): `NumberSelector` for 0-800 days of consumption history
      - 0-30 days: Regular sync only (efficient for recent data)
@@ -280,20 +281,20 @@ just restart  # Restart HA container to reload integration
 The project uses a **multi-layered approach** to dependency management:
 1. **Dependabot** - Automated weekly dependency updates (Mondays 5:00 AM)
 2. **CI Matrix Testing** - Tests against multiple HA versions + latest hydroqc
-3. **homeassistant-stubs** - Static type checking catches API breakages early
+3. **HA `py.typed`** - Static type checking against HA's own annotations catches API breakages early
 
 **Matrix Coverage** (`.github/workflows/ci.yml`):
 - HA versions: `2024.12.0` (minimum), `stable`, `beta` (pre-release)
 - hydroqc: Latest version only (pinned version tested in main test job)
-- Creates **3 test combinations** per PR with matching HA stubs for type checking
+- Creates **3 test combinations** per PR, each type-checked against its HA version
 
 **Key Dependencies**:
 - `Hydro-Quebec-API-Wrapper==4.2.6` - Pinned exactly (in manifest.json + pyproject.toml)
-- `homeassistant-stubs>=2025.1.0` - Dev dependency for type hints
 - Dependabot ignores major updates for homeassistant and hydroqc (require manual review)
-- Dependabot groups homeassistant-stubs with homeassistant updates
+- Dependabot groups homeassistant updates
 
-**Why homeassistant-stubs?**
+**Why HA's own type information?**
+- Home Assistant ships a `py.typed` marker since 2024.5.0; the separate `homeassistant-stubs` package is deprecated and empty
 - Catches HA API compatibility issues at **type-check time** (much faster than runtime)
 - Better IDE autocomplete and error detection
 - Proactive compatibility checking against beta versions

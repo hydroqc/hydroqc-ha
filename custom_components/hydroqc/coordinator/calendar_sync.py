@@ -309,9 +309,9 @@ class CalendarSyncMixin:
                 self._calendar_entity_id,
                 peaks,
                 self._created_event_uids,
-                self.contract_id,
-                self.contract_name,
-                self.rate_with_option,
+                contract_id=self.contract_id,
+                contract_name=self.contract_name,
+                rate=self.rate_with_option,
             )
 
             # Update stored UIDs and persist to storage

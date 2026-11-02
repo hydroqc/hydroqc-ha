@@ -102,18 +102,7 @@ jobs:
             uv pip install --system "homeassistant==${{ matrix.ha-version }}"
           fi
       
-      - name: Install matching HA stubs for type checking
-        run: |
-          # Install homeassistant-stubs matching the HA version
-          if [ "${{ matrix.ha-version }}" = "stable" ]; then
-            uv pip install --system "homeassistant-stubs"
-          elif [ "${{ matrix.ha-version }}" = "beta" ]; then
-            uv pip install --system --pre "homeassistant-stubs"
-          else
-            uv pip install --system "homeassistant-stubs==${{ matrix.ha-version }}"
-          fi
-      
-      - name: Type check with HA stubs
+      - name: Type check against installed HA version
         run: uv run mypy custom_components/hydroqc/ --no-error-summary
         continue-on-error: true
       

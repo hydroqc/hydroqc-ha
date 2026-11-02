@@ -12,7 +12,11 @@ import voluptuous as vol
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import Platform
 from homeassistant.core import HomeAssistant, ServiceCall
-from homeassistant.exceptions import ConfigEntryNotReady, HomeAssistantError
+from homeassistant.exceptions import (
+    ConfigEntryAuthFailed,
+    ConfigEntryNotReady,
+    HomeAssistantError,
+)
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from . import calendar_manager
@@ -70,6 +74,8 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
 
     try:
         await coordinator.async_config_entry_first_refresh()
+    except ConfigEntryAuthFailed:
+        raise
     except Exception as err:
         raise ConfigEntryNotReady(f"Error connecting to Hydro-Québec: {err}") from err
 
@@ -259,8 +265,8 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         date and time slot. Uses the same UID format as OpenData events.
         """
         device_id_input = call.data.get("device_id")
-        event_date: datetime.date = call.data.get(ATTR_DATE)
-        time_slot: str = call.data.get(ATTR_TIME_SLOT)
+        event_date: datetime.date | None = call.data.get(ATTR_DATE)
+        time_slot: str | None = call.data.get(ATTR_TIME_SLOT)
 
         # Normalize device_id to a list
         if isinstance(device_id_input, str):

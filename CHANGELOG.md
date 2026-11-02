@@ -6,6 +6,8 @@
 
 ### Corrigé
 
+- **Timers du coordinateur** : les timers OpenData, portail et calendrier sont maintenant annulés quand Home Assistant arrête ou recharge l'intégration. Après un reload de l'intégration, l'ancien coordinateur continuait de se connecter à Hydro-Québec. Une réauthentification ou une reconfiguration fait aussi un reload.
+
 ### Retiré
 
 ---

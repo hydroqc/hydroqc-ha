@@ -42,6 +42,10 @@ class SensorDataMixin:
         if data_source.startswith("calendar_peak_handler."):
             return self._get_calendar_peak_handler_value(data_source)
 
+        # Without period data the wrapper logs a warning on every cp_* property read
+        if self.periods_unavailable and data_source.startswith("contract.cp_"):
+            return None
+
         if not self.data:
             # For binary sensors ending with is_critical, return False instead of None
             if data_source.endswith(".is_critical"):

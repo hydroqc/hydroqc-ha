@@ -88,6 +88,28 @@
           "contract_name": "A friendly name for this configuration (e.g., 'Home', 'Cottage')",
           "rate_selection": "Select your electricity rate plan from available options"
         }
+      },
+      "reconfigure": {
+        "title": "Reconfigure Portal Account",
+        "description": "Update the Hydro-Québec credentials, then select the contract again (currently {contract_id}). The contract name, entities and history are kept.",
+        "data": {
+          "username": "Username (Email)",
+          "password": "Password"
+        },
+        "data_description": {
+          "username": "Your Hydro-Québec account email address",
+          "password": "Leave empty to keep the current password"
+        }
+      },
+      "reconfigure_contract": {
+        "title": "Select Contract",
+        "description": "Choose the contract this entry should follow (currently {contract_id}). Existing entities are moved to the selected contract.",
+        "data": {
+          "contract": "Contract"
+        },
+        "data_description": {
+          "contract": "Pick the new contract number if Hydro-Québec changed it"
+        }
       }
     },
     "error": {
@@ -99,7 +121,10 @@
       "unknown": "Unexpected error occurred"
     },
     "abort": {
-      "already_configured": "This contract is already configured"
+      "already_configured": "This contract is already configured",
+      "reconfigure_successful": "Reconfiguration successful",
+      "reconfigure_portal_only": "Only Portal Mode entries can be reconfigured",
+      "missing_contract": "The selected contract was not found"
     }
   },
   "options": {

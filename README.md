@@ -128,6 +128,17 @@ Uniquement les **alertes de pointe** sans identifiants
 3. Sélectionnez votre tarif
 4. Les alertes de pointe sont actives !
 
+### Changer de contrat ou de mot de passe
+
+Hydro-Québec attribue un nouveau numéro de contrat à chaque changement de responsable d'un même lieu de consommation, même si ce lieu a déjà été associé au compte. Pas besoin de supprimer l'intégration (mode compte seulement) :
+
+1. **Paramètres** → **Appareils et services** → **Hydro-Québec**
+2. Menu **⋮** de l'entrée → **Reconfigurer**
+3. Confirmez votre courriel. Laissez le mot de passe vide pour garder l'actuel, ou entrez le nouveau
+4. Sélectionnez le contrat
+
+Les entités gardent leur `entity_id` et l'historique de consommation est conservé. Pour un nouveau contrat, les données de facturation n'arrivent qu'après une dizaine de jours (voir la FAQ).
+
 ### Configuration du calendrier (Obligatoire pour DPC/DCPC)
 
 Le calendrier est **obligatoire** pour les tarifs DPC (Flex-D) et DCPC (Crédits hivernaux). Les capteurs de pointe dépendent du calendrier pour fonctionner.
@@ -334,6 +345,15 @@ Les blueprints incluent automatiquement un délai aléatoire (30 secondes à 5 m
 - Attendez 60 secondes pour la première mise à jour
 - Vérifiez les journaux : **Paramètres** → **Système** → **Journaux**
 - Vérifiez que le portail Hydro-Québec est en ligne
+
+</details>
+
+<details>
+<summary><strong>Nouveau contrat : capteurs de facturation inconnus</strong></summary>
+
+- Hydro-Québec n'expose le portrait de consommation qu'environ 10 jours après le début du contrat (ou après l'avis d'emménagement s'il est plus tardif)
+- Pendant ce délai, un seul avertissement « Consumption periods are not available yet » est journalisé, le solde et les pannes restent à jour et la synchronisation de consommation attend
+- Les données sont redemandées chaque heure et les capteurs se remplissent dès qu'elles sont disponibles
 
 </details>
 

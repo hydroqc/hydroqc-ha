@@ -1366,19 +1366,6 @@ wheels = [
 ]
 
 [[package]]
-name = "homeassistant-stubs"
-version = "2026.10.0"
-source = { registry = "https://pypi.org/simple" }
-dependencies = [
-    { name = "homeassistant", version = "2026.2.3", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version < '3.14.2'" },
-    { name = "homeassistant", version = "2026.3.4", source = { registry = "https://pypi.org/simple" }, marker = "python_full_version >= '3.14.2'" },
-]
-sdist = { url = "https://files.pythonhosted.org/packages/ca/9c/c77fc543d32be781d79f961a8397c96301510060aa390fa5957c0f3ede3d/homeassistant_stubs-2026.10.0.tar.gz", hash = "sha256:a0451e9c6bb213fe00d79f85fdf3e7a1d8e81073dc285fa85b57fd2a2e71bd7c", size = 3939, upload-time = "2026-10-03T12:24:17.808Z" }
-wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/c9/8683c0b234c7b05e36c81652d6774949b8a61edbc6090b5d27b75438f334/homeassistant_stubs-2026.10.0-py3-none-any.whl", hash = "sha256:bb284111bbbdd21fba6b20689378ced6943ebe300fa44d315c8e9efa2cc9f1b4", size = 2624, upload-time = "2026-10-03T12:24:16.551Z" },
-]
-
-[[package]]
 name = "httpcore"
 version = "1.0.9"
 source = { registry = "https://pypi.org/simple" }
@@ -1430,7 +1417,6 @@ source = { editable = "." }
 [package.dev-dependencies]
 dev = [
     { name = "freezegun" },
-    { name = "homeassistant-stubs" },
     { name = "hydro-quebec-api-wrapper" },
     { name = "mypy" },
     { name = "pytest" },
@@ -1446,7 +1432,6 @@ dev = [
 [package.metadata.requires-dev]
 dev = [
     { name = "freezegun", specifier = ">=1.5.0" },
-    { name = "homeassistant-stubs", specifier = ">=2025.1.0" },
     { name = "hydro-quebec-api-wrapper", specifier = "==4.2.6" },
     { name = "mypy", specifier = ">=1.13.0" },
     { name = "pytest", specifier = ">=8.3.0" },

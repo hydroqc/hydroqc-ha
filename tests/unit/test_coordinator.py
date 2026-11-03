@@ -37,6 +37,35 @@ class TestHydroQcDataCoordinator:
             # Manual scheduling: update_interval is None (disabled automatic polling)
             assert coordinator.update_interval is None
 
+    async def test_scheduled_triggers_cancelled_on_unload(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry: MockConfigEntry,
+        mock_webuser: MagicMock,
+        mock_public_client: MagicMock,
+    ) -> None:
+        """Unloading the entry cancels the coordinator's time triggers."""
+        mock_config_entry.add_to_hass(hass)
+        unsubs = [MagicMock(), MagicMock(), MagicMock()]
+
+        with (
+            patch("custom_components.hydroqc.coordinator.base.WebUser", return_value=mock_webuser),
+            patch(
+                "custom_components.hydroqc.coordinator.base.PublicDataClient",
+                return_value=mock_public_client,
+            ),
+            patch(
+                "custom_components.hydroqc.coordinator.base.async_track_time_change",
+                side_effect=unsubs,
+            ),
+        ):
+            HydroQcDataCoordinator(hass, mock_config_entry)
+
+        await mock_config_entry._async_process_on_unload(hass)
+
+        for unsub in unsubs:
+            unsub.assert_called_once()
+
     async def test_coordinator_login_success(
         self,
         hass: HomeAssistant,

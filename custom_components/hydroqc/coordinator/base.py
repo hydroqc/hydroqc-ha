@@ -144,33 +144,39 @@ class HydroQcDataCoordinator(
         self._init_consumption_sync()
         self._init_calendar_sync()
 
-        # Set up scheduled update triggers
+        # Set up scheduled update triggers, cancelled when the entry unloads
         # OpenData: Every 15 minutes during active window (10:30-15:00), hourly otherwise
         # Use offset based on start time to distribute API calls across users
         opendata_minutes = [(self._schedule_offset_minutes + i * 15) % 60 for i in range(4)]
-        async_track_time_change(
-            hass,
-            self._async_scheduled_opendata_update,
-            minute=opendata_minutes,  # Every 15 minutes with offset
-            second=self._schedule_offset_seconds,
+        entry.async_on_unload(
+            async_track_time_change(
+                hass,
+                self._async_scheduled_opendata_update,
+                minute=opendata_minutes,  # Every 15 minutes with offset
+                second=self._schedule_offset_seconds,
+            )
         )
 
         # Portal: Hourly during active window (0-8h), every 3 hours otherwise
         # Use offset based on start time to distribute API calls across users
-        async_track_time_change(
-            hass,
-            self._async_scheduled_portal_update,
-            minute=self._schedule_offset_minutes,  # Random minute within the hour
-            second=self._schedule_offset_seconds,
+        entry.async_on_unload(
+            async_track_time_change(
+                hass,
+                self._async_scheduled_portal_update,
+                minute=self._schedule_offset_minutes,  # Random minute within the hour
+                second=self._schedule_offset_seconds,
+            )
         )
 
         # Calendar: Every 15 minutes to catch manual event changes
         # Independent of OpenData - only refreshes calendar-based sensor data
-        async_track_time_change(
-            hass,
-            self._async_scheduled_calendar_refresh,
-            minute=[0, 15, 30, 45],
-            second=0,
+        entry.async_on_unload(
+            async_track_time_change(
+                hass,
+                self._async_scheduled_calendar_refresh,
+                minute=[0, 15, 30, 45],
+                second=0,
+            )
         )
 
     @property

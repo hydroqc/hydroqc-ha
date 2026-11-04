@@ -1,6 +1,7 @@
 """Unit tests for the HydroQcDataCoordinator."""
 
 from datetime import datetime, timedelta
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock, patch
 from zoneinfo import ZoneInfo
 
@@ -65,6 +66,77 @@ class TestHydroQcDataCoordinator:
 
         for unsub in unsubs:
             unsub.assert_called_once()
+
+    async def test_portal_schedule_offset_is_stable_across_restarts(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry: MockConfigEntry,
+        mock_webuser: MagicMock,
+        mock_public_client: MagicMock,
+    ) -> None:
+        """Portal trigger uses the same in-range slot regardless of startup time."""
+        mock_config_entry.add_to_hass(hass)
+        scheduled_triggers: list[dict[str, Any]] = []
+
+        def track_time_change(*_args: Any, **kwargs: Any) -> MagicMock:
+            scheduled_triggers.append(kwargs)
+            return MagicMock()
+
+        with (
+            patch("custom_components.hydroqc.coordinator.base.WebUser", return_value=mock_webuser),
+            patch(
+                "custom_components.hydroqc.coordinator.base.PublicDataClient",
+                return_value=mock_public_client,
+            ),
+            patch(
+                "custom_components.hydroqc.coordinator.base.async_track_time_change",
+                side_effect=track_time_change,
+            ),
+        ):
+            with freeze_time("2025-01-01 12:34:56"):
+                HydroQcDataCoordinator(hass, mock_config_entry)
+            first_portal_trigger = scheduled_triggers[1]
+
+            with freeze_time("2025-01-01 03:21:09"):
+                HydroQcDataCoordinator(hass, mock_config_entry)
+            second_portal_trigger = scheduled_triggers[4]
+
+        assert first_portal_trigger["minute"] == second_portal_trigger["minute"]
+        assert first_portal_trigger["second"] == second_portal_trigger["second"]
+        assert 0 <= first_portal_trigger["minute"] <= 59
+        assert 0 <= first_portal_trigger["second"] <= 59
+
+    async def test_opendata_schedule_keeps_startup_time_offsets(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry: MockConfigEntry,
+        mock_webuser: MagicMock,
+        mock_public_client: MagicMock,
+    ) -> None:
+        """OpenData trigger retains its existing 15-minute/startup-time schedule."""
+        mock_config_entry.add_to_hass(hass)
+        scheduled_triggers: list[dict[str, Any]] = []
+
+        def track_time_change(*_args: Any, **kwargs: Any) -> MagicMock:
+            scheduled_triggers.append(kwargs)
+            return MagicMock()
+
+        with (
+            patch("custom_components.hydroqc.coordinator.base.WebUser", return_value=mock_webuser),
+            patch(
+                "custom_components.hydroqc.coordinator.base.PublicDataClient",
+                return_value=mock_public_client,
+            ),
+            patch(
+                "custom_components.hydroqc.coordinator.base.async_track_time_change",
+                side_effect=track_time_change,
+            ),
+            freeze_time("2025-01-01 12:34:56"),
+        ):
+            HydroQcDataCoordinator(hass, mock_config_entry)
+
+        assert scheduled_triggers[0]["minute"] == [4, 19, 34, 49]
+        assert scheduled_triggers[0]["second"] == 56
 
     async def test_coordinator_login_success(
         self,

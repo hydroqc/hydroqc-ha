@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import asyncio
 import datetime
+import hashlib
 import logging
 from typing import Any
 from zoneinfo import ZoneInfo
@@ -108,6 +109,15 @@ class HydroQcDataCoordinator(
         self._schedule_offset_minutes = _now.minute % 15
         self._schedule_offset_seconds = _now.second
 
+        # Derive a stable portal slot from the persisted entry ID, independently
+        # of when Home Assistant starts or restarts.
+        portal_schedule_offset = int.from_bytes(
+            hashlib.sha256(entry.entry_id.encode()).digest()[:4], "big"
+        ) % 3600
+        self._portal_schedule_offset_minutes, self._portal_schedule_offset_seconds = divmod(
+            portal_schedule_offset, 60
+        )
+
         # Track portal offline status to avoid log spam
         self._portal_last_offline_log: datetime.datetime | None = None
 
@@ -158,13 +168,13 @@ class HydroQcDataCoordinator(
         )
 
         # Portal: Hourly during active window (0-8h), every 3 hours otherwise
-        # Use offset based on start time to distribute API calls across users
+        # Use a stable per-entry offset to distribute API calls across users
         entry.async_on_unload(
             async_track_time_change(
                 hass,
                 self._async_scheduled_portal_update,
-                minute=self._schedule_offset_minutes,  # Random minute within the hour
-                second=self._schedule_offset_seconds,
+                minute=self._portal_schedule_offset_minutes,
+                second=self._portal_schedule_offset_seconds,
             )
         )
 

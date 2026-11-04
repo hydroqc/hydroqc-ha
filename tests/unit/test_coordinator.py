@@ -138,6 +138,38 @@ class TestHydroQcDataCoordinator:
         assert scheduled_triggers[0]["minute"] == [4, 19, 34, 49]
         assert scheduled_triggers[0]["second"] == 56
 
+    async def test_scheduled_opendata_update_skips_portal_when_not_due(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry: MockConfigEntry,
+        mock_webuser: MagicMock,
+        mock_public_client: MagicMock,
+    ) -> None:
+        """Scheduled OpenData refreshes do not call the portal before its next update."""
+        mock_config_entry.add_to_hass(hass)
+
+        with (
+            patch(
+                "custom_components.hydroqc.coordinator.base.WebUser",
+                return_value=mock_webuser,
+            ),
+            patch(
+                "custom_components.hydroqc.coordinator.base.PublicDataClient",
+                return_value=mock_public_client,
+            ),
+            patch("custom_components.hydroqc.coordinator.base.is_winter_season", return_value=True),
+        ):
+            coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+            with (
+                patch.object(coordinator, "_should_update_opendata", return_value=True),
+                patch.object(coordinator, "_should_update_portal", return_value=False),
+            ):
+                await coordinator._async_scheduled_opendata_update(datetime.now(EST_TIMEZONE))
+
+        mock_public_client.fetch_peak_data.assert_awaited_once()
+        mock_webuser.check_hq_portal_status.assert_not_awaited()
+        assert coordinator._scheduled_opendata_refresh is False
+
     async def test_coordinator_login_success(
         self,
         hass: HomeAssistant,

@@ -111,9 +111,9 @@ class HydroQcDataCoordinator(
 
         # Derive a stable portal slot from the persisted entry ID, independently
         # of when Home Assistant starts or restarts.
-        portal_schedule_offset = int.from_bytes(
-            hashlib.sha256(entry.entry_id.encode()).digest()[:4], "big"
-        ) % 3600
+        portal_schedule_offset = (
+            int.from_bytes(hashlib.sha256(entry.entry_id.encode()).digest()[:4], "big") % 3600
+        )
         self._portal_schedule_offset_minutes, self._portal_schedule_offset_seconds = divmod(
             portal_schedule_offset, 60
         )

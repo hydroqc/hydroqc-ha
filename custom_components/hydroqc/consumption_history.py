@@ -8,10 +8,12 @@ import datetime
 import logging
 import zoneinfo
 from collections.abc import Callable, Sequence
+from contextlib import AbstractAsyncContextManager, nullcontext
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.recorder import statistics
 from homeassistant.core import HomeAssistant
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.recorder import get_instance
 
 if TYPE_CHECKING:
@@ -34,6 +36,8 @@ class ConsumptionHistoryImporter:
         rate: str,
         get_statistic_id_func: Callable[[str], str],
         statistics_manager: StatisticsManager,
+        *,
+        portal_request: Callable[[], AbstractAsyncContextManager[None]] = nullcontext,
     ) -> None:
         """Initialize the consumption history importer.
 
@@ -49,6 +53,7 @@ class ConsumptionHistoryImporter:
         self._rate = rate
         self._get_statistic_id = get_statistic_id_func
         self._statistics_manager = statistics_manager
+        self._portal_request = portal_request
 
     async def import_csv_history(self, days_back: int) -> None:
         """Import historical consumption data from CSV using iterative approach.
@@ -122,7 +127,10 @@ class ConsumptionHistoryImporter:
                         (today - current_start_date).days,
                     )
 
-                    csv_data_raw = await self._contract.get_hourly_energy(current_start_date, today)
+                    async with self._portal_request():
+                        csv_data_raw = await self._contract.get_hourly_energy(
+                            current_start_date, today
+                        )
                     csv_data = list(csv_data_raw)
 
                     if len(csv_data) <= 1:  # Only header or empty
@@ -239,6 +247,8 @@ class ConsumptionHistoryImporter:
                     # Yield control to event loop to keep HA responsive
                     await asyncio.sleep(0.1)
 
+                except ConfigEntryAuthFailed:
+                    raise
                 except Exception as e:
                     _LOGGER.error(
                         "CSV import: Error in iteration %d (from %s): %s",
@@ -255,6 +265,8 @@ class ConsumptionHistoryImporter:
                 total_rows_imported,
             )
 
+        except ConfigEntryAuthFailed:
+            raise
         except asyncio.CancelledError:
             _LOGGER.info("CSV consumption history import cancelled")
             raise

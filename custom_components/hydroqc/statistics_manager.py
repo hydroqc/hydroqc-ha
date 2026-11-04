@@ -7,10 +7,12 @@ import datetime
 import logging
 import zoneinfo
 from collections.abc import Callable
+from contextlib import AbstractAsyncContextManager, nullcontext
 from typing import TYPE_CHECKING, Any
 
 from homeassistant.components.recorder import statistics
 from homeassistant.components.recorder.models import StatisticMeanType
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.helpers.recorder import get_instance
 from homeassistant.helpers.update_coordinator import UpdateFailed
 
@@ -34,6 +36,8 @@ class StatisticsManager:
         rate: str,
         get_statistic_id_func: Callable[[str], str],
         contract_name: str = "home",
+        *,
+        portal_request: Callable[[], AbstractAsyncContextManager[None]] = nullcontext,
     ) -> None:
         """Initialize the statistics manager.
 
@@ -49,6 +53,7 @@ class StatisticsManager:
         self._rate = rate
         self._get_statistic_id = get_statistic_id_func
         self._contract_name = contract_name
+        self._portal_request = portal_request
 
     async def determine_sync_start_date(
         self,
@@ -233,7 +238,8 @@ class StatisticsManager:
                     _LOGGER.info("Fetching hourly consumption for %s", current_date)
 
                     # Get hourly data for this specific date
-                    hourly_data = await self._contract.get_hourly_consumption(current_date)
+                    async with self._portal_request():
+                        hourly_data = await self._contract.get_hourly_consumption(current_date)
 
                     hourly_list = hourly_data["results"].get("listeDonneesConsoEnergieHoraire", [])
                     if not hourly_list:
@@ -254,6 +260,8 @@ class StatisticsManager:
                     # Yield control to event loop to allow HA to process other tasks
                     await asyncio.sleep(0)
 
+                except (ConfigEntryAuthFailed, UpdateFailed):
+                    raise  # Stop the date loop on auth failure or shared portal cooldown
                 except HydroQcHTTPError as err:
                     # Expected error for dates without data (e.g., today, future dates)
                     if "No data available for date" in str(err):
@@ -282,6 +290,8 @@ class StatisticsManager:
                 end_date,
             )
 
+        except (ConfigEntryAuthFailed, UpdateFailed):
+            raise
         except Exception as err:
             _LOGGER.exception("Error fetching hourly consumption")
             raise UpdateFailed(f"Failed to fetch hourly consumption: {err}") from err

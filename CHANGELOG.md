@@ -1,4 +1,4 @@
-## [0.9.0-beta.1] - 2026-11-05
+## [0.9.0] - 2026-11-05
 
 ### Ajouté
 
@@ -8,13 +8,17 @@
 
 ### Modifié
 
-- Dépendance `Hydro-Quebec-API-Wrapper` mise à jour de 4.2.6 à 4.3.1. Cette version permet de détecter l'étape de vérification sans demander de code, ce qui réserve l'envoi du code au flux de réauthentification.
+- Documentation : le déroulement de la vérification par courriel et la limite de session d'environ 24 h sont détaillés dans le README et sur [hydroqc.ca](https://hydroqc.ca).
 
 ### Corrigé
 
 - **Aucun code demandé en arrière-plan** : lorsqu'une connexion automatique tombe sur l'étape de vérification par courriel, l'intégration s'arrête là. Elle ne demande plus de code pendant les mises à jour planifiées et ne relance plus la connexion en boucle; seul le flux de réauthentification demande le code et attend la saisie de l'utilisateur.
 
 - **Session réutilisée dès la première connexion** : la session obtenue pendant la configuration initiale est maintenant conservée pour la nouvelle entrée. La première synchronisation ne redemande donc plus un second code immédiatement après l'ajout de l'intégration.
+
+- **Déclencheurs du portail étalés** : les mises à jour planifiées du portail utilisent désormais un décalage stable dérivé de l'identifiant de l'entrée plutôt que de l'heure de démarrage. Les appels sont ainsi répartis entre les utilisateurs et ne se concentrent plus après un redémarrage. (PR #155)
+
+- **Calendrier du portail respecté en mode OpenData** : une mise à jour planifiée OpenData ne déclenche plus d'appel authentifié au portail lorsque celui-ci n'est pas dû. (PR #156)
 
 ### Retiré
 

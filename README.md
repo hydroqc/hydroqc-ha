@@ -145,9 +145,22 @@ Quand Hydro-Québec refuse le mot de passe enregistré (par exemple quand le por
 
 ### Vérification par courriel
 
-Hydro-Québec peut demander un code de vérification envoyé par courriel après le mot de passe. L'intégration affiche alors une étape **Vérification par courriel** pendant la configuration initiale, la reconfiguration ou la réauthentification. Entrez le code reçu; laissez le champ vide pour recevoir un nouveau code. Le code expire après quelques minutes, auquel cas un nouveau code est envoyé automatiquement.
+Hydro-Québec peut demander un code de vérification envoyé par courriel après le mot de passe.
 
-Pour éviter cette étape à chaque redémarrage, l'intégration conserve le jeton de rafraîchissement et les témoins de connexion du portail. Le portail garde cette session environ 24 h : pendant ce délai, la connexion se fait sans mot de passe ni nouveau code; passé ce délai, une nouvelle connexion avec code de vérification est requise. Cette fonctionnalité nécessite une version de **Hydro-Quebec-API-Wrapper** qui prend en charge la vérification par courriel (4.3.0 ou plus récente) : avec une version plus ancienne, l'étape n'apparaît pas et la vérification échoue avec un message explicite.
+**Déroulement**
+
+1. Pendant la configuration initiale, une reconfiguration ou une réauthentification, l'intégration affiche l'étape **Vérification par courriel**.
+2. Entrez le code reçu par courriel. Laissez le champ vide pour demander un nouveau code. Si le code est expiré, l'intégration relance la connexion et envoie automatiquement un nouveau code.
+3. Après validation, la session du portail est conservée dans le stockage de Home Assistant (jeton de rafraîchissement et témoins de connexion Azure AD B2C). Au redémarrage, l'intégration tente d'abord une connexion silencieuse. La session obtenue pendant la configuration initiale est réutilisée par l'entrée créée : aucun second code n'est demandé juste après l'ajout.
+
+**Aucun code demandé en arrière-plan**
+
+Les connexions automatiques (mises à jour planifiées, redémarrages) s'arrêtent à l'étape de vérification : aucun code n'est demandé ni envoyé, et la connexion n'est pas relancée en boucle. Home Assistant affiche **Réauthentification requise** dans **Paramètres** → **Appareils et services**. Cliquez sur **Réauthentifier**, puis saisissez le nouveau code.
+
+**Limite de 24 h**
+
+Le portail Hydro-Québec conserve une session environ **24 heures**. Pendant ce délai, les redémarrages de Home Assistant ne demandent ni mot de passe ni code. Passé ce délai, une nouvelle connexion avec code de vérification est obligatoire : l'intégration repasse en **Réauthentification requise** et il faut saisir un nouveau code. Prévoyez donc une réauthentification environ une fois par jour.
+
 
 ### Configuration du calendrier (Obligatoire pour DPC/DCPC)
 

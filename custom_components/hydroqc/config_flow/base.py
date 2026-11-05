@@ -358,6 +358,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_update_reload_and_abort(
                 self._get_reauth_entry(),
                 data_updates={CONF_PASSWORD: self._password},
+                reason="reauth_successful",
             )
         if self._login_origin == LOGIN_ORIGIN_RECONFIGURE:
             return await self.async_step_reconfigure_contract()
@@ -840,7 +841,9 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 if self._mfa_pending:
                     return await self.async_step_mfa()
                 return self.async_update_reload_and_abort(
-                    entry, data_updates={CONF_PASSWORD: self._password}
+                    entry,
+                    data_updates={CONF_PASSWORD: self._password},
+                    reason="reauth_successful",
                 )
 
         return self.async_show_form(
@@ -890,6 +893,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_RATE: selected["rate"],
                     CONF_RATE_OPTION: selected["rate_option"],
                 },
+                reason="reconfigure_successful",
             )
 
         contract_options = [

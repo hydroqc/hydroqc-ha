@@ -6,9 +6,14 @@ import asyncio
 import datetime
 import hashlib
 import logging
+import random
+from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager, suppress
+from email.utils import parsedate_to_datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
+from aiohttp import ClientError
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import CONF_PASSWORD, CONF_USERNAME
 from homeassistant.core import HomeAssistant
@@ -98,6 +103,11 @@ class HydroQcDataCoordinator(
         self._last_opendata_update: datetime.datetime | None = None
         self._last_portal_update: datetime.datetime | None = None
         self._last_consumption_sync: datetime.datetime | None = None
+        self._portal_lock = asyncio.Lock()
+        self._portal_failures = 0
+        self._portal_retry_after: datetime.datetime | None = None
+        self._portal_auth_failed = False
+        self._consumption_resume_at: datetime.datetime | None = None
 
         # Track critical peak events signature for calendar sync optimization
         # Using signature instead of count to detect additions, removals, and time changes
@@ -348,6 +358,8 @@ class HydroQcDataCoordinator(
 
     def _should_update_portal(self) -> bool:
         """Determine if Portal should be updated based on time elapsed and window."""
+        if not self._portal_ready():
+            return False
         # First update always runs
         if self._last_portal_update is None:
             return True
@@ -369,11 +381,81 @@ class HydroQcDataCoordinator(
             logged_in = await self._webuser.login()
         except hydroqc.error.HydroQcHTTPError as err:
             # A password change request breaks the login redirect chain with a non 5xx status
-            if err.status_code is not None and err.status_code >= 500:
+            if err.status_code is None or err.status_code in {408, 429} or err.status_code >= 500:
                 raise
             raise ConfigEntryAuthFailed(f"Hydro-Québec login failed: {err}") from err
         if not logged_in:
             raise ConfigEntryAuthFailed("Hydro-Québec rejected the credentials")
+
+    def _portal_ready(self) -> bool:
+        """Check the shared cooldown without making even a portal status request."""
+        return not self._portal_auth_failed and (
+            self._portal_retry_after is None
+            or datetime.datetime.now(datetime.UTC) >= self._portal_retry_after
+        )
+
+    def _portal_backoff(self, err: Exception) -> None:
+        """Back off 15/30/60 minutes, plus jitter; never shorten Retry-After."""
+        self._portal_failures = min(self._portal_failures + 1, 3)
+        seconds: float = 900 * 2 ** (self._portal_failures - 1)
+        # Wrapper 4.2.6 drops HTTP headers. aiohttp errors can still expose them.
+        headers = getattr(err, "headers", None)
+        retry_after = headers.get("Retry-After") if headers else None
+        now = datetime.datetime.now(datetime.UTC)
+        if retry_after:
+            try:
+                seconds = max(seconds, int(retry_after))
+            except ValueError:
+                with suppress(TypeError, ValueError, OverflowError):
+                    seconds = max(
+                        seconds, (parsedate_to_datetime(retry_after) - now).total_seconds()
+                    )
+        self._portal_retry_after = now + datetime.timedelta(seconds=seconds + random.uniform(0, 60))
+        _LOGGER.warning(
+            "[Portal] Temporary failure; next attempt no earlier than %s", self._portal_retry_after
+        )
+
+    @asynccontextmanager
+    async def _async_portal_request(self, *, consumption: bool = False) -> AsyncIterator[None]:
+        """Serialize portal work and recheck the same cooldown on every network path."""
+        if consumption and self._consumption_resume_at:
+            delay = (
+                self._consumption_resume_at - datetime.datetime.now(datetime.UTC)
+            ).total_seconds()
+            if delay > 0:
+                await asyncio.sleep(delay)  # Background sync only, never setup
+        async with self._portal_lock:
+            if self._portal_auth_failed:
+                raise ConfigEntryAuthFailed("Hydro-Québec credentials need reauthentication")
+            if not self._portal_ready() or (consumption and self._portal_failures):
+                raise UpdateFailed("Portal cooldown; waiting for a successful portal refresh")
+            try:
+                yield
+            except ConfigEntryAuthFailed:
+                self._portal_auth_failed = True
+                if consumption:
+                    self.entry.async_start_reauth(self.hass)
+                raise
+            except (hydroqc.error.HydroQcHTTPError, ClientError, TimeoutError) as err:
+                # Wrapper 4.2.6 uses this error for unpublished days, not an outage.
+                if consumption and "No data available for date" in str(err):
+                    raise
+                status = getattr(err, "status_code", getattr(err, "status", None))
+                if status in {401, 403}:
+                    self._portal_auth_failed = True
+                    if consumption:
+                        self.entry.async_start_reauth(self.hass)
+                    raise ConfigEntryAuthFailed(
+                        f"Hydro-Québec authentication failed: {err}"
+                    ) from err
+                if isinstance(err, hydroqc.error.HydroQcHTTPError) and (
+                    err.status_code is not None
+                    and err.status_code not in {408, 429}
+                    and err.status_code < 500
+                ):
+                    raise
+                self._portal_backoff(err)
+                raise UpdateFailed(f"Temporary portal failure: {err}") from err
 
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Hydro-Québec API.
@@ -442,13 +524,34 @@ class HydroQcDataCoordinator(
                 raise UpdateFailed("No new data available")
             return data
 
+        # OpenData-triggered refreshes must also respect the portal cooldown.
+        if self._portal_auth_failed:
+            raise ConfigEntryAuthFailed("Hydro-Québec credentials need reauthentication")
+        if not self._portal_ready():
+            if not data_fetched:
+                raise UpdateFailed("Portal cooldown and no new data")
+            return data
+
         # Portal mode: fetch contract data
+        try:
+            async with self._async_portal_request():
+                return await self._async_update_portal_data(data, data_fetched)
+        except ConfigEntryAuthFailed:
+            raise
+        except Exception as err:
+            raise UpdateFailed(f"Error fetching Hydro-Québec data: {err}") from err
+
+    async def _async_update_portal_data(
+        self, data: dict[str, Any], data_fetched: bool
+    ) -> dict[str, Any]:
+        """Refresh authenticated data while holding the shared portal guard."""
         try:
             # Check portal status before attempting updates
             if self._webuser:
                 portal_available = await self._webuser.check_hq_portal_status()
                 self._portal_available = portal_available  # Track for sensor
                 if not portal_available:
+                    self._portal_backoff(hydroqc.error.HydroQcHTTPError("Portal offline", 503))
                     now = datetime.datetime.now(ZoneInfo("America/Toronto"))
                     # Log warning once per hour to avoid spam
                     if (
@@ -517,13 +620,18 @@ class HydroQcDataCoordinator(
                 data_fetched = True
 
                 self._last_portal_update = datetime.datetime.now(ZoneInfo("America/Toronto"))
+                if self._portal_failures:
+                    self._consumption_resume_at = datetime.datetime.now(
+                        datetime.UTC
+                    ) + datetime.timedelta(seconds=random.uniform(30, 120))
+                self._portal_failures = 0
+                self._portal_retry_after = None
                 _LOGGER.debug("[Portal] Successfully fetched authenticated contract data")
 
         except ConfigEntryAuthFailed:
             raise
-        except hydroqc.error.HydroQcHTTPError as err:
-            _LOGGER.error("HTTP error fetching Hydro-Québec data: %s", err)
-            raise UpdateFailed(f"Error fetching Hydro-Québec data: {err}") from err
+        except (hydroqc.error.HydroQcHTTPError, ClientError, TimeoutError):
+            raise  # The shared guard records temporary failures before HA handles them
         except Exception as err:
             _LOGGER.error("Unexpected error fetching data: %s", err)
             raise UpdateFailed(f"Unexpected error: {err}") from err
@@ -545,7 +653,7 @@ class HydroQcDataCoordinator(
         if (
             self.is_portal_mode
             and self._contract
-            and hasattr(self, "_first_refresh_done")
+            and self._first_refresh_done
             and enable_consumption_sync
         ):
             # Check if enough time has elapsed (hourly)
@@ -555,7 +663,7 @@ class HydroQcDataCoordinator(
                 or (now - self._last_consumption_sync).total_seconds() >= 3600
             )
 
-            if should_sync:
+            if should_sync and (self._regular_sync_task is None or self._regular_sync_task.done()):
                 self._regular_sync_task = asyncio.create_task(
                     self._async_regular_consumption_sync()
                 )

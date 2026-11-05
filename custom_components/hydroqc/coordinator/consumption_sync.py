@@ -9,6 +9,7 @@ import datetime
 import logging
 from typing import TYPE_CHECKING
 
+from homeassistant.exceptions import ConfigEntryAuthFailed
 from homeassistant.util import slugify
 
 from ..const import CONF_CONTRACT_NAME
@@ -58,7 +59,12 @@ class ConsumptionSyncMixin:
         if self._statistics_manager is None:
             contract_name = self.entry.data.get(CONF_CONTRACT_NAME, "home")
             self._statistics_manager = StatisticsManager(
-                self.hass, self._contract, self._rate, self._get_statistic_id, contract_name
+                self.hass,
+                self._contract,
+                self._rate,
+                self._get_statistic_id,
+                contract_name,
+                portal_request=lambda: self._async_portal_request(consumption=True),
             )
         if self._history_importer is None and self._contract is not None:
             self._history_importer = ConsumptionHistoryImporter(
@@ -67,6 +73,7 @@ class ConsumptionSyncMixin:
                 self._rate,
                 self._get_statistic_id,
                 self._statistics_manager,
+                portal_request=lambda: self._async_portal_request(consumption=True),
             )
 
     def _is_near_billing_period_change(self) -> bool:
@@ -116,18 +123,9 @@ class ConsumptionSyncMixin:
             _LOGGER.debug("Consumption periods not available yet, skipping consumption sync")
             return
 
-        # Check portal status before attempting sync
-        if self._webuser:
-            try:
-                portal_available = await self._webuser.check_hq_portal_status()
-                if not portal_available:
-                    _LOGGER.warning("[Portal] Portal offline, skipping consumption sync")
-                    return
-            except Exception as err:
-                _LOGGER.warning(
-                    "[Portal] Failed to check portal status: %s, skipping consumption sync", err
-                )
-                return
+        # A normal refresh must recover first; individual requests recheck under the lock.
+        if not self._portal_ready() or self._portal_failures:
+            return
 
         # Skip if CSV import is running
         if self.is_consumption_history_syncing:
@@ -152,6 +150,8 @@ class ConsumptionSyncMixin:
                 _LOGGER.debug("Starting regular consumption statistics sync (last 24h)")
                 start_date = datetime.date.today() - datetime.timedelta(days=1)
                 await self.async_fetch_hourly_consumption(start_date, datetime.date.today())
+        except ConfigEntryAuthFailed:
+            raise
         except Exception as err:
             # Check if error might be due to billing period change
             if self._is_near_billing_period_change():
@@ -215,6 +215,8 @@ class ConsumptionSyncMixin:
             else:
                 # Statistics are up to date, nothing to do
                 _LOGGER.info("Consumption statistics are up to date, no sync needed")
+        except ConfigEntryAuthFailed:
+            raise
         except Exception as err:
             # Check if error might be due to billing period change
             if self._is_near_billing_period_change():
@@ -253,6 +255,8 @@ class ConsumptionSyncMixin:
                 await self._history_importer.import_csv_history(days_back)
                 _LOGGER.info("CSV import completed, running initial sync to get recent data")
                 await self._async_initial_sync()
+            except ConfigEntryAuthFailed:
+                raise
             except Exception as err:
                 _LOGGER.error("Error during CSV import or follow-up sync: %s", err)
 

@@ -143,6 +143,10 @@ Les entités gardent leur `entity_id` et l'historique de consommation est conser
 
 Quand Hydro-Québec refuse le mot de passe enregistré (par exemple quand le portail exige un nouveau mot de passe), l'intégration cesse ses mises à jour et Home Assistant affiche **Réauthentification requise** dans **Paramètres** → **Appareils et services**. Changez d'abord le mot de passe sur le site d'Hydro-Québec, puis cliquez sur **Réauthentifier** et entrez le nouveau.
 
+En cas de panne temporaire du portail (statut hors ligne, erreur réseau, HTTP 408/429/5xx), les tentatives sont espacées de **15, puis 30, puis 60 minutes**, avec 0–60 secondes aléatoires supplémentaires. Ce délai minimum est partagé par les mises à jour et la consommation (y compris les imports historiques) : les déclencheurs OpenData continuent normalement, mais ne contournent pas cette protection. Après le délai, le prochain déclencheur habituel réessaie le rafraîchissement du portail ; après succès, la consommation reprend avec 30–120 secondes de décalage. Les erreurs d'identifiants demandent une réauthentification, sans nouvelle tentative automatique.
+
+Limites : protection en mémoire par entrée, réinitialisée au rechargement/redémarrage ; pas de délai ajouté au premier accès portail pendant le démarrage de Home Assistant. `Retry-After` est respecté quand les en-têtes sont accessibles, mais le wrapper **4.2.6** ne les transmet pas dans ses erreurs HTTP. Un import interrompu n'est pas repris intégralement automatiquement : la synchronisation habituelle reprend les données récentes ; relancez le service d'historique pour les données plus anciennes.
+
 ### Configuration du calendrier (Obligatoire pour DPC/DCPC)
 
 Le calendrier est **obligatoire** pour les tarifs DPC (Flex-D) et DCPC (Crédits hivernaux). Les capteurs de pointe dépendent du calendrier pour fonctionner.

@@ -12,6 +12,10 @@
 
 ### Corrigé
 
+- **Aucun code demandé en arrière-plan** : lorsqu'une connexion automatique tombe sur l'étape de vérification par courriel, l'intégration s'arrête là. Elle ne demande plus de code pendant les mises à jour planifiées et ne relance plus la connexion en boucle; seul le flux de réauthentification demande le code et attend la saisie de l'utilisateur.
+
+- **Session réutilisée dès la première connexion** : la session obtenue pendant la configuration initiale est maintenant conservée pour la nouvelle entrée. La première synchronisation ne redemande donc plus un second code immédiatement après l'ajout de l'intégration.
+
 ### Retiré
 
 ---

@@ -55,7 +55,7 @@ from ..const import (
     DEFAULT_PREHEAT_DURATION,
     DOMAIN,
 )
-from ..session import async_save_session as save_session_state
+from ..session import async_save_session as save_session_state, stage_pending_session
 from .helpers import SECTOR_MAPPING, fetch_available_sectors, fetch_offers_for_sector
 from .options import HydroQcOptionsFlow
 
@@ -111,6 +111,9 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._available_rates: list[dict[str, str]] = []
         self._login_origin: str = LOGIN_ORIGIN_USER
         self._mfa_pending: bool = False
+        # Session captured during the initial setup: the config entry does not
+        # exist yet, so it is written once HA creates it.
+        self._pending_session_state: dict[str, Any] | None = None
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the initial step - choose auth mode."""
@@ -285,7 +288,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             await webuser.close_session()
 
     async def _async_save_session(self) -> None:
-        """Persist the session of the entry being reconfigured or reauthenticated.
+        """Persist the session of the login that just succeeded.
 
         Without it the next start would restore the session that just expired
         and could ask for another verification code immediately.
@@ -298,8 +301,6 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             entry = self._get_reauth_entry()
         elif self._login_origin == LOGIN_ORIGIN_RECONFIGURE:
             entry = self._get_reconfigure_entry()
-        if entry is None:
-            return
 
         export_state = getattr(self._webuser, "export_session_state", None)
         if not callable(export_state):
@@ -311,8 +312,20 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             _LOGGER.debug("Could not export the Hydro-Québec session", exc_info=True)
             return
 
-        if isinstance(state, dict):
-            await save_session_state(self.hass, entry, state)
+        if not isinstance(state, dict):
+            return
+
+        if entry is None:
+            # Initial setup: HA has not created the config entry yet. Keep the
+            # state until async_step_import_history can write it for the entry,
+            # otherwise the coordinator logs in a second time right after setup
+            # and asks for another verification code.
+            if not state.get("refresh_token") and not state.get("cookies"):
+                return
+            self._pending_session_state = state
+            return
+
+        await save_session_state(self.hass, entry, state)
 
     async def _async_request_code(self) -> bool:
         """Ask Hydro-Québec for a new verification code."""
@@ -560,6 +573,17 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Add calendar configuration if provided
             if calendar_entity_id:
                 entry_data[CONF_CALENDAR_ENTITY_ID] = calendar_entity_id
+
+            # Stage the session under the contract id: the coordinator takes it
+            # over once Home Assistant created the entry, so the first refresh
+            # does not log in (and ask for a code) a second time.
+            if self._pending_session_state is not None:
+                stage_pending_session(
+                    self.hass,
+                    self._selected_contract["contract_id"],
+                    self._pending_session_state,
+                )
+                self._pending_session_state = None
 
             return self.async_create_entry(
                 title=f"{self._contract_name} ({self._selected_contract['rate']}{self._selected_contract['rate_option']})",

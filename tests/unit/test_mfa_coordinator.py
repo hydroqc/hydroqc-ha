@@ -7,11 +7,16 @@ from unittest.mock import AsyncMock, MagicMock, patch
 import pytest
 from homeassistant.core import HomeAssistant
 from homeassistant.exceptions import ConfigEntryAuthFailed
+from homeassistant.helpers.update_coordinator import UpdateFailed
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 import custom_components.hydroqc.coordinator.base as coordinator_module
 from custom_components.hydroqc.coordinator import HydroQcDataCoordinator
-from custom_components.hydroqc.session import async_load_session
+from custom_components.hydroqc.session import (
+    async_load_session,
+    stage_pending_session,
+    take_pending_session,
+)
 
 
 class HydroQcMFAResult:
@@ -61,6 +66,82 @@ async def test_login_requiring_a_code_raises_auth_failed(
     with pytest.raises(ConfigEntryAuthFailed, match="verification code"):
         await coordinator._async_login()
 
+    assert coordinator._reauth_required is True
+    mock_webuser.request_mfa_code.assert_not_awaited()
+
+
+async def test_background_login_does_not_request_a_code_with_the_switch(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_webuser: MagicMock,
+    mock_public_client: MagicMock,
+) -> None:
+    """Wrappers exposing the opt-out receive it instead of sending a code."""
+    mock_config_entry.add_to_hass(hass)
+
+    async def fake_login(*, send_mfa_code: bool = True) -> HydroQcMFAResult:
+        if send_mfa_code:
+            await mock_webuser.request_mfa_code()
+        return MFA_REQUIRED
+
+    mock_webuser.login = fake_login
+    coordinator = _build_coordinator(hass, mock_config_entry, mock_webuser, mock_public_client)
+
+    with pytest.raises(ConfigEntryAuthFailed, match="verification code"):
+        await coordinator._async_login()
+
+    mock_webuser.request_mfa_code.assert_not_awaited()
+
+
+async def test_background_login_suppresses_the_code_on_older_wrappers(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_webuser: MagicMock,
+    mock_public_client: MagicMock,
+) -> None:
+    """A wrapper without the opt-out still must not send a code in the background."""
+    mock_config_entry.add_to_hass(hass)
+
+    async def fake_login() -> HydroQcMFAResult:
+        await mock_webuser.request_mfa_code()
+        return MFA_REQUIRED
+
+    mock_webuser.login = fake_login
+    coordinator = _build_coordinator(hass, mock_config_entry, mock_webuser, mock_public_client)
+
+    with pytest.raises(ConfigEntryAuthFailed, match="verification code"):
+        await coordinator._async_login()
+
+    mock_webuser.request_mfa_code.assert_not_awaited()
+    # The real method is restored once the login returns.
+    assert isinstance(mock_webuser.request_mfa_code, AsyncMock)
+
+
+async def test_updates_stop_while_a_code_is_pending(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_webuser: MagicMock,
+    mock_public_client: MagicMock,
+) -> None:
+    """Once a code is required, scheduled updates no longer touch the portal."""
+    mock_config_entry.add_to_hass(hass)
+    mock_webuser.session_expired = True
+    mock_webuser.login = AsyncMock(return_value=MFA_REQUIRED)
+    coordinator = _build_coordinator(hass, mock_config_entry, mock_webuser, mock_public_client)
+
+    with pytest.raises(ConfigEntryAuthFailed, match="verification code"):
+        await coordinator._async_update_data()
+
+    mock_webuser.login.reset_mock()
+    mock_webuser.check_hq_portal_status.reset_mock()
+
+    with pytest.raises(UpdateFailed, match="verification code"):
+        await coordinator._async_update_data()
+
+    mock_webuser.login.assert_not_awaited()
+    mock_webuser.request_mfa_code.assert_not_awaited()
+    mock_webuser.check_hq_portal_status.assert_not_awaited()
+
 
 async def test_mfa_error_during_update_raises_auth_failed(
     hass: HomeAssistant,
@@ -80,6 +161,32 @@ async def test_mfa_error_during_update_raises_auth_failed(
 
     with pytest.raises(ConfigEntryAuthFailed, match="verification code"):
         await coordinator._async_update_data()
+
+
+async def test_initial_setup_session_is_adopted_on_the_first_start(
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_webuser: MagicMock,
+    mock_public_client: MagicMock,
+) -> None:
+    """The session staged by the setup flow is reused instead of logging in."""
+    mock_config_entry.add_to_hass(hass)
+    stage_pending_session(
+        hass,
+        "contract123",
+        {"refresh_token": "setup-token", "cookies": [{"key": "x-ms-cpim-sso"}]},
+    )
+    coordinator = _build_coordinator(hass, mock_config_entry, mock_webuser, mock_public_client)
+
+    await coordinator.async_restore_session()
+
+    assert coordinator._session_restored is True
+    assert mock_webuser.import_session_state.call_args[0][0]["refresh_token"] == "setup-token"
+    # The pending copy is consumed, and the session is now stored for the entry.
+    assert take_pending_session(hass, "contract123") is None
+    stored = await async_load_session(hass, mock_config_entry)
+    assert stored is not None
+    assert stored["refresh_token"] == "setup-token"
 
 
 async def test_stored_session_is_reused_on_restart(

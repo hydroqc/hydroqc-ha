@@ -19,7 +19,7 @@ from custom_components.hydroqc.const import (
     CONF_MFA_CODE,
     DOMAIN,
 )
-from custom_components.hydroqc.session import async_load_session
+from custom_components.hydroqc.session import async_load_session, take_pending_session
 
 
 class HydroQcMFAResult:
@@ -102,6 +102,40 @@ async def test_setup_asks_for_the_verification_code(
     assert result["step_id"] == "select_contract"
     # The temporary client is closed once the login is complete.
     mock_webuser.close_session.assert_awaited()
+
+
+async def test_initial_setup_persists_the_session(
+    hass: HomeAssistant,
+    mock_webuser: MagicMock,
+    mock_setup_entry: AsyncMock,
+) -> None:
+    """The session obtained during setup is reused by the new entry."""
+    mock_webuser.login = AsyncMock(return_value=MFA_REQUIRED)
+    mock_webuser.submit_mfa_code = AsyncMock(return_value=SUCCESS)
+    mock_webuser.export_session_state = MagicMock(
+        return_value={"refresh_token": "setup-token", "cookies": []}
+    )
+
+    result = await _start_account_flow(hass, mock_webuser)
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {CONF_MFA_CODE: "123456"}
+    )
+    assert result["step_id"] == "select_contract"
+
+    result = await hass.config_entries.flow.async_configure(
+        result["flow_id"], {"contract": "test_contract_id"}
+    )
+    assert result["step_id"] == "import_history"
+
+    result = await hass.config_entries.flow.async_configure(result["flow_id"], {})
+    await hass.async_block_till_done()
+
+    assert result["type"] is FlowResultType.CREATE_ENTRY
+    # The entry does not exist while the code is entered: the flow stages the
+    # session under the contract id for the coordinator to adopt.
+    state = take_pending_session(hass, "test_contract_id")
+    assert state is not None
+    assert state["refresh_token"] == "setup-token"
 
 
 async def test_empty_code_requests_a_new_one(

@@ -14,6 +14,7 @@ integration.
 
 from __future__ import annotations
 
+import inspect
 import logging
 from typing import Any
 
@@ -89,6 +90,50 @@ async def async_try_silent_login(webuser: Any) -> Any:
         return None
     status: Any = await method()
     return status
+
+
+def _accepts_argument(method: Any, name: str) -> bool:
+    """Tell whether ``method`` explicitly accepts the keyword ``name``.
+
+    Mocks expose ``(*args, **kwargs)`` and wrapper versions differ, so the
+    signature is the only reliable signal: passing an unknown keyword to a real
+    ``login`` would raise ``TypeError``.
+    """
+    try:
+        parameters = inspect.signature(method).parameters
+    except (TypeError, ValueError):
+        return False
+    return name in parameters
+
+
+async def async_login(webuser: Any, *, send_mfa_code: bool = True) -> Any:
+    """Run the portal login, optionally without requesting a verification code.
+
+    Background logins must not send e-mail codes: only the config flow may ask
+    for one. Wrappers that expose the ``send_mfa_code`` switch receive it;
+    older wrappers (4.3.0) always request a code inside ``login``, so the
+    request is neutralized for the duration of the call.
+    """
+    method = getattr(webuser, "login", None)
+    if not callable(method):
+        return None
+    if send_mfa_code or not supports_mfa(webuser):
+        return await method()
+    if _accepts_argument(method, "send_mfa_code"):
+        return await method(send_mfa_code=False)
+
+    # Compatibility path: the wrapper predates the opt-out. Replace the bound
+    # request with a no-op for this login only, then restore it.
+    original = webuser.request_mfa_code
+
+    async def _skip_request(*_args: Any, **_kwargs: Any) -> bool:
+        return False
+
+    webuser.request_mfa_code = _skip_request
+    try:
+        return await method()
+    finally:
+        webuser.request_mfa_code = original
 
 
 async def async_request_mfa_code(webuser: Any) -> bool:

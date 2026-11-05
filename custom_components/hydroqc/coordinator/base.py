@@ -104,6 +104,9 @@ class HydroQcDataCoordinator(
         # Track first refresh completion (set by __init__.py after setup)
         self._first_refresh_done: bool = False
 
+        # True only while handling a scheduled OpenData refresh
+        self._scheduled_opendata_refresh = False
+
         # Track last peak update hour to ensure hourly updates
         self._last_peak_update_hour: int | None = None
 
@@ -263,7 +266,11 @@ class HydroQcDataCoordinator(
         """
         if self._should_update_opendata():
             _LOGGER.debug("[OpenData] Scheduled update trigger - fetching data")
-            await self.async_request_refresh()
+            self._scheduled_opendata_refresh = True
+            try:
+                await self.async_request_refresh()
+            finally:
+                self._scheduled_opendata_refresh = False
         else:
             _LOGGER.debug("[OpenData] Scheduled update skipped (not needed)")
 
@@ -559,6 +566,12 @@ class HydroQcDataCoordinator(
                 raise UpdateFailed("No new data available")
             return data
 
+        # Skip authenticated portal calls on OpenData schedule unless Portal is due.
+        portal_user = self._webuser
+        if self._scheduled_opendata_refresh and not self._should_update_portal():
+            _LOGGER.debug("[Portal] Scheduled update skipped (not needed)")
+            portal_user = None
+
         # Portal mode: fetch contract data
         if self._reauth_required:
             # The portal is waiting for a code the user has to enter in the
@@ -571,8 +584,8 @@ class HydroQcDataCoordinator(
 
         try:
             # Check portal status before attempting updates
-            if self._webuser:
-                portal_available = await self._webuser.check_hq_portal_status()
+            if portal_user:
+                portal_available = await portal_user.check_hq_portal_status()
                 self._portal_available = portal_available  # Track for sensor
                 if not portal_available:
                     now = datetime.datetime.now(ZoneInfo("America/Toronto"))
@@ -592,16 +605,16 @@ class HydroQcDataCoordinator(
                     return data
 
             # Login if session expired
-            if self._webuser and self._webuser.session_expired:
+            if portal_user and portal_user.session_expired:
                 _LOGGER.debug("Session expired, re-authenticating")
                 await self._async_login()
 
             # Fetch contract hierarchy
-            if self._webuser:
-                await self._webuser.get_info()
-                await self._webuser.fetch_customers_info()
+            if portal_user:
+                await portal_user.get_info()
+                await portal_user.fetch_customers_info()
 
-                self._customer = self._webuser.get_customer(self._customer_id)
+                self._customer = portal_user.get_customer(self._customer_id)
                 await self._customer.get_info()
 
                 self._account = self._customer.get_account(self._account_id)

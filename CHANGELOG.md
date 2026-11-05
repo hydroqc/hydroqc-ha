@@ -1,12 +1,14 @@
-## [Non publié]
+## [0.9.0-beta.1] - 2026-11-05
 
 ### Ajouté
 
-- **Vérification par courriel (MFA)** : Hydro-Québec peut maintenant demander un code envoyé par courriel après le mot de passe. L'intégration reconnaît cette étape et affiche un formulaire de vérification pendant la configuration initiale, la reconfiguration et la réauthentification. Un champ vide demande l'envoi d'un nouveau code; un code expiré relance la connexion automatiquement. La session du portail dure environ 24 h : ensuite, une nouvelle connexion avec code de vérification est requise. Cette prise en charge nécessite `Hydro-Quebec-API-Wrapper>=4.3.0`; avec la version épinglée actuelle (4.2.6), l'étape n'est simplement jamais déclenchée.
+- **Vérification par courriel (MFA)** : Hydro-Québec peut maintenant demander un code envoyé par courriel après le mot de passe. L'intégration reconnaît cette étape et affiche un formulaire de vérification pendant la configuration initiale, la reconfiguration et la réauthentification. Un champ vide demande l'envoi d'un nouveau code; un code expiré relance la connexion automatiquement. La session du portail dure environ 24 h : ensuite, une nouvelle connexion avec code de vérification est requise.
 
 - **Réutilisation de la session du portail** : le jeton de rafraîchissement et les témoins de connexion Azure AD B2C sont conservés entre les redémarrages de Home Assistant (stockage `.storage`), ce qui permet de se reconnecter sans mot de passe ni nouveau code pendant environ 24 h. Une connexion silencieuse est tentée en premier; en cas d'échec, la connexion normale reprend.
 
 ### Modifié
+
+- Dépendance `Hydro-Quebec-API-Wrapper` mise à jour de 4.2.6 à 4.3.0, première version qui gère la vérification par courriel.
 
 ### Corrigé
 

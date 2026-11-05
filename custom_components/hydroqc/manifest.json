@@ -8,6 +8,6 @@
   "integration_type": "service",
   "iot_class": "cloud_polling",
   "issue_tracker": "https://github.com/hydroqc/hydroqc-ha/issues",
-  "requirements": ["Hydro-Quebec-API-Wrapper==4.2.6"],
+  "requirements": ["Hydro-Quebec-API-Wrapper==4.3.0"],
   "version": "0.7.0"
 }

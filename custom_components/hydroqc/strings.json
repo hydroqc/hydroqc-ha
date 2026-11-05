@@ -13,7 +13,7 @@
       },
       "account": {
         "title": "Portal Mode - Account Login",
-        "description": "Enter your Hydro-Québec credentials",
+        "description": "Enter your Hydro-Québec credentials. The portal may ask for a one-time e-mail code; the session then lasts about 24 hours and a new code is required after that.",
         "data": {
           "username": "Username (Email)",
           "password": "Password",
@@ -91,7 +91,7 @@
       },
       "reconfigure": {
         "title": "Reconfigure Portal Account",
-        "description": "Update the Hydro-Québec credentials, then select the contract again (currently {contract_id}). The contract name, entities and history are kept.",
+        "description": "Update the Hydro-Québec credentials, then select the contract again (currently {contract_id}). The contract name, entities and history are kept. The new session lasts about 24 hours; a new e-mail code is required after that.",
         "data": {
           "username": "Username (Email)",
           "password": "Password"
@@ -113,9 +113,19 @@
       },
       "reauth_confirm": {
         "title": "Reauthenticate Portal Account",
-        "description": "Hydro-Québec refused the password for {username}. If the portal asked you to change it, set the new password on the Hydro-Québec website first, then enter it here.",
+        "description": "Hydro-Québec refused the password for {username}, or the 24-hour portal session expired. Enter the password; if the portal asks for a verification code, the next step will request it. If the portal asked you to change it, set the new password on the Hydro-Québec website first, then enter it here.",
         "data": {
           "password": "Password"
+        }
+      },
+      "mfa": {
+        "title": "E-mail Verification",
+        "description": "Hydro-Québec sent a verification code to {email}. Enter it below. Leave the field empty to receive a new code. The session obtained lasts about 24 hours; after that Hydro-Québec will ask for a new code.",
+        "data": {
+          "mfa_code": "Verification Code"
+        },
+        "data_description": {
+          "mfa_code": "The one-time code from the Hydro-Québec e-mail"
         }
       }
     },
@@ -125,7 +135,12 @@
       "no_contracts": "No contracts found for this account",
       "portal_unavailable": "Hydro-Québec portal is currently unavailable. Please try again later.",
       "portal_maintenance": "Hydro-Québec portal is under maintenance (Error 500). Please try again in a few hours.",
-      "unknown": "Unexpected error occurred"
+      "unknown": "Unexpected error occurred",
+      "invalid_mfa_code": "The verification code was refused. Check the code and try again.",
+      "mfa_expired": "The verification step expired. Try again to receive a new code.",
+      "mfa_code_resent": "A new verification code was sent to {email}.",
+      "mfa_code_resend_failed": "Could not request a new code automatically. Check that {email} is the right address and try again in a moment.",
+      "mfa_unsupported": "The installed Hydro-Quebec API Wrapper does not support e-mail verification. Update it and restart Home Assistant."
     },
     "abort": {
       "already_configured": "This contract is already configured",

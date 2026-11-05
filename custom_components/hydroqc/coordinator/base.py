@@ -33,6 +33,13 @@ try:
 except AttributeError:
     HYDROQC_VERSION = "unknown"
 
+from ..auth import (
+    LOGIN_MFA_REQUIRED,
+    LOGIN_SUCCESS,
+    MFA_ERRORS,
+    async_try_silent_login,
+    login_outcome,
+)
 from ..const import (
     AUTH_MODE_OPENDATA,
     AUTH_MODE_PORTAL,
@@ -49,6 +56,7 @@ from ..const import (
     NEW_CONTRACT_PERIODS_RETRY_HOURS,
 )
 from ..public_data_client import PublicDataClient
+from ..session import async_load_session, async_save_session as save_session_state
 from .calendar_sync import CalendarSyncMixin
 from .consumption_sync import ConsumptionSyncMixin
 from .sensor_data import SensorDataMixin
@@ -126,6 +134,11 @@ class HydroQcDataCoordinator(
 
         # Set while a new contract has no consumption periods yet (see NEW_CONTRACT_GRACE_DAYS)
         self._periods_retry_after: datetime.datetime | None = None
+
+        # Set when the session persisted at the previous run was restored; the
+        # next login then tries it first instead of asking for the password (and
+        # a new e-mail verification code).
+        self._session_restored: bool = False
 
         # Initialize webuser if in portal mode
         if self._auth_mode == AUTH_MODE_PORTAL:
@@ -361,18 +374,89 @@ class HydroQcDataCoordinator(
             return elapsed >= 3600  # 60 minutes
         return elapsed >= 10800  # 180 minutes
 
+    async def async_restore_session(self) -> None:
+        """Restore the session persisted at the previous run.
+
+        Called before the first refresh: while the refresh token or the Azure
+        AD B2C single sign-on cookie is still valid the portal issues new tokens
+        without a password nor a new e-mail verification code.
+        """
+        if self._webuser is None:
+            return
+
+        state = await async_load_session(self.hass, self.entry)
+        if not state:
+            return
+
+        import_state = getattr(self._webuser, "import_session_state", None)
+        if not callable(import_state):
+            return
+
+        try:
+            import_state(state)
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.warning("Ignoring the stored Hydro-Québec session", exc_info=True)
+            return
+
+        self._session_restored = True
+        _LOGGER.debug("[Portal] Restored the stored session of %s", self.contract_name)
+
+    async def _async_persist_session(self) -> None:
+        """Store the current session so a restart can skip the login."""
+        if self._webuser is None:
+            return
+
+        export_state = getattr(self._webuser, "export_session_state", None)
+        if not callable(export_state):
+            return
+
+        try:
+            state = export_state()
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.debug("[Portal] Could not export the session", exc_info=True)
+            return
+
+        if isinstance(state, dict):
+            await save_session_state(self.hass, self.entry, state)
+
     async def _async_login(self) -> None:
         """Log in, raising ConfigEntryAuthFailed when Hydro-Québec rejects the credentials."""
         assert self._webuser is not None
+
+        # A session restored from the previous run may still be trusted by the
+        # portal: try it once before asking for the password again.
+        if self._session_restored:
+            self._session_restored = False
+            try:
+                silent = await async_try_silent_login(self._webuser)
+            except Exception as err:  # pylint: disable=broad-except
+                _LOGGER.debug("[Portal] Silent login failed: %s", err)
+            else:
+                if login_outcome(silent) == LOGIN_SUCCESS:
+                    _LOGGER.debug("[Portal] Reused the stored Hydro-Québec session")
+                    return
+
         try:
-            # login() returns False instead of raising when the credentials are refused
-            logged_in = await self._webuser.login()
+            # login() returns a status instead of raising when the credentials are refused
+            status = await self._webuser.login()
+        except MFA_ERRORS as err:
+            raise ConfigEntryAuthFailed(
+                "Hydro-Québec asks for an e-mail verification code: reauthenticate "
+                "the integration to enter it"
+            ) from err
         except hydroqc.error.HydroQcHTTPError as err:
             # A password change request breaks the login redirect chain with a non 5xx status
             if err.status_code is not None and err.status_code >= 500:
                 raise
             raise ConfigEntryAuthFailed(f"Hydro-Québec login failed: {err}") from err
-        if not logged_in:
+
+        outcome = login_outcome(status)
+        if outcome == LOGIN_MFA_REQUIRED:
+            raise ConfigEntryAuthFailed(
+                "Hydro-Québec sent an e-mail verification code: reauthenticate the "
+                "integration to enter it"
+            )
+        if outcome != LOGIN_SUCCESS:
             raise ConfigEntryAuthFailed("Hydro-Québec rejected the credentials")
 
     async def _async_update_data(self) -> dict[str, Any]:
@@ -518,9 +602,17 @@ class HydroQcDataCoordinator(
 
                 self._last_portal_update = datetime.datetime.now(ZoneInfo("America/Toronto"))
                 _LOGGER.debug("[Portal] Successfully fetched authenticated contract data")
+                # Keep the refresh token and the B2C cookies up to date so a
+                # restart can skip the login (and a new verification code).
+                await self._async_persist_session()
 
         except ConfigEntryAuthFailed:
             raise
+        except MFA_ERRORS as err:
+            raise ConfigEntryAuthFailed(
+                "Hydro-Québec asks for an e-mail verification code: reauthenticate "
+                "the integration to enter it"
+            ) from err
         except hydroqc.error.HydroQcHTTPError as err:
             _LOGGER.error("HTTP error fetching Hydro-Québec data: %s", err)
             raise UpdateFailed(f"Error fetching Hydro-Québec data: {err}") from err

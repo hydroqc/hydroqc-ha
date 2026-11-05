@@ -71,6 +71,7 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         _LOGGER.info("Migrated config: removed deprecated 'update_interval' option")
 
     coordinator = HydroQcDataCoordinator(hass, entry)
+    await coordinator.async_restore_session()
 
     try:
         await coordinator.async_config_entry_first_refresh()

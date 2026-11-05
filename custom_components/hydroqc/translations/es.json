@@ -13,7 +13,7 @@
       },
       "account": {
         "title": "Modo Portal - Inicio de sesión",
-        "description": "Ingrese sus credenciales de Hydro-Québec",
+        "description": "Ingrese sus credenciales de Hydro-Québec. El portal puede solicitar un código de verificación por correo; la sesión obtenida es válida unas 24 h y después se necesitará un nuevo código.",
         "data": {
           "username": "Nombre de usuario (Correo electrónico)",
           "password": "Contraseña",
@@ -101,7 +101,7 @@
       },
       "reconfigure": {
         "title": "Reconfigurar la cuenta del portal",
-        "description": "Actualice las credenciales de Hydro-Québec y luego seleccione de nuevo el contrato (actualmente {contract_id}). Se conservan el nombre del contrato, las entidades y el historial.",
+        "description": "Actualice las credenciales de Hydro-Québec y luego seleccione de nuevo el contrato (actualmente {contract_id}). Se conservan el nombre del contrato, las entidades y el historial. La nueva sesión es válida unas 24 h; después se necesitará un nuevo código por correo.",
         "data": {
           "username": "Usuario (correo electrónico)",
           "password": "Contraseña"
@@ -123,9 +123,19 @@
       },
       "reauth_confirm": {
         "title": "Volver a autenticar la cuenta del portal",
-        "description": "Hydro-Québec rechazó la contraseña de {username}. Si el portal le pidió cambiarla, defina primero la nueva contraseña en el sitio de Hydro-Québec y luego ingrésela aquí.",
+        "description": "Hydro-Québec rechazó la contraseña de {username} o la sesión del portal (válida unas 24 h) expiró. Ingrese la contraseña; si el portal solicita un código de verificación, el siguiente paso se lo pedirá. Si el portal le pidió cambiarla, defina primero la nueva contraseña en el sitio de Hydro-Québec y luego ingrésela aquí.",
         "data": {
           "password": "Contraseña"
+        }
+      },
+      "mfa": {
+        "title": "Verificación por correo electrónico",
+        "description": "Hydro-Québec envió un código de verificación a {email}. Ingréselo a continuación. Deje el campo vacío para recibir un nuevo código. La sesión obtenida es válida unas 24 h; después Hydro-Québec pedirá un nuevo código.",
+        "data": {
+          "mfa_code": "Código de verificación"
+        },
+        "data_description": {
+          "mfa_code": "El código de un solo uso del correo de Hydro-Québec"
         }
       }
     },
@@ -137,7 +147,12 @@
       "portal_maintenance": "El portal de Hydro-Québec está en mantenimiento (Error 500). Por favor, inténtelo en unas horas.",
       "calendar_required": "Se requiere un calendario para las tarifas DPC/DCPC. Todos los sensores de pico dependen de los eventos del calendario.",
       "calendar_not_found": "No se encontró la entidad de calendario. Por favor, cree un calendario primero.",
-      "unknown": "Ocurrió un error inesperado"
+      "unknown": "Ocurrió un error inesperado",
+      "invalid_mfa_code": "El código de verificación fue rechazado. Verifique el código e inténtelo de nuevo.",
+      "mfa_expired": "La verificación expiró. Inténtelo de nuevo para recibir un nuevo código.",
+      "mfa_code_resent": "Se envió un nuevo código de verificación a {email}.",
+      "mfa_code_resend_failed": "No se pudo solicitar un nuevo código automáticamente. Verifique que {email} sea la dirección correcta e inténtelo de nuevo en un momento.",
+      "mfa_unsupported": "La versión instalada de Hydro-Quebec-API-Wrapper no admite la verificación por correo electrónico. Actualícela y reinicie Home Assistant."
     },
     "abort": {
       "already_configured": "Este contrato ya está configurado",

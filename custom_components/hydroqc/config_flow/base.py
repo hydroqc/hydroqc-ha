@@ -28,6 +28,15 @@ from homeassistant.helpers.selector import (
 import hydroqc
 from hydroqc.webuser import WebUser
 
+from ..auth import (
+    LOGIN_MFA_REQUIRED,
+    LOGIN_SUCCESS,
+    async_request_mfa_code,
+    async_submit_mfa_code,
+    login_outcome,
+    mfa_error_kind,
+    supports_mfa,
+)
 from ..const import (
     AUTH_MODE_OPENDATA,
     AUTH_MODE_PORTAL,
@@ -39,16 +48,24 @@ from ..const import (
     CONF_CUSTOMER_ID,
     CONF_ENABLE_CONSUMPTION_SYNC,
     CONF_HISTORY_DAYS,
+    CONF_MFA_CODE,
     CONF_PREHEAT_DURATION,
     CONF_RATE,
     CONF_RATE_OPTION,
     DEFAULT_PREHEAT_DURATION,
     DOMAIN,
 )
+from ..session import async_save_session as save_session_state, stage_pending_session
 from .helpers import SECTOR_MAPPING, fetch_available_sectors, fetch_offers_for_sector
 from .options import HydroQcOptionsFlow
 
 _LOGGER = logging.getLogger(__name__)
+
+# Where the login was started from, so the verification step can hand control
+# back to the right step once the portal accepts the account.
+LOGIN_ORIGIN_USER = "user"
+LOGIN_ORIGIN_RECONFIGURE = "reconfigure"
+LOGIN_ORIGIN_REAUTH = "reauth"
 
 
 @callback
@@ -92,6 +109,11 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._available_sectors: list[str] = []
         self._selected_sector: str | None = None
         self._available_rates: list[dict[str, str]] = []
+        self._login_origin: str = LOGIN_ORIGIN_USER
+        self._mfa_pending: bool = False
+        # Session captured during the initial setup: the config entry does not
+        # exist yet, so it is written once HA creates it.
+        self._pending_session_state: dict[str, Any] | None = None
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the initial step - choose auth mode."""
@@ -133,6 +155,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     ) -> ConfigFlowResult:
         """Handle portal mode account setup."""
         errors: dict[str, str] = {}
+        self._login_origin = LOGIN_ORIGIN_USER
 
         if user_input is not None:
             self._username = user_input[CONF_USERNAME]
@@ -141,6 +164,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             errors = await self._async_fetch_contracts()
             if not errors:
+                if self._mfa_pending:
+                    return await self.async_step_mfa()
                 return await self.async_step_select_contract()
 
         return self.async_show_form(
@@ -158,15 +183,34 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
     async def _async_fetch_contracts(self) -> dict[str, str]:
         """Log in to the portal and collect every contract of the account.
 
-        Returns the form errors, empty on success.
+        Returns the form errors, empty on success. When the portal asks for an
+        e-mail verification code no error is returned and ``self._mfa_pending``
+        is set: the caller has to show :meth:`async_step_mfa`.
         """
-        errors: dict[str, str] = {}
+        errors = await self._async_start_portal_login()
+        try:
+            if errors or self._mfa_pending:
+                return errors
+            return await self._async_finish_login()
+        finally:
+            if not self._mfa_pending:
+                await self._async_save_session()
+                await self._async_close_webuser()
+
+    async def _async_start_portal_login(self) -> dict[str, str]:
+        """Check the portal and authenticate the account.
+
+        Keeps the portal client open when Hydro-Québec asks for a verification
+        code: the pending transaction only lives in that client.
+        """
         assert self._username is not None
         assert self._password is not None
+        errors: dict[str, str] = {}
+        self._webuser = None
+        self._mfa_pending = False
 
         try:
-            # Check portal status first
-            temp_webuser = WebUser(
+            self._webuser = WebUser(
                 self._username,
                 self._password,
                 verify_ssl=True,
@@ -174,17 +218,34 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 http_log_level="WARNING",
             )
 
-            portal_available = await temp_webuser.check_hq_portal_status()
-            if not portal_available:
+            if not await self._webuser.check_hq_portal_status():
                 errors["base"] = "portal_unavailable"
-                await temp_webuser.close_session()
-                raise RuntimeError("Portal unavailable")
-
-            # Try to login and fetch contracts
-            self._webuser = temp_webuser
-            if not await self._webuser.login():
-                errors["base"] = "invalid_auth"
                 return errors
+
+            outcome = login_outcome(await self._webuser.login())
+            if outcome == LOGIN_MFA_REQUIRED:
+                self._mfa_pending = True
+            elif outcome != LOGIN_SUCCESS:
+                errors["base"] = "invalid_auth"
+        except hydroqc.error.HydroQcHTTPError as err:
+            # Check if it's a 500 error (portal maintenance)
+            if getattr(err, "status_code", None) == 500:
+                errors["base"] = "portal_maintenance"
+            else:
+                errors["base"] = "invalid_auth"
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.exception("Unexpected exception during login")
+            errors["base"] = "cannot_connect"
+
+        return errors
+
+    async def _async_finish_login(self) -> dict[str, str]:
+        """Collect every contract of the authenticated account."""
+        errors: dict[str, str] = {}
+        if self._webuser is None:
+            return {"base": "invalid_auth"}
+
+        try:
             await self._webuser.get_info()
             await self._webuser.fetch_customers_info()
 
@@ -210,21 +271,192 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         except hydroqc.error.HydroQcHTTPError as err:
             # Check if it's a 500 error (portal maintenance)
-            if hasattr(err, "status_code") and err.status_code == 500:
+            if getattr(err, "status_code", None) == 500:
                 errors["base"] = "portal_maintenance"
             else:
                 errors["base"] = "invalid_auth"
-        except RuntimeError:
-            # Portal unavailable - error already set above
-            pass
         except Exception:  # pylint: disable=broad-except
-            _LOGGER.exception("Unexpected exception during login")
+            _LOGGER.exception("Unexpected exception while fetching contracts")
             errors["base"] = "cannot_connect"
-        finally:
-            if self._webuser:
-                await self._webuser.close_session()
 
         return errors
+
+    async def _async_close_webuser(self) -> None:
+        """Close and forget the temporary portal client."""
+        webuser, self._webuser = self._webuser, None
+        if webuser is not None:
+            await webuser.close_session()
+
+    async def _async_save_session(self) -> None:
+        """Persist the session of the login that just succeeded.
+
+        Without it the next start would restore the session that just expired
+        and could ask for another verification code immediately.
+        """
+        if self._webuser is None:
+            return
+
+        entry: config_entries.ConfigEntry | None = None
+        if self._login_origin == LOGIN_ORIGIN_REAUTH:
+            entry = self._get_reauth_entry()
+        elif self._login_origin == LOGIN_ORIGIN_RECONFIGURE:
+            entry = self._get_reconfigure_entry()
+
+        export_state = getattr(self._webuser, "export_session_state", None)
+        if not callable(export_state):
+            return
+
+        try:
+            state = export_state()
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.debug("Could not export the Hydro-Québec session", exc_info=True)
+            return
+
+        if not isinstance(state, dict):
+            return
+
+        if entry is None:
+            # Initial setup: HA has not created the config entry yet. Keep the
+            # state until async_step_import_history can write it for the entry,
+            # otherwise the coordinator logs in a second time right after setup
+            # and asks for another verification code.
+            if not state.get("refresh_token") and not state.get("cookies"):
+                return
+            self._pending_session_state = state
+            return
+
+        await save_session_state(self.hass, entry, state)
+
+    async def _async_request_code(self) -> bool:
+        """Ask Hydro-Québec for a new verification code."""
+        if self._webuser is None or not supports_mfa(self._webuser):
+            return False
+        try:
+            return await async_request_mfa_code(self._webuser)
+        except Exception:  # pylint: disable=broad-except
+            _LOGGER.warning("Could not request a new verification code", exc_info=True)
+            return False
+
+    async def _async_restart_login(self) -> bool:
+        """Restart a login whose verification step expired.
+
+        Returns True when a new code is waiting to be entered.
+        """
+        self._mfa_pending = False
+        await self._async_close_webuser()
+        errors = await self._async_start_portal_login()
+        if errors or not self._mfa_pending:
+            _LOGGER.error("Could not restart the Hydro-Québec login: %s", errors)
+            return False
+        return True
+
+    async def _async_complete_login(self) -> ConfigFlowResult:
+        """Hand control back to the step the login was started from."""
+        await self._async_save_session()
+        await self._async_close_webuser()
+        if self._login_origin == LOGIN_ORIGIN_REAUTH:
+            return self.async_update_reload_and_abort(
+                self._get_reauth_entry(),
+                data_updates={CONF_PASSWORD: self._password},
+            )
+        if self._login_origin == LOGIN_ORIGIN_RECONFIGURE:
+            return await self.async_step_reconfigure_contract()
+        return await self.async_step_select_contract()
+
+    async def _async_show_origin_form(self, errors: dict[str, str]) -> ConfigFlowResult:
+        """Show the step the login was started from, with ``errors``.
+
+        Used when the credentials were accepted but the account could not be
+        read: the verification step is over, so re-showing the code form would
+        only reject an already consumed code.
+        """
+        if self._login_origin == LOGIN_ORIGIN_REAUTH:
+            entry = self._get_reauth_entry()
+            return self.async_show_form(
+                step_id="reauth_confirm",
+                data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}),
+                errors=errors,
+                description_placeholders={"username": entry.data[CONF_USERNAME]},
+            )
+        if self._login_origin == LOGIN_ORIGIN_RECONFIGURE:
+            entry = self._get_reconfigure_entry()
+            return self.async_show_form(
+                step_id="reconfigure",
+                data_schema=vol.Schema(
+                    {
+                        vol.Required(CONF_USERNAME, default=entry.data.get(CONF_USERNAME, "")): str,
+                        vol.Optional(CONF_PASSWORD): str,
+                    }
+                ),
+                errors=errors,
+                description_placeholders={"contract_id": entry.data.get(CONF_CONTRACT_ID, "")},
+            )
+        return self.async_show_form(
+            step_id="account",
+            data_schema=vol.Schema(
+                {
+                    vol.Required(CONF_USERNAME): str,
+                    vol.Required(CONF_PASSWORD): str,
+                    vol.Required(CONF_CONTRACT_NAME): str,
+                }
+            ),
+            errors=errors,
+        )
+
+    async def async_step_mfa(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
+        """Ask for the e-mail verification code sent by Hydro-Québec.
+
+        The wrapper requests the first code when the verification step is
+        detected. An empty field asks for a new one: the first message may have
+        been lost or the code may have expired.
+        """
+        errors: dict[str, str] = {}
+
+        if user_input is not None:
+            code = str(user_input.get(CONF_MFA_CODE) or "").strip()
+            if not code:
+                errors["base"] = (
+                    "mfa_code_resent"
+                    if await self._async_request_code()
+                    else "mfa_code_resend_failed"
+                )
+            elif self._webuser is None or not supports_mfa(self._webuser):
+                errors["base"] = "mfa_unsupported"
+            else:
+                try:
+                    status = await async_submit_mfa_code(self._webuser, code)
+                except Exception as err:  # pylint: disable=broad-except
+                    kind = mfa_error_kind(err)
+                    if kind == "invalid":
+                        errors["base"] = "invalid_mfa_code"
+                    elif kind in ("expired", "required"):
+                        errors["base"] = (
+                            "mfa_code_resent"
+                            if await self._async_restart_login()
+                            else "mfa_expired"
+                        )
+                    else:
+                        _LOGGER.exception("Unexpected error while submitting the verification code")
+                        errors["base"] = "cannot_connect"
+                else:
+                    if login_outcome(status) == LOGIN_SUCCESS:
+                        self._mfa_pending = False
+                        errors = await self._async_finish_login()
+                        if not errors:
+                            return await self._async_complete_login()
+                        # The code was accepted but the account could not be
+                        # read: the verification step is over, hand the errors
+                        # back to the step the login started from.
+                        await self._async_close_webuser()
+                        return await self._async_show_origin_form(errors)
+                    errors["base"] = "invalid_mfa_code"
+
+        return self.async_show_form(
+            step_id="mfa",
+            data_schema=vol.Schema({vol.Required(CONF_MFA_CODE): str}),
+            errors=errors,
+            description_placeholders={"email": self._username or ""},
+        )
 
     async def async_step_select_contract(
         self, user_input: dict[str, Any] | None = None
@@ -341,6 +573,17 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             # Add calendar configuration if provided
             if calendar_entity_id:
                 entry_data[CONF_CALENDAR_ENTITY_ID] = calendar_entity_id
+
+            # Stage the session under the contract id: the coordinator takes it
+            # over once Home Assistant created the entry, so the first refresh
+            # does not log in (and ask for a code) a second time.
+            if self._pending_session_state is not None:
+                stage_pending_session(
+                    self.hass,
+                    self._selected_contract["contract_id"],
+                    self._pending_session_state,
+                )
+                self._pending_session_state = None
 
             return self.async_create_entry(
                 title=f"{self._contract_name} ({self._selected_contract['rate']}{self._selected_contract['rate_option']})",
@@ -551,6 +794,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             return self.async_abort(reason="reconfigure_portal_only")
 
         errors: dict[str, str] = {}
+        self._login_origin = LOGIN_ORIGIN_RECONFIGURE
 
         if user_input is not None:
             self._username = user_input[CONF_USERNAME]
@@ -559,6 +803,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             errors = await self._async_fetch_contracts()
             if not errors:
+                if self._mfa_pending:
+                    return await self.async_step_mfa()
                 return await self.async_step_reconfigure_contract()
 
         return self.async_show_form(
@@ -583,6 +829,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Ask for the new portal password."""
         entry = self._get_reauth_entry()
         errors: dict[str, str] = {}
+        self._login_origin = LOGIN_ORIGIN_REAUTH
 
         if user_input is not None:
             self._username = entry.data[CONF_USERNAME]
@@ -590,6 +837,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
             errors = await self._async_fetch_contracts()
             if not errors:
+                if self._mfa_pending:
+                    return await self.async_step_mfa()
                 return self.async_update_reload_and_abort(
                     entry, data_updates={CONF_PASSWORD: self._password}
                 )

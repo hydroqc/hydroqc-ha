@@ -15,7 +15,7 @@
   <a href="https://github.com/hydroqc/hydroqc-ha/blob/main/LICENSE"><img src="https://img.shields.io/github/license/hydroqc/hydroqc-ha.svg" alt="License"></a>
   <br/>
   <a href="https://github.com/hydroqc/hydroqc-ha/releases"><img src="https://img.shields.io/github/downloads/hydroqc/hydroqc-ha/total?label=total%20downloads" alt="Total Downloads"></a>
-  <a href="https://discord.gg/JaRfRJEByz"><img src="https://img.shields.io/discord/931570222475907083?label=discord&logo=discord" alt="Discord"></a>
+  <a href="https://discord.gg/5zEpJjppgr"><img src="https://img.shields.io/discord/931570222475907083?label=discord&logo=discord" alt="Discord"></a>
   <a href="https://github.com/hydroqc/hydroqc-ha/commits/main"><img src="https://img.shields.io/github/last-commit/hydroqc/hydroqc-ha" alt="Last Commit"></a>
   <a href="https://github.com/hydroqc/hydroqc-ha/stargazers"><img src="https://img.shields.io/github/stars/hydroqc/hydroqc-ha?style=social" alt="Stars"></a>
 </p>
@@ -142,6 +142,12 @@ Les entités gardent leur `entity_id` et l'historique de consommation est conser
 ### Mot de passe refusé ou à changer
 
 Quand Hydro-Québec refuse le mot de passe enregistré (par exemple quand le portail exige un nouveau mot de passe), l'intégration cesse ses mises à jour et Home Assistant affiche **Réauthentification requise** dans **Paramètres** → **Appareils et services**. Changez d'abord le mot de passe sur le site d'Hydro-Québec, puis cliquez sur **Réauthentifier** et entrez le nouveau.
+
+### Vérification par courriel
+
+Hydro-Québec peut demander un code de vérification envoyé par courriel après le mot de passe. L'intégration affiche alors une étape **Vérification par courriel** pendant la configuration initiale, la reconfiguration ou la réauthentification. Entrez le code reçu; laissez le champ vide pour recevoir un nouveau code. Le code expire après quelques minutes, auquel cas un nouveau code est envoyé automatiquement.
+
+Pour éviter cette étape à chaque redémarrage, l'intégration conserve le jeton de rafraîchissement et les témoins de connexion du portail. Le portail garde cette session environ 24 h : pendant ce délai, la connexion se fait sans mot de passe ni nouveau code; passé ce délai, une nouvelle connexion avec code de vérification est requise. Cette fonctionnalité nécessite une version de **Hydro-Quebec-API-Wrapper** qui prend en charge la vérification par courriel (4.3.0 ou plus récente) : avec une version plus ancienne, l'étape n'apparaît pas et la vérification échoue avec un message explicite.
 
 ### Configuration du calendrier (Obligatoire pour DPC/DCPC)
 

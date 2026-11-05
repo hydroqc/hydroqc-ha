@@ -57,6 +57,13 @@ def mock_webuser() -> MagicMock:
     """Return a mock WebUser instance."""
     webuser = MagicMock()
     webuser.login = AsyncMock(return_value=True)
+    # Real WebUser instances delegate to a HydroClient; keep the mock from
+    # auto-creating one when the auth helper inspects the underlying client.
+    webuser._hydro_client = None
+    webuser.submit_mfa_code = AsyncMock(return_value=True)
+    webuser.request_mfa_code = AsyncMock(return_value=True)
+    webuser.try_silent_login = AsyncMock(return_value=False)
+    webuser.export_session_state = MagicMock(return_value={})
     webuser.session_expired = False
     webuser.close_session = AsyncMock()
     webuser.get_info = AsyncMock()

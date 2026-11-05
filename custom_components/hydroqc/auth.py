@@ -106,34 +106,49 @@ def _accepts_argument(method: Any, name: str) -> bool:
     return name in parameters
 
 
-async def async_login(webuser: Any, *, send_mfa_code: bool = True) -> Any:
-    """Run the portal login, optionally without requesting a verification code.
-
-    Background logins must not send e-mail codes: only the config flow may ask
-    for one. Wrappers that expose the ``send_mfa_code`` switch receive it;
-    older wrappers (4.3.0) always request a code inside ``login``, so the
-    request is neutralized for the duration of the call.
-    """
-    method = getattr(webuser, "login", None)
-    if not callable(method):
-        return None
-    if send_mfa_code or not supports_mfa(webuser):
-        return await method()
-    if _accepts_argument(method, "send_mfa_code"):
-        return await method(send_mfa_code=False)
-
-    # Compatibility path: the wrapper predates the opt-out. Replace the bound
-    # request with a no-op for this login only, then restore it.
-    original = webuser.request_mfa_code
+async def _login_without_requesting_code(instance: Any) -> Any:
+    """Run ``instance.login`` while its ``request_mfa_code`` is neutralized."""
+    original = instance.request_mfa_code
 
     async def _skip_request(*_args: Any, **_kwargs: Any) -> bool:
         return False
 
-    webuser.request_mfa_code = _skip_request
+    instance.request_mfa_code = _skip_request
     try:
-        return await method()
+        return await instance.login()
     finally:
-        webuser.request_mfa_code = original
+        instance.request_mfa_code = original
+
+
+async def async_login(webuser: Any, *, send_mfa_code: bool = True) -> Any:
+    """Run the portal login, optionally without requesting a verification code.
+
+    Background logins must not send e-mail codes: only the config flow may ask
+    for one. The switch is used wherever the installed wrapper exposes it, with
+    a compatibility fallback for wrappers that request the code during login.
+    """
+    method = getattr(webuser, "login", None)
+    if not callable(method):
+        return None
+    if send_mfa_code:
+        return await method()
+    if _accepts_argument(method, "send_mfa_code"):
+        return await method(send_mfa_code=False)
+
+    # WebUser.login is a thin delegate over its HydroClient. Wrappers that do
+    # not forward the switch yet (4.3.1) still accept it on that client.
+    client = getattr(webuser, "_hydro_client", None)
+    client_login = getattr(client, "login", None)
+    if callable(client_login):
+        if _accepts_argument(client_login, "send_mfa_code"):
+            return await client_login(send_mfa_code=False)
+        if supports_mfa(client):
+            return await _login_without_requesting_code(client)
+
+    # Legacy wrappers request the code on the WebUser itself.
+    if supports_mfa(webuser):
+        return await _login_without_requesting_code(webuser)
+    return await method()
 
 
 async def async_request_mfa_code(webuser: Any) -> bool:

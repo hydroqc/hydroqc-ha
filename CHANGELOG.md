@@ -8,7 +8,7 @@
 
 ### Modifié
 
-- Dépendance `Hydro-Quebec-API-Wrapper` mise à jour de 4.2.6 à 4.3.0, première version qui gère la vérification par courriel.
+- Dépendance `Hydro-Quebec-API-Wrapper` mise à jour de 4.2.6 à 4.3.1. Cette version permet de détecter l'étape de vérification sans demander de code, ce qui réserve l'envoi du code au flux de réauthentification.
 
 ### Corrigé
 

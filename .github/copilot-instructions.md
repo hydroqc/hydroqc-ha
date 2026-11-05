@@ -289,7 +289,7 @@ The project uses a **multi-layered approach** to dependency management:
 - Creates **3 test combinations** per PR, each type-checked against its HA version
 
 **Key Dependencies**:
-- `Hydro-Quebec-API-Wrapper==4.3.0` - Pinned exactly (in manifest.json + pyproject.toml)
+- `Hydro-Quebec-API-Wrapper==4.3.1` - Pinned exactly (in manifest.json + pyproject.toml)
 - Dependabot ignores major updates for homeassistant and hydroqc (require manual review)
 - Dependabot groups homeassistant updates
 

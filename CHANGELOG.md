@@ -1,3 +1,17 @@
+## [Non publié]
+
+### Ajouté
+
+### Modifié
+
+### Corrigé
+
+- **Messages de fin en français** : la fin d'une réauthentification ou d'une reconfiguration affiche maintenant « Réauthentification réussie » ou « Reconfiguration réussie » dans la langue de Home Assistant. Home Assistant affichait son propre message, qui n'est pas traduit en français.
+
+### Retiré
+
+---
+
 ## [0.9.0] - 2026-11-05
 
 ### Ajouté

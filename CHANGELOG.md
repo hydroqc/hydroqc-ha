@@ -8,6 +8,10 @@
 
 - **Messages de fin en français** : la fin d'une réauthentification ou d'une reconfiguration affiche maintenant « Réauthentification réussie » ou « Reconfiguration réussie » dans la langue de Home Assistant. Home Assistant affichait son propre message, qui n'est pas traduit en français.
 
+- **Maintenance du portail affichée** : pendant une maintenance d'Hydro-Québec, la carte de l'entrée affiche maintenant « Hydro-Québec maintenance until … » au lieu de « Unexpected error ». Les formulaires de configuration, de réauthentification et de reconfiguration indiquent l'heure de fin annoncée. L'heure de fin demande la version de la bibliothèque qui inclut hydroqc/hydroqc#14.
+
+- **Erreur du portail après la connexion** : une erreur HTTP du portail après une connexion réussie affiche maintenant « portail indisponible » au lieu de « identifiants invalides ».
+
 ### Retiré
 
 ---

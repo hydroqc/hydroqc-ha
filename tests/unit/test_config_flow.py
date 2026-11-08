@@ -222,3 +222,76 @@ async def test_reconfigure_opendata_entry_aborts(
 
     assert result["type"] is FlowResultType.ABORT
     assert result["reason"] == "reconfigure_portal_only"
+
+
+@pytest.mark.parametrize(
+    ("window", "error", "maintenance_end"),
+    [
+        (
+            {"service": "libreService", "from": "2026-11-07 18:00:00", "to": "2026-11-08 18:00:00"},
+            "portal_maintenance_until",
+            "2026-11-08 18:00:00",
+        ),
+        (None, "portal_unavailable", ""),
+    ],
+)
+async def test_reconfigure_portal_down_shows_maintenance_end(
+    *,
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    webuser_two_contracts: MagicMock,
+    window: dict[str, str] | None,
+    error: str,
+    maintenance_end: str,
+) -> None:
+    """An offline portal names the announced maintenance end, without trying to log in."""
+    mock_config_entry.add_to_hass(hass)
+    webuser_two_contracts.check_hq_portal_status = AsyncMock(return_value=False)
+    webuser_two_contracts.get_hq_portal_unavailability = AsyncMock(return_value=window)
+
+    result = await _start_reconfigure(hass, mock_config_entry)
+    with patch(
+        "custom_components.hydroqc.config_flow.base.WebUser",
+        return_value=webuser_two_contracts,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_USERNAME: "test@example.com", CONF_PASSWORD: "secret"}
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+    assert result["errors"] == {"base": error}
+    assert result["description_placeholders"]["maintenance_end"] == maintenance_end
+    webuser_two_contracts.login.assert_not_called()
+
+
+@pytest.mark.parametrize(
+    ("status_code", "error"),
+    [(403, "portal_unavailable"), (500, "portal_maintenance")],
+)
+async def test_reconfigure_portal_error_after_login_is_not_invalid_auth(
+    *,
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    webuser_two_contracts: MagicMock,
+    status_code: int,
+    error: str,
+) -> None:
+    """A portal error once logged in does not tell the user the password is wrong."""
+    mock_config_entry.add_to_hass(hass)
+    webuser_two_contracts.get_info = AsyncMock(
+        side_effect=hydroqc.error.HydroQcHTTPError("maj-session", status_code)
+    )
+
+    result = await _start_reconfigure(hass, mock_config_entry)
+    with patch(
+        "custom_components.hydroqc.config_flow.base.WebUser",
+        return_value=webuser_two_contracts,
+    ):
+        result = await hass.config_entries.flow.async_configure(
+            result["flow_id"], {CONF_USERNAME: "test@example.com", CONF_PASSWORD: "secret"}
+        )
+
+    assert result["type"] is FlowResultType.FORM
+    assert result["step_id"] == "reconfigure"
+    assert result["errors"] == {"base": error}

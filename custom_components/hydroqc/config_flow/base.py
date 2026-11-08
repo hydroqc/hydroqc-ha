@@ -111,6 +111,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._available_rates: list[dict[str, str]] = []
         self._login_origin: str = LOGIN_ORIGIN_USER
         self._mfa_pending: bool = False
+        self._maintenance_end: str = ""
         # Session captured during the initial setup: the config entry does not
         # exist yet, so it is written once HA creates it.
         self._pending_session_state: dict[str, Any] | None = None
@@ -178,6 +179,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+            description_placeholders={"maintenance_end": self._maintenance_end},
         )
 
     async def _async_fetch_contracts(self) -> dict[str, str]:
@@ -196,6 +198,20 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             if not self._mfa_pending:
                 await self._async_save_session()
                 await self._async_close_webuser()
+
+    async def _async_portal_unavailable_error(self) -> str:
+        """Pick the error for an unavailable portal, naming the announced maintenance end if any."""
+        # get_hq_portal_unavailability() only exists in newer hydroqc releases.
+        get_window = getattr(self._webuser, "get_hq_portal_unavailability", None)
+        if get_window is not None:
+            try:
+                window = await get_window()
+            except Exception:  # pylint: disable=broad-except
+                window = None
+            if isinstance(window, dict) and window.get("to"):
+                self._maintenance_end = str(window["to"])
+                return "portal_maintenance_until"
+        return "portal_unavailable"
 
     async def _async_start_portal_login(self) -> dict[str, str]:
         """Check the portal and authenticate the account.
@@ -219,7 +235,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             )
 
             if not await self._webuser.check_hq_portal_status():
-                errors["base"] = "portal_unavailable"
+                errors["base"] = await self._async_portal_unavailable_error()
                 return errors
 
             outcome = login_outcome(await self._webuser.login())
@@ -228,7 +244,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             elif outcome != LOGIN_SUCCESS:
                 errors["base"] = "invalid_auth"
         except hydroqc.error.HydroQcHTTPError as err:
-            # Check if it's a 500 error (portal maintenance)
+            # A non-5xx status during the login can be a password change request, not only a wrong password.
             if getattr(err, "status_code", None) == 500:
                 errors["base"] = "portal_maintenance"
             else:
@@ -270,11 +286,12 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 errors["base"] = "no_contracts"
 
         except hydroqc.error.HydroQcHTTPError as err:
-            # Check if it's a 500 error (portal maintenance)
+            # The login already succeeded: an HTTP error here comes from the portal, not from the credentials.
             if getattr(err, "status_code", None) == 500:
                 errors["base"] = "portal_maintenance"
             else:
-                errors["base"] = "invalid_auth"
+                _LOGGER.warning("Hydro-Québec portal error while fetching contracts: %s", err)
+                errors["base"] = "portal_unavailable"
         except Exception:  # pylint: disable=broad-except
             _LOGGER.exception("Unexpected exception while fetching contracts")
             errors["base"] = "cannot_connect"
@@ -377,7 +394,10 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 step_id="reauth_confirm",
                 data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}),
                 errors=errors,
-                description_placeholders={"username": entry.data[CONF_USERNAME]},
+                description_placeholders={
+                    "username": entry.data[CONF_USERNAME],
+                    "maintenance_end": self._maintenance_end,
+                },
             )
         if self._login_origin == LOGIN_ORIGIN_RECONFIGURE:
             entry = self._get_reconfigure_entry()
@@ -390,7 +410,10 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     }
                 ),
                 errors=errors,
-                description_placeholders={"contract_id": entry.data.get(CONF_CONTRACT_ID, "")},
+                description_placeholders={
+                    "contract_id": entry.data.get(CONF_CONTRACT_ID, ""),
+                    "maintenance_end": self._maintenance_end,
+                },
             )
         return self.async_show_form(
             step_id="account",
@@ -402,6 +425,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
+            description_placeholders={"maintenance_end": self._maintenance_end},
         )
 
     async def async_step_mfa(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
@@ -817,7 +841,10 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 }
             ),
             errors=errors,
-            description_placeholders={"contract_id": entry.data.get(CONF_CONTRACT_ID, "")},
+            description_placeholders={
+                "contract_id": entry.data.get(CONF_CONTRACT_ID, ""),
+                "maintenance_end": self._maintenance_end,
+            },
         )
 
     async def async_step_reauth(self, _entry_data: Mapping[str, Any]) -> ConfigFlowResult:
@@ -850,7 +877,10 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             step_id="reauth_confirm",
             data_schema=vol.Schema({vol.Required(CONF_PASSWORD): str}),
             errors=errors,
-            description_placeholders={"username": entry.data[CONF_USERNAME]},
+            description_placeholders={
+                "username": entry.data[CONF_USERNAME],
+                "maintenance_end": self._maintenance_end,
+            },
         )
 
     async def async_step_reconfigure_contract(

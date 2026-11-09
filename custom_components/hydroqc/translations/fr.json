@@ -13,7 +13,7 @@
       },
       "account": {
         "title": "Mode Portail - Connexion au compte",
-        "description": "Entrez vos identifiants Hydro-Québec. Le portail peut demander un code de vérification par courriel; la session obtenue est alors valide environ 24 h et un nouveau code sera requis par la suite.",
+        "description": "Entrez vos identifiants Hydro-Québec. Le portail peut demander un code de vérification par courriel.",
         "data": {
           "username": "Nom d'utilisateur (Courriel)",
           "password": "Mot de passe",
@@ -91,7 +91,7 @@
       },
       "reconfigure": {
         "title": "Reconfigurer le compte du portail",
-        "description": "Mettez à jour les identifiants Hydro-Québec, puis sélectionnez de nouveau le contrat (actuellement {contract_id}). Le nom du contrat, les entités et l'historique sont conservés. La nouvelle session est valide environ 24 h; un nouveau code par courriel sera requis par la suite.",
+        "description": "Mettez à jour les identifiants Hydro-Québec, puis sélectionnez de nouveau le contrat (actuellement {contract_id}). Le nom du contrat, les entités et l'historique sont conservés.",
         "data": {
           "username": "Nom d'utilisateur (courriel)",
           "password": "Mot de passe"
@@ -113,14 +113,14 @@
       },
       "reauth_confirm": {
         "title": "Réauthentifier le compte du portail",
-        "description": "Hydro-Québec a refusé le mot de passe de {username} ou la session du portail (valide environ 24 h) a expiré. Entrez le mot de passe; si le portail demande un code de vérification, l'étape suivante vous le demandera. Si le portail vous a demandé de le changer, définissez d'abord le nouveau mot de passe sur le site d'Hydro-Québec, puis entrez-le ici.",
+        "description": "Hydro-Québec a refusé le mot de passe de {username} ou la session du portail a expiré. Entrez le mot de passe; si le portail demande un code de vérification, l'étape suivante vous le demandera. Si le portail vous a demandé de le changer, définissez d'abord le nouveau mot de passe sur le site d'Hydro-Québec, puis entrez-le ici.",
         "data": {
           "password": "Mot de passe"
         }
       },
       "mfa": {
         "title": "Vérification par courriel",
-        "description": "Hydro-Québec a envoyé un code de vérification à {email}. Entrez-le ci-dessous. Laissez le champ vide pour recevoir un nouveau code. La session obtenue est valide environ 24 h; Hydro-Québec demandera ensuite un nouveau code.",
+        "description": "Hydro-Québec a envoyé un code de vérification à {email}. Entrez-le ci-dessous. Laissez le champ vide pour recevoir un nouveau code. La durée de la session dépend du client de connexion (Options → Avancé) : 90 jours renouvelés automatiquement avec l'application mobile, 24 heures avec le portail web.",
         "data": {
           "mfa_code": "Code de vérification"
         },
@@ -168,6 +168,18 @@
           "preheat_duration_minutes": "Durée avant les événements de pointe critique pour déclencher le préchauffage (0-240 minutes)",
           "enable_consumption_sync": "Activer pour synchroniser les données de consommation horaire pour le tableau de bord énergétique. Nécessite un rechargement de l'intégration pour prendre effet.",
           "calendar_entity_id": "Entité calendrier pour les événements de pointe (tarifs DPC/DCPC seulement). Requis pour le fonctionnement des capteurs de pointe."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Avancé",
+            "description": "Comment l'intégration se connecte au portail Hydro-Québec.",
+            "data": {
+              "auth_client": "Client de connexion"
+            },
+            "data_description": {
+              "auth_client": "Changer de client recharge l'intégration et demande un nouveau code de vérification par courriel."
+            }
+          }
         }
       }
     },
@@ -356,6 +368,14 @@
       },
       "portal_status": {
         "name": "Statut du portail"
+      }
+    }
+  },
+  "selector": {
+    "auth_client": {
+      "options": {
+        "mobile": "Application mobile (recommandé) : session renouvelée automatiquement (90 jours)",
+        "web": "Portail web : nouveau code de vérification chaque jour (24 heures)"
       }
     }
   }

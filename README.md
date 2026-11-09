@@ -119,6 +119,8 @@ Accès à **toutes les données** : consommation, facturation, pointes, crédits
 5. Sélectionnez le contrat à surveiller
 6. Terminé ! Les capteurs apparaissent en ~60 secondes
 
+La connexion utilise par défaut le client de l'application mobile d'Hydro-Québec, qui garde la session 90 jours. Voir [Durée de la session](#vérification-par-courriel) pour choisir le portail web.
+
 ### Option 2 : Données publiques (Sans compte)
 
 Uniquement les **alertes de pointe** sans identifiants
@@ -157,9 +159,18 @@ Hydro-Québec peut demander un code de vérification envoyé par courriel après
 
 Les connexions automatiques (mises à jour planifiées, redémarrages) s'arrêtent à l'étape de vérification : aucun code n'est demandé ni envoyé, et la connexion n'est pas relancée en boucle. Home Assistant affiche **Réauthentification requise** dans **Paramètres** → **Appareils et services**. Cliquez sur **Réauthentifier**, puis saisissez le nouveau code.
 
-**Limite de 24 h**
+**Durée de la session**
 
-Le portail Hydro-Québec conserve une session environ **24 heures**. Pendant ce délai, les redémarrages de Home Assistant ne demandent ni mot de passe ni code. Passé ce délai, une nouvelle connexion avec code de vérification est obligatoire : l'intégration repasse en **Réauthentification requise** et il faut saisir un nouveau code. Prévoyez donc une réauthentification environ une fois par jour.
+La durée dépend du client de connexion, choisi dans **Paramètres** → **Appareils et services** → **Hydro-Québec** → **Configurer** → **Avancé** → **Client de connexion** :
+
+| Client | Durée de la session | Code de vérification |
+|--------|---------------------|----------------------|
+| **Application mobile** (par défaut) | 90 jours, prolongée à chaque connexion | Une seule fois, puis seulement si la session expire |
+| **Portail web** | 24 heures | Chaque jour |
+
+Pendant la durée de la session, les redémarrages de Home Assistant ne demandent ni mot de passe ni code. Une fois la session expirée, l'intégration repasse en **Réauthentification requise** et il faut saisir un nouveau code.
+
+Changer de client recharge l'intégration et demande un nouveau code : la session d'un client ne sert pas à l'autre. Le client mobile utilise l'identifiant de l'application officielle d'Hydro-Québec. Si le client mobile cesse de fonctionner, choisissez le portail web.
 
 
 ### Configuration du calendrier (Obligatoire pour DPC/DCPC)

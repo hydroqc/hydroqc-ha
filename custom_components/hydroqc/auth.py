@@ -16,9 +16,13 @@ from __future__ import annotations
 
 import inspect
 import logging
+from collections.abc import Mapping
 from typing import Any
 
 import hydroqc
+from hydroqc.webuser import WebUser
+
+from .const import AUTH_CLIENT_WEB, CONF_AUTH_CLIENT, DEFAULT_AUTH_CLIENT
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -167,3 +171,22 @@ async def async_submit_mfa_code(webuser: Any, code: str) -> Any:
         return None
     status: Any = await method(code)
     return status
+
+
+def webuser_auth_kwargs(options: Mapping[str, Any]) -> dict[str, Any]:
+    """Return the ``WebUser`` keyword selecting the login client of an entry.
+
+    The web client needs no keyword, so entries keep working on a wrapper that
+    predates ``auth_client``. On such a wrapper the mobile choice falls back to
+    the web client.
+    """
+    auth_client = options.get(CONF_AUTH_CLIENT, DEFAULT_AUTH_CLIENT)
+    if auth_client == AUTH_CLIENT_WEB:
+        return {}
+    if not _accepts_argument(WebUser, "auth_client"):
+        _LOGGER.warning(
+            "The installed hydroqc version cannot use the %s login client, using the web client",
+            auth_client,
+        )
+        return {}
+    return {"auth_client": auth_client}

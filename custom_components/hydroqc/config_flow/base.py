@@ -36,6 +36,7 @@ from ..auth import (
     login_outcome,
     mfa_error_kind,
     supports_mfa,
+    webuser_auth_kwargs,
 )
 from ..const import (
     AUTH_MODE_OPENDATA,
@@ -216,6 +217,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 verify_ssl=True,
                 log_level="INFO",
                 http_log_level="WARNING",
+                **webuser_auth_kwargs(self._login_entry_options()),
             )
 
             if not await self._webuser.check_hq_portal_status():
@@ -286,6 +288,14 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         webuser, self._webuser = self._webuser, None
         if webuser is not None:
             await webuser.close_session()
+
+    def _login_entry_options(self) -> Mapping[str, Any]:
+        """Return the options of the entry this login belongs to, if any."""
+        if self._login_origin == LOGIN_ORIGIN_REAUTH:
+            return self._get_reauth_entry().options
+        if self._login_origin == LOGIN_ORIGIN_RECONFIGURE:
+            return self._get_reconfigure_entry().options
+        return {}
 
     async def _async_save_session(self) -> None:
         """Persist the session of the login that just succeeded.

@@ -2,6 +2,8 @@
 
 ### Ajouté
 
+- **Choix du client de connexion** : les options ont une section repliable « Avancé » pour choisir le client de connexion Hydro-Québec. L'application mobile, par défaut, garde la session 90 jours et la renouvelle automatiquement. Le portail web demande un nouveau code de vérification chaque jour. Changer de client recharge l'intégration et demande un nouveau code. Nécessite une version de hydroqc qui accepte `auth_client`, sinon l'intégration reste sur le portail web et l'indique dans le journal.
+
 ### Modifié
 
 ### Corrigé

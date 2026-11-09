@@ -20,7 +20,7 @@ from homeassistant.exceptions import (
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from . import calendar_manager
-from .const import DOMAIN
+from .const import CONF_AUTH_CLIENT, DEFAULT_AUTH_CLIENT, DOMAIN
 from .coordinator import HydroQcDataCoordinator
 
 if TYPE_CHECKING:
@@ -99,6 +99,11 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
     async def _async_options_updated(hass: HomeAssistant, config_entry: ConfigEntry) -> None:
         """Handle options update - trigger immediate calendar sync if configured."""
         coord: HydroQcDataCoordinator = hass.data[DOMAIN][config_entry.entry_id]
+
+        # The login client is chosen when the coordinator builds its WebUser
+        if coord.auth_client != config_entry.options.get(CONF_AUTH_CLIENT, DEFAULT_AUTH_CLIENT):
+            hass.config_entries.async_schedule_reload(config_entry.entry_id)
+            return
 
         # Update coordinator with new calendar settings
         coord._calendar_entity_id = config_entry.options.get(

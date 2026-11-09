@@ -139,8 +139,7 @@ async def async_login(webuser: Any, *, send_mfa_code: bool = True) -> Any:
     if _accepts_argument(method, "send_mfa_code"):
         return await method(send_mfa_code=False)
 
-    # WebUser.login is a thin delegate over its HydroClient. Wrappers that do
-    # not forward the switch yet (4.3.1) still accept it on that client.
+    # WebUser.login is a thin delegate over its HydroClient.
     client = getattr(webuser, "_hydro_client", None)
     client_login = getattr(client, "login", None)
     if callable(client_login):

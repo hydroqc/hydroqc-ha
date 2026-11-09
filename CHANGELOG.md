@@ -8,6 +8,20 @@
 
 ### Corrigé
 
+### Retiré
+
+---
+
+## [0.9.1] - 2026-11-09
+
+### Ajouté
+
+### Modifié
+
+- Dépendance `Hydro-Quebec-API-Wrapper` mise à jour de 4.3.1 à 4.4.0. Cette version ajoute un client mobile B2C facultatif, dont le jeton de rafraîchissement glisse sur 90 jours; l'intégration conserve le client web par défaut.
+
+### Corrigé
+
 - **Messages de fin en français** : la fin d'une réauthentification ou d'une reconfiguration affiche maintenant « Réauthentification réussie » ou « Reconfiguration réussie » dans la langue de Home Assistant. Home Assistant affichait son propre message, qui n'est pas traduit en français.
 
 ### Retiré

@@ -17,13 +17,23 @@ CONF_HISTORY_DAYS: Final = "history_days"
 CONF_CALENDAR_ENTITY_ID: Final = "calendar_entity_id"
 CONF_ENABLE_CONSUMPTION_SYNC: Final = "enable_consumption_sync"
 CONF_MFA_CODE: Final = "mfa_code"
+CONF_AUTH_CLIENT: Final = "auth_client"
+
+# Options form sections
+SECTION_ADVANCED: Final = "advanced"
 
 # Auth modes
 AUTH_MODE_PORTAL: Final = "portal"
 AUTH_MODE_OPENDATA: Final = "opendata"
 
+# Hydro-Québec login clients (the wrapper's ``auth_client`` argument)
+AUTH_CLIENT_WEB: Final = "web"
+AUTH_CLIENT_MOBILE: Final = "mobile"
+AUTH_CLIENTS: Final = [AUTH_CLIENT_MOBILE, AUTH_CLIENT_WEB]
+
 # Defaults
 DEFAULT_PREHEAT_DURATION: Final = 120  # minutes
+DEFAULT_AUTH_CLIENT: Final = AUTH_CLIENT_MOBILE
 
 # Hydro-Québec only exposes consumption periods 10 days after the contract start,
 # or after the move-in notice when it comes later, hence the margin.

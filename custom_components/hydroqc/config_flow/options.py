@@ -7,21 +7,29 @@ from typing import Any
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
+from homeassistant.data_entry_flow import section
 from homeassistant.helpers.selector import (
     EntitySelector,
     EntitySelectorConfig,
     NumberSelector,
     NumberSelectorConfig,
     NumberSelectorMode,
+    SelectSelector,
+    SelectSelectorConfig,
+    SelectSelectorMode,
 )
 
 from ..const import (
+    AUTH_CLIENTS,
+    CONF_AUTH_CLIENT,
     CONF_CALENDAR_ENTITY_ID,
     CONF_ENABLE_CONSUMPTION_SYNC,
     CONF_PREHEAT_DURATION,
     CONF_RATE,
     CONF_RATE_OPTION,
+    DEFAULT_AUTH_CLIENT,
     DEFAULT_PREHEAT_DURATION,
+    SECTION_ADVANCED,
 )
 
 
@@ -48,7 +56,10 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
                     errors[CONF_CALENDAR_ENTITY_ID] = "calendar_not_found"
 
             if not errors:
-                return self.async_create_entry(title="", data=user_input)
+                # Sections nest their fields: store them flat like the other options
+                data = dict(user_input)
+                data.update(data.pop(SECTION_ADVANCED, {}))
+                return self.async_create_entry(title="", data=data)
 
         # Check if rate supports calendar configuration
         rate = self.config_entry.data.get(CONF_RATE, "")
@@ -102,6 +113,27 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
                 schema_dict[vol.Required(CONF_CALENDAR_ENTITY_ID)] = EntitySelector(
                     EntitySelectorConfig(domain="calendar")
                 )
+
+        if is_portal_mode:
+            schema_dict[vol.Required(SECTION_ADVANCED)] = section(
+                vol.Schema(
+                    {
+                        vol.Required(
+                            CONF_AUTH_CLIENT,
+                            default=self.config_entry.options.get(
+                                CONF_AUTH_CLIENT, DEFAULT_AUTH_CLIENT
+                            ),
+                        ): SelectSelector(
+                            SelectSelectorConfig(
+                                options=AUTH_CLIENTS,
+                                translation_key=CONF_AUTH_CLIENT,
+                                mode=SelectSelectorMode.LIST,
+                            )
+                        ),
+                    }
+                ),
+                {"collapsed": True},
+            )
 
         return self.async_show_form(
             step_id="init",

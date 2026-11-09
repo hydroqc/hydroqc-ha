@@ -13,7 +13,7 @@
       },
       "account": {
         "title": "Modo Portal - Inicio de sesión",
-        "description": "Ingrese sus credenciales de Hydro-Québec. El portal puede solicitar un código de verificación por correo; la sesión obtenida es válida unas 24 h y después se necesitará un nuevo código.",
+        "description": "Ingrese sus credenciales de Hydro-Québec. El portal puede solicitar un código de verificación por correo.",
         "data": {
           "username": "Nombre de usuario (Correo electrónico)",
           "password": "Contraseña",
@@ -101,7 +101,7 @@
       },
       "reconfigure": {
         "title": "Reconfigurar la cuenta del portal",
-        "description": "Actualice las credenciales de Hydro-Québec y luego seleccione de nuevo el contrato (actualmente {contract_id}). Se conservan el nombre del contrato, las entidades y el historial. La nueva sesión es válida unas 24 h; después se necesitará un nuevo código por correo.",
+        "description": "Actualice las credenciales de Hydro-Québec y luego seleccione de nuevo el contrato (actualmente {contract_id}). Se conservan el nombre del contrato, las entidades y el historial.",
         "data": {
           "username": "Usuario (correo electrónico)",
           "password": "Contraseña"
@@ -123,14 +123,14 @@
       },
       "reauth_confirm": {
         "title": "Volver a autenticar la cuenta del portal",
-        "description": "Hydro-Québec rechazó la contraseña de {username} o la sesión del portal (válida unas 24 h) expiró. Ingrese la contraseña; si el portal solicita un código de verificación, el siguiente paso se lo pedirá. Si el portal le pidió cambiarla, defina primero la nueva contraseña en el sitio de Hydro-Québec y luego ingrésela aquí.",
+        "description": "Hydro-Québec rechazó la contraseña de {username} o la sesión del portal expiró. Ingrese la contraseña; si el portal solicita un código de verificación, el siguiente paso se lo pedirá. Si el portal le pidió cambiarla, defina primero la nueva contraseña en el sitio de Hydro-Québec y luego ingrésela aquí.",
         "data": {
           "password": "Contraseña"
         }
       },
       "mfa": {
         "title": "Verificación por correo electrónico",
-        "description": "Hydro-Québec envió un código de verificación a {email}. Ingréselo a continuación. Deje el campo vacío para recibir un nuevo código. La sesión obtenida es válida unas 24 h; después Hydro-Québec pedirá un nuevo código.",
+        "description": "Hydro-Québec envió un código de verificación a {email}. Ingréselo a continuación. Deje el campo vacío para recibir un nuevo código. La duración de la sesión depende del cliente de inicio de sesión (Opciones → Avanzado): 90 días renovados automáticamente con la aplicación móvil, 24 horas con el portal web.",
         "data": {
           "mfa_code": "Código de verificación"
         },
@@ -178,6 +178,18 @@
           "preheat_duration_minutes": "Duración antes de eventos de pico crítico para activar precalentamiento (0-240 minutos)",
           "enable_consumption_sync": "Habilitar para sincronizar datos de consumo por hora para el panel de energía. Requiere recargar la integración para tener efecto.",
           "calendar_entity_id": "Entidad de calendario para eventos de pico (solo tarifas DPC/DCPC). Requerido para el funcionamiento de los sensores de pico."
+        },
+        "sections": {
+          "advanced": {
+            "name": "Avanzado",
+            "description": "Cómo la integración inicia sesión en el portal de Hydro-Québec.",
+            "data": {
+              "auth_client": "Cliente de inicio de sesión"
+            },
+            "data_description": {
+              "auth_client": "Cambiar de cliente recarga la integración y pide un nuevo código de verificación por correo."
+            }
+          }
         }
       }
     },
@@ -366,6 +378,14 @@
       },
       "portal_status": {
         "name": "Estado del portal"
+      }
+    }
+  },
+  "selector": {
+    "auth_client": {
+      "options": {
+        "mobile": "Aplicación móvil (recomendado): sesión renovada automáticamente (90 días)",
+        "web": "Portal web: nuevo código de verificación cada día (24 horas)"
       }
     }
   }

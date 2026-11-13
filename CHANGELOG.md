@@ -2,11 +2,17 @@
 
 ### Ajouté
 
-- **Choix du client de connexion** : les options ont une section repliable « Avancé » pour choisir le client de connexion Hydro-Québec. L'application mobile, par défaut, garde la session 90 jours et la renouvelle automatiquement. Le portail web demande un nouveau code de vérification chaque jour. Changer de client recharge l'intégration et demande un nouveau code. Nécessite une version de hydroqc qui accepte `auth_client`, sinon l'intégration reste sur le portail web et l'indique dans le journal.
-
 ### Modifié
 
+- Dépendance `Hydro-Quebec-API-Wrapper` mise à jour de 4.4.0 à 4.5.0. Cette version expose `get_hq_portal_unavailability()`, qui permet d'afficher l'heure de fin d'une maintenance du portail; sans elle, l'intégration garde le message générique.
+
 ### Corrigé
+
+- **Coordonnateur OpenData hors saison** : en mode OpenData seulement, le coordonnateur démarre maintenant correctement hors de la saison de pointe au lieu d'échouer avec « aucune nouvelle donnée », les données de pointe ne s'appliquant pas en été.
+
+- **Maintenance du portail affichée** : pendant une maintenance d'Hydro-Québec, la carte de l'entrée affiche maintenant « Hydro-Québec maintenance until … » au lieu de « Unexpected error ». Les formulaires de configuration, de réauthentification et de reconfiguration indiquent l'heure de fin annoncée. Nécessite `Hydro-Quebec-API-Wrapper` 4.5.0, sinon l'intégration garde le message générique.
+
+- **Erreur du portail après la connexion** : une erreur HTTP du portail après une connexion réussie affiche maintenant « portail indisponible » au lieu de « identifiants invalides ».
 
 ### Retiré
 
@@ -16,6 +22,8 @@
 
 ### Ajouté
 
+- **Choix du client de connexion** : les options ont une section repliable « Avancé » pour choisir le client de connexion Hydro-Québec. L'application mobile, par défaut, garde la session 90 jours et la renouvelle automatiquement. Le portail web demande un nouveau code de vérification chaque jour. Changer de client recharge l'intégration et demande un nouveau code. Nécessite une version de hydroqc qui accepte `auth_client`, sinon l'intégration reste sur le portail web et l'indique dans le journal.
+
 ### Modifié
 
 - Dépendance `Hydro-Quebec-API-Wrapper` mise à jour de 4.3.1 à 4.4.0. Cette version ajoute un client mobile B2C facultatif, dont le jeton de rafraîchissement glisse sur 90 jours; l'intégration conserve le client web par défaut.
@@ -23,10 +31,6 @@
 ### Corrigé
 
 - **Messages de fin en français** : la fin d'une réauthentification ou d'une reconfiguration affiche maintenant « Réauthentification réussie » ou « Reconfiguration réussie » dans la langue de Home Assistant. Home Assistant affichait son propre message, qui n'est pas traduit en français.
-
-- **Maintenance du portail affichée** : pendant une maintenance d'Hydro-Québec, la carte de l'entrée affiche maintenant « Hydro-Québec maintenance until … » au lieu de « Unexpected error ». Les formulaires de configuration, de réauthentification et de reconfiguration indiquent l'heure de fin annoncée. L'heure de fin demande la version de la bibliothèque qui inclut hydroqc/hydroqc#14.
-
-- **Erreur du portail après la connexion** : une erreur HTTP du portail après une connexion réussie affiche maintenant « portail indisponible » au lieu de « identifiants invalides ».
 
 ### Retiré
 

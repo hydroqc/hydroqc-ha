@@ -4,6 +4,18 @@
 
 ### Modifié
 
+### Corrigé
+
+### Retiré
+
+---
+
+## [0.9.2] - 2026-11-13
+
+### Ajouté
+
+### Modifié
+
 - Dépendance `Hydro-Quebec-API-Wrapper` mise à jour de 4.4.0 à 4.5.0. Cette version expose `get_hq_portal_unavailability()`, qui permet d'afficher l'heure de fin d'une maintenance du portail; sans elle, l'intégration garde le message générique.
 
 ### Corrigé

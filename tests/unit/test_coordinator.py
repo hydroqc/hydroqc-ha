@@ -8,6 +8,7 @@ from zoneinfo import ZoneInfo
 import pytest
 from freezegun import freeze_time
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers.update_coordinator import UpdateFailed
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hydroqc.const import DOMAIN
@@ -694,3 +695,60 @@ class TestHydroQcDataCoordinator:
 
             assert coordinator.contract_id == "opendata_test_home"
             assert coordinator.is_opendata_mode is True
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    ("window", "expected"),
+    [
+        (
+            {"service": "libreService", "from": "2026-11-07 18:00:00", "to": "2026-11-08 18:00:00"},
+            "Hydro-Québec maintenance until 2026-11-08 18:00:00",
+        ),
+        (None, "Hydro-Québec portal is offline"),
+    ],
+)
+async def test_portal_offline_reports_maintenance(
+    *,
+    hass: HomeAssistant,
+    mock_config_entry: MockConfigEntry,
+    mock_webuser: MagicMock,
+    mock_public_client: MagicMock,
+    window: dict[str, str] | None,
+    expected: str,
+) -> None:
+    """An offline portal fails the update with the announced maintenance end, not as unexpected."""
+    mock_config_entry.add_to_hass(hass)
+    mock_webuser.check_hq_portal_status = AsyncMock(return_value=False)
+    mock_webuser.get_hq_portal_unavailability = AsyncMock(return_value=window)
+
+    with (
+        patch("custom_components.hydroqc.coordinator.base.WebUser", return_value=mock_webuser),
+        patch(
+            "custom_components.hydroqc.coordinator.base.PublicDataClient",
+            return_value=mock_public_client,
+        ),
+        patch("custom_components.hydroqc.coordinator.base.is_winter_season", return_value=False),
+    ):
+        coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+        with pytest.raises(UpdateFailed) as exc_info:
+            await coordinator._async_update_data()
+
+    assert str(exc_info.value) == expected
+    mock_webuser.get_info.assert_not_awaited()
+
+
+@pytest.mark.asyncio
+async def test_portal_offline_reason_without_library_support(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """A hydroqc release without get_hq_portal_unavailability() keeps the generic reason."""
+    mock_config_entry.add_to_hass(hass)
+    with patch("custom_components.hydroqc.coordinator.base.PublicDataClient"):
+        coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+
+    portal_user = MagicMock(spec=["check_hq_portal_status"])
+    assert (
+        await coordinator._async_portal_offline_reason(portal_user)
+        == "Hydro-Québec portal is offline"
+    )

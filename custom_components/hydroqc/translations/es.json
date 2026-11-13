@@ -144,6 +144,7 @@
       "invalid_auth": "Nombre de usuario o contraseña inválidos",
       "no_contracts": "No se encontraron contratos para esta cuenta",
       "portal_unavailable": "El portal de Hydro-Québec no está disponible actualmente. Por favor, inténtelo más tarde.",
+      "portal_maintenance_until": "Hydro-Québec anunció un mantenimiento de su portal hasta el {maintenance_end}. Vuelva a intentarlo después de esa hora.",
       "portal_maintenance": "El portal de Hydro-Québec está en mantenimiento (Error 500). Por favor, inténtelo en unas horas.",
       "calendar_required": "Se requiere un calendario para las tarifas DPC/DCPC. Todos los sensores de pico dependen de los eventos del calendario.",
       "calendar_not_found": "No se encontró la entidad de calendario. Por favor, cree un calendario primero.",

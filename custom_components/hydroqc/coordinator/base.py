@@ -506,6 +506,19 @@ class HydroQcDataCoordinator(
 
         self._reauth_required = False
 
+    async def _async_portal_offline_reason(self, portal_user: WebUser) -> str:
+        """Describe why the portal is offline, with the announced maintenance end if known."""
+        # get_hq_portal_unavailability() only exists in newer hydroqc releases.
+        get_window = getattr(portal_user, "get_hq_portal_unavailability", None)
+        if get_window is not None:
+            try:
+                window = await get_window()
+            except Exception:  # pylint: disable=broad-except
+                window = None
+            if isinstance(window, dict) and window.get("to"):
+                return f"Hydro-Québec maintenance until {window['to']}"
+        return "Hydro-Québec portal is offline"
+
     async def _async_update_data(self) -> dict[str, Any]:
         """Fetch data from Hydro-Québec API.
 
@@ -601,20 +614,21 @@ class HydroQcDataCoordinator(
                 portal_available = await portal_user.check_hq_portal_status()
                 self._portal_available = portal_available  # Track for sensor
                 if not portal_available:
+                    reason = await self._async_portal_offline_reason(portal_user)
                     now = datetime.datetime.now(ZoneInfo("America/Toronto"))
                     # Log warning once per hour to avoid spam
                     if (
                         self._portal_last_offline_log is None
                         or (now - self._portal_last_offline_log).total_seconds() >= 3600
                     ):
-                        _LOGGER.warning("[Portal] Hydro-Québec portal is offline, skipping update")
+                        _LOGGER.warning("[Portal] %s, skipping update", reason)
                         self._portal_last_offline_log = now
                     # Portal offline - if no OpenData fetched either, skip update
                     if not data_fetched:
                         _LOGGER.debug(
                             "No data fetched (portal offline, no OpenData), skipping sensor update"
                         )
-                        raise UpdateFailed("Portal offline and no new data")
+                        raise UpdateFailed(reason)
                     return data
 
             # Login if session expired
@@ -674,7 +688,7 @@ class HydroQcDataCoordinator(
                 # restart can skip the login (and a new verification code).
                 await self._async_persist_session()
 
-        except ConfigEntryAuthFailed:
+        except (ConfigEntryAuthFailed, UpdateFailed):
             raise
         except MFA_ERRORS as err:
             raise ConfigEntryAuthFailed(

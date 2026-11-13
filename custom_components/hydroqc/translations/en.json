@@ -144,6 +144,7 @@
       "invalid_auth": "Invalid username or password",
       "no_contracts": "No contracts found for this account",
       "portal_unavailable": "Hydro-Québec portal is currently unavailable. Please try again later.",
+      "portal_maintenance_until": "Hydro-Québec announced a maintenance of its portal until {maintenance_end}. Please try again after that time.",
       "portal_maintenance": "Hydro-Québec portal is under maintenance (Error 500). Please try again in a few hours.",
       "calendar_required": "A calendar is required for DPC/DCPC rates. All peak sensors depend on calendar events.",
       "calendar_not_found": "Calendar entity not found. Please create a calendar first.",

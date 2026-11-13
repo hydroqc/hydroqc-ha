@@ -8,13 +8,17 @@
 
 ### Corrigé
 
-- **Coordonnateur OpenData hors saison** : en mode OpenData seulement, le coordonnateur démarre maintenant correctement hors de la saison de pointe au lieu d'échouer avec « aucune nouvelle donnée », les données de pointe ne s'appliquant pas en été.
+- **Coordonnateur OpenData hors saison** : en mode OpenData seulement, le coordonnateur démarre maintenant correctement hors de la saison de pointe au lieu d'échouer avec « aucune nouvelle donnée », les données de pointe ne s'appliquant pas en été. (PR #163, merci @sirunderground)
 
-- **Maintenance du portail affichée** : pendant une maintenance d'Hydro-Québec, la carte de l'entrée affiche maintenant « Hydro-Québec maintenance until … » au lieu de « Unexpected error ». Les formulaires de configuration, de réauthentification et de reconfiguration indiquent l'heure de fin annoncée. Nécessite `Hydro-Quebec-API-Wrapper` 4.5.0, sinon l'intégration garde le message générique.
+- **Maintenance du portail affichée** : pendant une maintenance d'Hydro-Québec, la carte de l'entrée affiche maintenant « Hydro-Québec maintenance until … » au lieu de « Unexpected error ». Les formulaires de configuration, de réauthentification et de reconfiguration indiquent l'heure de fin annoncée. Nécessite `Hydro-Quebec-API-Wrapper` 4.5.0, sinon l'intégration garde le message générique. (PR #164, merci @johnjohn-11)
 
-- **Erreur du portail après la connexion** : une erreur HTTP du portail après une connexion réussie affiche maintenant « portail indisponible » au lieu de « identifiants invalides ».
+- **Erreur du portail après la connexion** : une erreur HTTP du portail après une connexion réussie affiche maintenant « portail indisponible » au lieu de « identifiants invalides ». (PR #164, merci @johnjohn-11)
 
 ### Retiré
+
+### Remerciements
+
+Un grand merci à **@sirunderground** (PR #163) et à **@johnjohn-11** (PR #164) pour ces corrections !
 
 ---
 
@@ -22,7 +26,7 @@
 
 ### Ajouté
 
-- **Choix du client de connexion** : les options ont une section repliable « Avancé » pour choisir le client de connexion Hydro-Québec. L'application mobile, par défaut, garde la session 90 jours et la renouvelle automatiquement. Le portail web demande un nouveau code de vérification chaque jour. Changer de client recharge l'intégration et demande un nouveau code. Nécessite une version de hydroqc qui accepte `auth_client`, sinon l'intégration reste sur le portail web et l'indique dans le journal.
+- **Choix du client de connexion** : les options ont une section repliable « Avancé » pour choisir le client de connexion Hydro-Québec. L'application mobile, par défaut, garde la session 90 jours et la renouvelle automatiquement. Le portail web demande un nouveau code de vérification chaque jour. Changer de client recharge l'intégration et demande un nouveau code. Nécessite une version de hydroqc qui accepte `auth_client`, sinon l'intégration reste sur le portail web et l'indique dans le journal. (PR #166, merci @johnjohn-11)
 
 ### Modifié
 
@@ -30,7 +34,7 @@
 
 ### Corrigé
 
-- **Messages de fin en français** : la fin d'une réauthentification ou d'une reconfiguration affiche maintenant « Réauthentification réussie » ou « Reconfiguration réussie » dans la langue de Home Assistant. Home Assistant affichait son propre message, qui n'est pas traduit en français.
+- **Messages de fin en français** : la fin d'une réauthentification ou d'une reconfiguration affiche maintenant « Réauthentification réussie » ou « Reconfiguration réussie » dans la langue de Home Assistant. Home Assistant affichait son propre message, qui n'est pas traduit en français. (PR #162, merci @johnjohn-11)
 
 ### Retiré
 

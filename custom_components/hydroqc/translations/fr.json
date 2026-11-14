@@ -191,6 +191,24 @@
   },
   "entity": {
     "sensor": {
+      "last_7_days_kwh": {
+        "name": "Consommation des 7 derniers jours"
+      },
+      "same_7_days_last_year_kwh": {
+        "name": "Mêmes 7 jours l'an dernier"
+      },
+      "yoy_7day_delta_kwh": {
+        "name": "Écart sur 7 jours vs l'an dernier"
+      },
+      "last_30_days_kwh": {
+        "name": "Consommation des 30 derniers jours"
+      },
+      "same_30_days_last_year_kwh": {
+        "name": "Mêmes 30 jours l'an dernier"
+      },
+      "yoy_30day_delta_kwh": {
+        "name": "Écart sur 30 jours vs l'an dernier"
+      },
       "balance": {
         "name": "Solde"
       },

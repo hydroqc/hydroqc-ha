@@ -213,8 +213,13 @@ class ConsumptionSyncMixin:
                         missing_days,
                     )
             else:
-                # Statistics are up to date, nothing to do
+                # Statistics are up to date, nothing to import
                 _LOGGER.info("Consumption statistics are up to date, no sync needed")
+                # Still fill the year-over-year sensors now rather than after the next hourly sync
+                try:
+                    await self.async_maybe_recompute_yoy()
+                except Exception as err:
+                    _LOGGER.warning("Could not update year-over-year consumption values: %s", err)
         except Exception as err:
             # Check if error might be due to billing period change
             if self._is_near_billing_period_change():
@@ -287,6 +292,13 @@ class ConsumptionSyncMixin:
 
         # Delegate to StatisticsManager
         await self._statistics_manager.fetch_and_import_hourly_consumption(start_date, end_date)
+
+        # New statistics may have completed yesterday: refresh the year-over-year values.
+        # Never let this fail the consumption sync itself.
+        try:
+            await self.async_maybe_recompute_yoy()
+        except Exception as err:
+            _LOGGER.warning("Could not update year-over-year consumption values: %s", err)
 
     def _get_statistic_id(self, consumption_type: str) -> str:
         """Get the statistic_id for a consumption type.

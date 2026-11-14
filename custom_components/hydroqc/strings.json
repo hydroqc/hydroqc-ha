@@ -183,6 +183,28 @@
       }
     }
   },
+  "entity": {
+    "sensor": {
+      "last_7_days_kwh": {
+        "name": "Last 7 Days Consumption"
+      },
+      "same_7_days_last_year_kwh": {
+        "name": "Same 7 Days Last Year"
+      },
+      "yoy_7day_delta_kwh": {
+        "name": "7-Day YoY Delta"
+      },
+      "last_30_days_kwh": {
+        "name": "Last 30 Days Consumption"
+      },
+      "same_30_days_last_year_kwh": {
+        "name": "Same 30 Days Last Year"
+      },
+      "yoy_30day_delta_kwh": {
+        "name": "30-Day YoY Delta"
+      }
+    }
+  },
   "selector": {
     "auth_client": {
       "options": {

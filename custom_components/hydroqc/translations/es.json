@@ -201,6 +201,24 @@
   },
   "entity": {
     "sensor": {
+      "last_7_days_kwh": {
+        "name": "Consumo de los últimos 7 días"
+      },
+      "same_7_days_last_year_kwh": {
+        "name": "Mismos 7 días del año pasado"
+      },
+      "yoy_7day_delta_kwh": {
+        "name": "Diferencia de 7 días vs año pasado"
+      },
+      "last_30_days_kwh": {
+        "name": "Consumo de los últimos 30 días"
+      },
+      "same_30_days_last_year_kwh": {
+        "name": "Mismos 30 días del año pasado"
+      },
+      "yoy_30day_delta_kwh": {
+        "name": "Diferencia de 30 días vs año pasado"
+      },
       "balance": {
         "name": "Saldo"
       },

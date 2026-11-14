@@ -22,6 +22,7 @@ from homeassistant.helpers.selector import (
 from ..const import (
     AUTH_CLIENTS,
     CONF_AUTH_CLIENT,
+    CONF_BILLING_DURATION_ENTITY,
     CONF_CALENDAR_ENTITY_ID,
     CONF_ENABLE_CONSUMPTION_SYNC,
     CONF_FORCE_IPV4,
@@ -68,6 +69,7 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
         rate_with_option = f"{rate}{rate_option}"
         supports_calendar = rate_with_option in ["DPC", "DCPC"]
         is_portal_mode = self.config_entry.data.get("auth_mode", "portal") == "portal"
+        is_tarif_d = rate in ["D"] and is_portal_mode
 
         # Build schema based on rate capabilities
         schema_dict: dict[Any, Any] = {
@@ -109,6 +111,22 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
                 ),
             )
         ] = bool
+
+        # Add billing duration entity picker for Tarif D/DCPC (optional)
+        if is_tarif_d or rate_with_option == "DCPC":
+            current_billing_entity = self.config_entry.options.get(
+                CONF_BILLING_DURATION_ENTITY,
+                self.config_entry.data.get(CONF_BILLING_DURATION_ENTITY, ""),
+            )
+            # A suggested value, not a default: the entity selector rejects the empty
+            # string, so a default of "" would make the form fail to save while no
+            # sensor is chosen. Left empty, the key is simply absent from the options.
+            schema_dict[
+                vol.Optional(
+                    CONF_BILLING_DURATION_ENTITY,
+                    description={"suggested_value": current_billing_entity or None},
+                )
+            ] = EntitySelector(EntitySelectorConfig(domain="sensor"))
 
         # Add calendar options for DPC/DCPC rates (required)
         if supports_calendar:

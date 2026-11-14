@@ -175,6 +175,7 @@
           "preheat_duration_minutes": "Duración de precalentamiento (minutos)",
           "enable_consumption_sync": "Habilitar sincronización de consumo",
           "calendar_entity_id": "Entidad de calendario",
+          "billing_duration_entity": "Sensor de duración del período de facturación (opcional)",
           "force_ipv4": "Forzar IPv4"
         },
         "data_description": {
@@ -182,6 +183,7 @@
           "preheat_duration_minutes": "Duración antes de eventos de pico crítico para activar precalentamiento (0-240 minutos)",
           "enable_consumption_sync": "Habilitar para sincronizar datos de consumo por hora para el panel de energía. Requiere recargar la integración para tener efecto.",
           "calendar_entity_id": "Entidad de calendario para eventos de pico (solo tarifas DPC/DCPC). Requerido para el funcionamiento de los sensores de pico.",
+          "billing_duration_entity": "Seleccione un sensor que registre la duración de su período de facturación en días. El historial del sensor se usará para re-dividir el consumo pasado en franjas de precio bajo y precio alto. Deje vacío para usar una aproximación de 60 días.",
           "force_ipv4": "Todas las direcciones IP deben originarse en Canadá/Quebec. En hosts de doble pila, el tráfico IPv6 puede enrutarse a través de una ruta no canadiense y ser bloqueado geográficamente por los servidores de Hydro-Québec, causando tiempos de espera. Forzar IPv4 garantiza que el tráfico use su dirección IPv4 canadiense."
         },
         "sections": {
@@ -345,6 +347,15 @@
       },
       "wc_yesterday_evening_peak_saved_consumption": {
         "name": "Consumo ahor. ayer tarde"
+      },
+      "tarif_d_low_price_threshold_kwh": {
+        "name": "Umbral Precio Bajo"
+      },
+      "tarif_d_low_price_remaining_kwh": {
+        "name": "Precio Bajo Restante"
+      },
+      "tarif_d_daily_low_price_budget_kwh": {
+        "name": "Presupuesto Diario Precio Bajo"
       }
     },
     "binary_sensor": {

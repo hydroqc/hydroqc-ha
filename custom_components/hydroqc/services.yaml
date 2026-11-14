@@ -56,3 +56,16 @@ create_peak_event:
               value: "AM"
             - label: "Evening (16h-20h)"
               value: "PM"
+
+resplit_tarif_d_history:
+  name: Re-split Tarif D history
+  description: >
+    Re-splits existing Tarif D total hourly consumption statistics into low-price
+    (reg) and high-price (haut) streams using the 40 kWh/day billing period
+    threshold. Run this once after enabling the Tarif D split feature.
+    The total stream is left untouched as a rollback safety net.
+    Only available for Tarif D and Tarif D with CPC (DCPC) rates in portal mode.
+  target:
+    entity:
+      integration: hydroqc
+  fields: {}

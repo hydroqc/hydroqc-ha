@@ -23,6 +23,11 @@ CONF_AUTH_CLIENT: Final = "auth_client"
 SECTION_ADVANCED: Final = "advanced"
 CONF_FORCE_IPV4: Final = "force_ipv4"
 
+# Tarif D threshold (kWh per day at low price)
+TARIF_D_THRESHOLD_KWH_PER_DAY: Final = 40
+TARIF_D_HISTORY_PERIOD_DAYS: Final = 60  # approximation for historical re-split
+CONF_BILLING_DURATION_ENTITY: Final = "billing_duration_entity"
+
 # Auth modes
 AUTH_MODE_PORTAL: Final = "portal"
 AUTH_MODE_OPENDATA: Final = "opendata"
@@ -472,6 +477,32 @@ SENSORS: Final = {
         "unit": "kWh",
         "rates": ["ALL"],
         "disabled_by_default": True,
+    },
+    # Tarif D low-price budget sensors
+    "tarif_d_low_price_threshold_kwh": {
+        "name": "Low Price Threshold",
+        "data_source": "computed.tarif_d_threshold",
+        "state_class": "measurement",
+        "icon": "mdi:speedometer",
+        "unit": "kWh",
+        "rates": ["D", "DCPC"],
+        "diagnostic": True,
+    },
+    "tarif_d_low_price_remaining_kwh": {
+        "name": "Low Price Remaining",
+        "data_source": "computed.tarif_d_remaining",
+        "state_class": "measurement",
+        "icon": "mdi:battery-charging-low",
+        "unit": "kWh",
+        "rates": ["D", "DCPC"],
+    },
+    "tarif_d_daily_low_price_budget_kwh": {
+        "name": "Daily Low Price Budget",
+        "data_source": "computed.tarif_d_daily_budget",
+        "state_class": "measurement",
+        "icon": "mdi:calendar-today",
+        "unit": "kWh",
+        "rates": ["D", "DCPC"],
     },
 }
 

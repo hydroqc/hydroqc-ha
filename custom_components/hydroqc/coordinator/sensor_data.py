@@ -7,6 +7,8 @@ from __future__ import annotations
 import logging
 from typing import TYPE_CHECKING, Any
 
+from ..const import TARIF_D_THRESHOLD_KWH_PER_DAY
+
 if TYPE_CHECKING:
     pass
 
@@ -36,6 +38,13 @@ class SensorDataMixin:
             if self.is_portal_mode:
                 return self._portal_available
             return None
+
+        # Handle year-over-year rolling window sensors (cached by YoYStatsMixin)
+        if data_source.startswith("computed_yoy."):
+            return self.get_yoy_value(data_source)
+        # Handle computed Tarif D budget sensors
+        if data_source.startswith("computed.tarif_d"):
+            return self._get_tarif_d_computed_value(data_source)
 
         # Handle calendar_peak_handler data source
         # Returns None if no calendar configured (sensors will be unavailable)
@@ -141,6 +150,50 @@ class SensorDataMixin:
                 return None
 
         return obj
+
+    def _get_tarif_d_computed_value(self, data_source: str) -> Any:
+        """Compute Tarif D low-price budget sensor values.
+
+        These sensors derive their values from contract billing data:
+          - tarif_d_threshold: cp_duration x 40 kWh (total low-price allowance)
+          - tarif_d_remaining: threshold - cp_total_consumption (floored at 0)
+          - tarif_d_daily_budget: remaining ÷ days_left (floored at 0)
+        """
+        if not self.data:
+            return None
+
+        contract = self.data.get("contract")
+        if contract is None:
+            return None
+
+        try:
+            cp_duration = getattr(contract, "cp_duration", None)
+            cp_total = getattr(contract, "cp_total_consumption", None)
+            cp_current_day = getattr(contract, "cp_current_day", None)
+
+            if cp_duration is None or cp_total is None:
+                return None
+
+            threshold = float(cp_duration) * TARIF_D_THRESHOLD_KWH_PER_DAY
+
+            if data_source == "computed.tarif_d_threshold":
+                return round(threshold, 2)
+
+            remaining = max(0.0, threshold - float(cp_total))
+
+            if data_source == "computed.tarif_d_remaining":
+                return round(remaining, 2)
+
+            if data_source == "computed.tarif_d_daily_budget":
+                if cp_current_day is None:
+                    return None
+                days_left = max(1, int(cp_duration) - int(cp_current_day) + 1)
+                return round(remaining / days_left, 2)
+
+        except (TypeError, ValueError, AttributeError) as err:
+            _LOGGER.debug("Error computing Tarif D value for %s: %s", data_source, err)
+
+        return None
 
     def _get_calendar_peak_handler_value(self, data_source: str) -> Any:
         """Extract value from calendar_peak_handler using dot-notation path.

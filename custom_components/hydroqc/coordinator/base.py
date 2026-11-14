@@ -68,6 +68,7 @@ from ..session import (
 from .calendar_sync import CalendarSyncMixin
 from .consumption_sync import ConsumptionSyncMixin
 from .sensor_data import SensorDataMixin
+from .yoy_stats import YoYStatsMixin
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -77,6 +78,7 @@ class HydroQcDataCoordinator(
     ConsumptionSyncMixin,
     CalendarSyncMixin,
     SensorDataMixin,
+    YoYStatsMixin,
 ):
     """Class to manage fetching Hydro-Québec data."""
 
@@ -186,6 +188,7 @@ class HydroQcDataCoordinator(
         # Initialize mixin attributes (after super().__init__ so self.hass is available)
         self._init_consumption_sync()
         self._init_calendar_sync()
+        self._init_yoy_stats()
 
         # Set up scheduled update triggers, cancelled when the entry unloads
         # OpenData: Every 15 minutes during active window (10:30-15:00), hourly otherwise

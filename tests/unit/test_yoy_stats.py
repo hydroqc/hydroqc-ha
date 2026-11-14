@@ -40,7 +40,22 @@ class FakeRecorder:
         self.fail = False
 
     def fill(self, first_day: D, last_day: D, kwh: float) -> None:
-        """Add one row per real elapsed hour from local midnight of first_day to last_day."""
+        """Add the rows the integration writes for these days.
+
+        Like the consumption sync and the history import, attach the local
+        timezone to each wall-clock hour 00:00 to 23:00: the repeated fall-back
+        01:00 lands on one timestamp (24 rows) and the spring-forward day ends
+        up with 23.
+        """
+        day = first_day
+        while day <= last_day:
+            for hour in range(24):
+                local = datetime.datetime.combine(day, datetime.time(hour), tzinfo=_TZ)
+                self.rows[local.astimezone(UTC)] = kwh
+            day += datetime.timedelta(days=1)
+
+    def fill_elapsed(self, first_day: D, last_day: D, kwh: float) -> None:
+        """Add one row per real elapsed hour (both fall-back 01:00 hours kept)."""
         t = datetime.datetime.combine(first_day, datetime.time.min, tzinfo=_TZ).astimezone(UTC)
         end = datetime.datetime.combine(
             last_day + datetime.timedelta(days=1), datetime.time.min, tzinfo=_TZ
@@ -170,9 +185,10 @@ async def test_partial_last_year_history_is_none_not_a_partial_sum(recorder: Fak
 
 
 @freeze_time(NOW)
-async def test_gap_in_current_window_blanks_current_and_delta_only(recorder: FakeRecorder) -> None:
+async def test_gap_beyond_tolerance_blanks_current_and_delta_only(recorder: FakeRecorder) -> None:
     fill_normal_year(recorder)
-    recorder.drop(datetime.datetime(2026, 6, 5, 14, 0, tzinfo=_TZ))
+    for hour in range(10, 14):  # 4 hours: more than the 3 tolerated over 7 days
+        recorder.drop(datetime.datetime(2026, 6, 5, hour, 0, tzinfo=_TZ))
     h = Harness()
 
     await h.async_maybe_recompute_yoy()
@@ -245,8 +261,10 @@ async def test_leap_day_window_total_uses_seven_full_days(recorder: FakeRecorder
 @pytest.mark.parametrize(
     ("yesterday", "expected_current_hours"),
     [
-        (D(2025, 11, 5), 169),  # window contains the 25-hour fall-back day (2025-11-02)
-        (D(2026, 3, 10), 167),  # window contains the 23-hour spring-forward day (2026-03-08)
+        # Fall-back day (2025-11-02): its repeated 01:00 is stored once, 24 rows
+        (D(2025, 11, 5), 168),
+        # Spring-forward day (2026-03-08): 23 rows
+        (D(2026, 3, 10), 167),
     ],
 )
 async def test_window_with_dst_change_is_complete(
@@ -260,6 +278,85 @@ async def test_window_with_dst_change_is_complete(
     result = await h._async_compute_window(yesterday, 7)
 
     assert result["last_7_days_kwh"] == float(expected_current_hours)
+
+
+async def test_30_day_windows_around_the_fall_back_change_are_complete(
+    recorder: FakeRecorder,
+) -> None:
+    """Regression: windows containing a fall-back day stayed unknown for a month.
+
+    On 2026-11-14 both 30-day windows contain a fall-back day (2026-11-01 and
+    2025-11-02). They were expected to hold 25 rows that day, which the
+    integration never writes.
+    """
+    yesterday = D(2026, 11, 13)
+    recorder.fill(D(2026, 10, 1), yesterday, 1.0)
+    recorder.fill(D(2025, 10, 1), D(2025, 11, 13), 0.5)
+    h = Harness()
+
+    result = await h._async_compute_window(yesterday, 30)
+
+    assert result["last_30_days_kwh"] == 720.0
+    assert result["same_30_days_last_year_kwh"] == 360.0
+    assert result["yoy_30day_delta_kwh"] == 360.0
+
+
+async def test_both_fall_back_hours_stored_is_complete_too(recorder: FakeRecorder) -> None:
+    """Should the import ever keep both 01:00 hours, the window is still complete."""
+    recorder.fill_elapsed(D(2025, 10, 30), D(2025, 11, 5), 1.0)
+
+    assert await Harness()._async_sum_window(D(2025, 10, 30), D(2025, 11, 5)) == (169.0, True)
+
+
+async def test_missing_hour_on_a_fall_back_day_is_still_incomplete(
+    recorder: FakeRecorder,
+) -> None:
+    """Accepting 24 rows on the fall-back day must not hide a real gap."""
+    recorder.fill(D(2025, 10, 30), D(2025, 11, 5), 1.0)
+    recorder.drop(datetime.datetime(2025, 11, 2, 15, tzinfo=_TZ))
+
+    _, complete = await Harness()._async_sum_window(D(2025, 10, 30), D(2025, 11, 5))
+    assert complete is False
+
+
+@pytest.mark.parametrize(("missing", "expected"), [(3, 168.0), (4, None)])
+async def test_up_to_two_percent_missing_is_scaled(
+    recorder: FakeRecorder, missing: int, expected: float | None
+) -> None:
+    """3 missing hours of 168 is within 2% and scaled; 4 is not."""
+    recorder.fill(D(2026, 6, 3), D(2026, 6, 9), 1.0)
+    for hour in range(missing):
+        recorder.drop(datetime.datetime(2026, 6, 5, hour, tzinfo=_TZ))
+
+    value, complete = await Harness()._async_sum_window(D(2026, 6, 3), D(2026, 6, 9))
+
+    assert value == expected
+    assert complete is False
+
+
+@freeze_time("2026-11-14 16:00:00")
+async def test_unavailable_hours_last_year_still_give_a_comparison(
+    recorder: FakeRecorder,
+) -> None:
+    """Regression from a real log: two hours Hydro-Québec marked unavailable.
+
+    Last year's 7-day window had 166 of 168 hours and the 30-day one 718 of 720
+    (after the fall-back day): both were unknown. They are now scaled, and the
+    day still counts as done since the recent windows are complete.
+    """
+    recorder.fill(D(2026, 10, 1), D(2026, 11, 13), 1.0)
+    recorder.fill(D(2025, 10, 1), D(2025, 11, 13), 0.5)
+    recorder.drop(datetime.datetime(2025, 11, 10, 3, tzinfo=_TZ))
+    recorder.drop(datetime.datetime(2025, 11, 10, 4, tzinfo=_TZ))
+    h = Harness()
+
+    await h.async_maybe_recompute_yoy()
+
+    assert h.get_yoy_value("computed_yoy.same_7_days_last_year_kwh") == 84.0
+    assert h.get_yoy_value("computed_yoy.yoy_7day_delta_kwh") == 84.0
+    assert h.get_yoy_value("computed_yoy.last_30_days_kwh") == 720.0
+    assert h.get_yoy_value("computed_yoy.same_30_days_last_year_kwh") == 360.0
+    assert h._yoy_last_computed_date == D(2026, 11, 14)
 
 
 # ── Trigger ───────────────────────────────────────────────────────────────────
@@ -342,13 +439,13 @@ async def test_hole_in_recent_window_is_retried_after_the_next_sync(
     h = Harness()
 
     await h.async_maybe_recompute_yoy()
-    assert h.get_yoy_value("computed_yoy.last_7_days_kwh") is None
+    assert h.get_yoy_value("computed_yoy.last_7_days_kwh") == 168.0  # scaled from 167 hours
     assert h._yoy_last_computed_date is None  # not marked done
 
-    recorder.rows[hole.astimezone(UTC)] = 1.0  # the missing hour finally shows up
+    recorder.rows[hole.astimezone(UTC)] = 5.0  # the missing hour finally shows up
     await h.async_maybe_recompute_yoy()
 
-    assert h.get_yoy_value("computed_yoy.last_7_days_kwh") == 168.0
+    assert h.get_yoy_value("computed_yoy.last_7_days_kwh") == 172.0  # the real value
     assert h._yoy_last_computed_date == D(2026, 6, 10)
 
 

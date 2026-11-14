@@ -2,7 +2,7 @@
 
 ### Ajouté
 
-- **Comparaison avec l'an dernier** : six nouveaux capteurs (fenêtres de 7 et 30 jours : consommation récente, mêmes jours l'an dernier, écart). Ils fonctionnent avec tous les tarifs, restent à `None` tant qu'il n'y a pas un an d'historique complet, et sont recalculés une fois par jour dès que les données de la veille sont disponibles. Ces capteurs sont désactivés par défaut : activez ceux que vous voulez dans les entités de l'intégration.
++- **Comparaison avec l'an dernier** : six nouveaux capteurs (fenêtres de 7 et 30 jours : consommation récente, mêmes jours l'an dernier, écart). Ils fonctionnent avec tous les tarifs, restent à `None` tant qu'il n'y a pas un an d'historique complet (quelques heures indisponibles chez Hydro-Québec, jusqu'à 2 % d'une fenêtre, sont compensées au prorata des heures présentes), et sont recalculés une fois par jour dès que les données de la veille sont disponibles. Ces capteurs sont désactivés par défaut : activez ceux que vous voulez dans les entités de l'intégration.
 
 ### Modifié
 

@@ -421,7 +421,8 @@ SENSORS: Final = {
     # Rolling totals go up and down, so they are plain measurements: no energy
     # device class (HA only allows total/total_increasing there, which would
     # record bogus long-term statistics). Values are None until the window,
-    # and the same window one year earlier, are fully present in the recorder.
+    # and the same window one year earlier, are in the recorder (up to 2% of
+    # missing hours is tolerated and scaled, see YOY_MAX_MISSING_SHARE).
     # Disabled by default: enable the ones you want from the entity registry.
     "last_7_days_kwh": {
         "name": "Last 7 Days Consumption",

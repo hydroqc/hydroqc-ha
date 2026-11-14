@@ -160,23 +160,6 @@ vous conviennent pas :
 
 ---
 
-## Journalisation
-
-Pour voir le détail dans les journaux, ajoutez à `configuration.yaml` :
-
-```yaml
-logger:
-  default: warning
-  logs:
-    custom_components.hydroqc: debug
-    hydroqc: debug
-```
-
-`custom_components.hydroqc` couvre l'intégration; `hydroqc` couvre la bibliothèque qui
-communique avec Hydro-Québec.
-
----
-
 ## Constantes
 
 | Constante | Valeur | Description |

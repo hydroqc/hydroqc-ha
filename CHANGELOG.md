@@ -2,7 +2,7 @@
 
 ### Ajouté
 
-- **Comparaison avec l'an dernier** : six nouveaux capteurs (fenêtres de 7 et 30 jours : consommation récente, mêmes jours l'an dernier, écart). Ils fonctionnent avec tous les tarifs, restent à `None` tant qu'il n'y a pas un an d'historique complet, et sont recalculés une fois par jour dès que les données de la veille sont disponibles. Ces capteurs sont désactivés par défaut : activez ceux que vous voulez dans les entités de l'intégration.
+- **Comparaison avec l'an dernier** : six nouveaux capteurs (fenêtres de 7 et 30 jours : consommation récente, mêmes jours l'an dernier, écart). Ils fonctionnent avec tous les tarifs, restent à `None` tant qu'il n'y a pas un an d'historique complet (quelques heures indisponibles chez Hydro-Québec, jusqu'à 2 % d'une fenêtre, sont compensées au prorata des heures présentes), et sont recalculés une fois par jour dès que les données de la veille sont disponibles. Ces capteurs sont désactivés par défaut : activez ceux que vous voulez dans les entités de l'intégration.
 - **Tarif D : séparation prix bas / prix élevé** : trois nouveaux capteurs (consommation à prix bas, à prix élevé, seuil de 40 kWh/jour) ainsi que les capteurs de kWh restants et de moyenne quotidienne restante avant d'atteindre le seuil. Le service `hydroqc.resplit_tarif_d_history` permet de recalculer l'historique existant (voir [TARIF_D_SPLIT.md](TARIF_D_SPLIT.md)).
 
 ### Modifié

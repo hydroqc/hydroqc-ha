@@ -31,6 +31,11 @@ _TZ = zoneinfo.ZoneInfo("America/Toronto")
 # Rolling window sizes, in days
 YOY_WINDOWS: tuple[int, ...] = (7, 30)
 
+# Share of a window's hours that may be missing, scaled from the hours present.
+# Hydro-Québec marks the odd hour as unavailable; 2% allows 3 hours over 7 days
+# and 14 over 30 days, while a real lack of history still gives no value.
+YOY_MAX_MISSING_SHARE: float = 0.02
+
 # Every metric this mixin can serve (also the sensor keys in const.py)
 YOY_METRICS: tuple[str, ...] = tuple(
     name
@@ -60,16 +65,24 @@ def _one_year_earlier(day: datetime.date) -> datetime.date:
         return day.replace(year=day.year - 1, day=28)
 
 
-def _hours_between(start: datetime.datetime, end: datetime.datetime) -> int:
-    """Return the real number of elapsed hours between two aware datetimes.
+def _stored_hours(first_day: datetime.date, last_day: datetime.date) -> int:
+    """Return how many hourly rows the integration stores for these days.
 
-    Both datetimes share the same ``zoneinfo`` tzinfo object, and Python then
-    subtracts them as wall-clock times, ignoring DST. Converting to UTC first
-    gives the true elapsed time, so a fall-back day correctly counts 25 hours
-    and a spring-forward day 23.
+    The consumption sync and the history import both timestamp an hour by
+    attaching the local timezone to Hydro-Québec's wall-clock hour. On the
+    fall-back day the repeated 01:00 hour therefore lands on one timestamp, so
+    that day holds 24 rows although it lasts 25 hours; the spring-forward day
+    holds 23. Counting real elapsed hours instead made every window containing
+    a fall-back day look incomplete, for about a month each autumn.
     """
-    delta = end.astimezone(datetime.UTC) - start.astimezone(datetime.UTC)
-    return int(delta.total_seconds() // 3600)
+    stamps: set[datetime.datetime] = set()
+    day = first_day
+    while day <= last_day:
+        for hour in range(24):
+            local = datetime.datetime.combine(day, datetime.time(hour), tzinfo=_TZ)
+            stamps.add(local.astimezone(datetime.UTC))
+        day += datetime.timedelta(days=1)
+    return len(stamps)
 
 
 class YoYStatsMixin:
@@ -81,6 +94,8 @@ class YoYStatsMixin:
         self._yoy_metrics: dict[str, float | None] = {}
         # Local date for which the metrics were last computed
         self._yoy_last_computed_date: datetime.date | None = None
+        # window -> True when every hour of the recent window was in the recorder
+        self._yoy_recent_complete: dict[int, bool] = {}
 
     # ------------------------------------------------------------------
     # Accessor used by get_sensor_value()
@@ -124,13 +139,12 @@ class YoYStatsMixin:
         for window in YOY_WINDOWS:
             self._yoy_metrics.update(await self._async_compute_window(yesterday, window))
 
-        # Done for today only if the recent windows were complete. If one has a
-        # hole (an hour not published yet), try again after the next sync instead
-        # of showing nothing until tomorrow. A missing *last-year* window is
-        # permanent for the first year, so it must not cause endless retries.
-        if all(
-            self._yoy_metrics.get(f"last_{window}_days_kwh") is not None for window in YOY_WINDOWS
-        ):
+        # Done for today only if every hour of the recent windows was there. If one
+        # has a hole (an hour not published yet), its value is scaled or blank, so
+        # try again after the next sync instead of keeping that until tomorrow. A
+        # missing *last-year* window is permanent for the first year, so it must
+        # not cause endless retries.
+        if all(self._yoy_recent_complete.get(window) for window in YOY_WINDOWS):
             self._yoy_last_computed_date = today
         _LOGGER.debug("[YoY] Recomputed year-over-year values: %s", self._yoy_metrics)
 
@@ -184,10 +198,14 @@ class YoYStatsMixin:
 
     async def _async_sum_window(
         self, first_day: datetime.date, last_day: datetime.date
-    ) -> float | None:
+    ) -> tuple[float | None, bool]:
         """Sum the consumption of ``first_day`` to ``last_day`` inclusive.
 
-        Returns None unless every hour of the window is present. A partial sum
+        Returns ``(kWh, complete)``. ``complete`` is True when every hour is there.
+
+        Up to YOY_MAX_MISSING_SHARE of the hours may be missing (Hydro-Québec
+        marks the odd hour as unavailable): the sum is then scaled by expected
+        over present hours. Beyond that, the value is None. A plain partial sum
         would silently understate the window and produce a misleading
         year-over-year difference, for example when last year's history only
         starts in the middle of the window. Showing nothing is better than
@@ -195,25 +213,41 @@ class YoYStatsMixin:
         """
         start = _local_midnight(first_day)
         end = _local_midnight(last_day + datetime.timedelta(days=1))
-        expected_hours = _hours_between(start, end)
+        expected_hours = _stored_hours(first_day, last_day)
 
         try:
             rows = await self._async_hourly_rows(start, end)
         except Exception as err:
             _LOGGER.warning("[YoY] Could not query %s to %s: %s", first_day, last_day, err)
-            return None
+            return None, False
 
-        if len(rows) != expected_hours:
+        found = len(rows)
+        total = sum(row.get("state") or 0.0 for row in rows)
+
+        # More rows than expected can only be both fall-back 01:00 hours stored
+        # separately, which is complete as well.
+        if found >= expected_hours:
+            return round(total, 2), True
+
+        missing = expected_hours - found
+        if found == 0 or missing > int(expected_hours * YOY_MAX_MISSING_SHARE):
             _LOGGER.debug(
                 "[YoY] Window %s to %s incomplete: %d of %d hours",
                 first_day,
                 last_day,
-                len(rows),
+                found,
                 expected_hours,
             )
-            return None
+            return None, False
 
-        return round(sum(row.get("state") or 0.0 for row in rows), 2)
+        _LOGGER.debug(
+            "[YoY] Window %s to %s missing %d of %d hours, scaled from the hours present",
+            first_day,
+            last_day,
+            missing,
+            expected_hours,
+        )
+        return round(total * expected_hours / found, 2), False
 
     async def _async_compute_window(
         self, yesterday: datetime.date, window: int
@@ -235,8 +269,10 @@ class YoYStatsMixin:
         last_year_last_day = _one_year_earlier(yesterday)
         last_year_first_day = last_year_last_day - datetime.timedelta(days=window - 1)
 
-        current = await self._async_sum_window(first_day, yesterday)
-        last_year = await self._async_sum_window(last_year_first_day, last_year_last_day)
+        current, self._yoy_recent_complete[window] = await self._async_sum_window(
+            first_day, yesterday
+        )
+        last_year, _ = await self._async_sum_window(last_year_first_day, last_year_last_day)
 
         delta = (
             round(current - last_year, 2) if current is not None and last_year is not None else None

@@ -62,6 +62,7 @@ L'intégration calendrier offre **plusieurs niveaux de protection** pour vos aut
 - **Tous les tarifs supportés** : D, DT, DPC (Flex-D), DCPC (Crédits hivernaux)
 - **Mode sans compte** : Surveillez les pointes sans identifiants
 - **Multi-contrats** : Gérez maison, chalet, etc.
+- **Tarif D : prix bas / prix élevé** : Consommation séparée dans le tableau de bord Énergie ([détails](TARIF_D_SPLIT.md))
 - **Blueprints prêt-à-l'emploi** : Automatisations optimisées incluses
 
 ---
@@ -224,6 +225,10 @@ target:
 
 > **Note** : L'événement utilise le même format d'UID que les événements OpenData. Si Hydro-Québec annonce ensuite la même pointe, l'événement existant sera conservé (pas de doublon).
 
+### Service `hydroqc.resplit_tarif_d_history`
+
+Tarifs D et DCPC seulement. Recalcule les flux prix bas et prix élevé à partir de l'historique de consommation totale. À lancer une fois après une mise à jour depuis une version antérieure; inutile pour une nouvelle installation. Voir [Tarif D : séparation prix bas / prix élevé](TARIF_D_SPLIT.md).
+
 ---
 
 ## Blueprints
@@ -349,6 +354,16 @@ Les blueprints incluent automatiquement un délai aléatoire (30 secondes à 5 m
 - Nombre d'heures critiques
 - Nombre de jours hivernaux
 - Alertes de pointe critique
+
+</details>
+
+<details>
+<summary><strong>Tarifs D / DCPC</strong></summary>
+
+- Seuil, kWh restants et budget quotidien au prix bas
+- Consommation au prix bas / prix élevé dans le tableau de bord Énergie
+
+Voir [Tarif D : séparation prix bas / prix élevé](TARIF_D_SPLIT.md).
 
 </details>
 

@@ -105,6 +105,10 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         """Initialize the config flow."""
         self._selected_contract: dict[str, Any] | None = None
         self._webuser: WebUser | None = None
+        # IPv4-only HTTP session handed to the temporary client when Force IPv4 is
+        # on. The wrapper never closes a session it did not create, so this flow
+        # owns it and closes it together with the client.
+        self._portal_session: aiohttp.ClientSession | None = None
         self._contracts: list[dict[str, Any]] = []
         self._auth_mode: str | None = None
         self._username: str | None = None
@@ -229,7 +233,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         assert self._username is not None
         assert self._password is not None
         errors: dict[str, str] = {}
-        self._webuser = None
+        # A new attempt replaces the previous client: close it instead of leaking it
+        await self._async_close_webuser()
         self._mfa_pending = False
 
         try:
@@ -241,6 +246,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     cookie_jar=aiohttp.CookieJar(quote_cookie=False, unsafe=True),
                     requote_redirect_url=False,
                 )
+                # Kept before building the client, so it is closed even if that fails
+                self._portal_session = portal_session
                 _LOGGER.debug("Force IPv4: created IPv4-only session for login")
             self._webuser = WebUser(
                 self._username,
@@ -262,6 +269,8 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             elif outcome != LOGIN_SUCCESS:
                 errors["base"] = "invalid_auth"
         except hydroqc.error.HydroQcHTTPError as err:
+            # The wrapper only logs "Exception in http_request": name the URL and status
+            _LOGGER.debug("Hydro-Québec login failed: %s", err)
             # A non-5xx status during the login can be a password change request, not only a wrong password.
             if getattr(err, "status_code", None) == 500:
                 errors["base"] = "portal_maintenance"
@@ -316,11 +325,26 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
 
         return errors
 
+    @callback
+    def async_remove(self) -> None:
+        """Close the temporary client when the flow goes away before finishing.
+
+        This happens when the dialog is closed while waiting for the e-mail
+        verification code: the client is kept open for that step.
+        """
+        if self._webuser is not None or self._portal_session is not None:
+            self.hass.async_create_task(self._async_close_webuser())
+
     async def _async_close_webuser(self) -> None:
-        """Close and forget the temporary portal client."""
+        """Close and forget the temporary portal client and its IPv4 session."""
         webuser, self._webuser = self._webuser, None
-        if webuser is not None:
-            await webuser.close_session()
+        session, self._portal_session = self._portal_session, None
+        try:
+            if webuser is not None:
+                await webuser.close_session()
+        finally:
+            if session is not None and not session.closed:
+                await session.close()
 
     def _login_entry_options(self) -> Mapping[str, Any]:
         """Return the options of the entry this login belongs to, if any."""

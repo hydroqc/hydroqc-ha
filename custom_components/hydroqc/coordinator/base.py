@@ -96,6 +96,9 @@ class HydroQcDataCoordinator(
 
         # Portal mode attributes (requires login)
         self._webuser: WebUser | None = None
+        # IPv4-only HTTP session handed to the portal client when Force IPv4 is on.
+        # The wrapper never closes a session it did not create: closed at shutdown.
+        self._portal_session: aiohttp.ClientSession | None = None
         self._customer: Customer | None = None
         self._account: Account | None = None
         self._contract: Contract | None = None
@@ -180,6 +183,7 @@ class HydroQcDataCoordinator(
                     cookie_jar=_cookie_jar,
                     requote_redirect_url=False,
                 )
+                self._portal_session = portal_session
             self._webuser = WebUser(
                 entry.data[CONF_USERNAME],
                 entry.data[CONF_PASSWORD],
@@ -822,6 +826,11 @@ class HydroQcDataCoordinator(
                 except asyncio.CancelledError:
                     _LOGGER.debug("Cancelled regular sync task")
 
-        if self._webuser:
-            await self._webuser.close_session()
+        try:
+            if self._webuser:
+                await self._webuser.close_session()
+        finally:
+            session, self._portal_session = self._portal_session, None
+            if session is not None and not session.closed:
+                await session.close()
         await self.public_client.close_session()

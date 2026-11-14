@@ -9,6 +9,8 @@
 
 ### Corrigé
 
+- **Forcer IPv4** : la session HTTP IPv4 est maintenant fermée après chaque tentative de connexion (réussie, refusée ou abandonnée à l'étape du code de vérification) et au rechargement de l'intégration. Home Assistant n'affiche plus « Unclosed client session » ni « Unclosed connector ». Un échec de connexion indique aussi l'adresse et le code HTTP dans le journal de débogage.
+
 ### Retiré
 
 ---

@@ -172,13 +172,15 @@
           "update_interval": "Update Interval (seconds)",
           "preheat_duration_minutes": "Pre-heat Duration (minutes)",
           "enable_consumption_sync": "Enable consumption synchronization",
-          "calendar_entity_id": "Calendar Entity"
+          "calendar_entity_id": "Calendar Entity",
+          "billing_duration_entity": "Billing period duration sensor (optional)"
         },
         "data_description": {
           "update_interval": "How often to fetch data from Hydro-Québec (30-600 seconds)",
           "preheat_duration_minutes": "Duration before critical peak events to trigger pre-heating (0-240 minutes)",
           "enable_consumption_sync": "Enable to sync hourly consumption data for the energy dashboard. Requires integration reload to take effect.",
-          "calendar_entity_id": "Calendar entity for peak events (DPC/DCPC rates only). Required for peak sensors to work."
+          "calendar_entity_id": "Calendar entity for peak events (DPC/DCPC rates only). Required for peak sensors to work.",
+          "billing_duration_entity": "Select a sensor that tracks your billing period duration in days. Its recorder history will be used to accurately re-split past consumption into low-price and high-price streams. Leave empty to use a 60-day approximation."
         },
         "sections": {
           "advanced": {
@@ -341,6 +343,15 @@
       },
       "wc_yesterday_evening_peak_saved_consumption": {
         "name": "Yest. Evening Saved Cons."
+      },
+      "tarif_d_low_price_threshold_kwh": {
+        "name": "Low Price Threshold"
+      },
+      "tarif_d_low_price_remaining_kwh": {
+        "name": "Low Price Remaining"
+      },
+      "tarif_d_daily_low_price_budget_kwh": {
+        "name": "Daily Low Price Budget"
       }
     },
     "binary_sensor": {

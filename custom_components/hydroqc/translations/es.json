@@ -172,13 +172,15 @@
           "update_interval": "Intervalo de actualización (segundos)",
           "preheat_duration_minutes": "Duración de precalentamiento (minutos)",
           "enable_consumption_sync": "Habilitar sincronización de consumo",
-          "calendar_entity_id": "Entidad de calendario"
+          "calendar_entity_id": "Entidad de calendario",
+          "billing_duration_entity": "Sensor de duración del período de facturación (opcional)"
         },
         "data_description": {
           "update_interval": "Con qué frecuencia obtener datos de Hydro-Québec (30-600 segundos)",
           "preheat_duration_minutes": "Duración antes de eventos de pico crítico para activar precalentamiento (0-240 minutos)",
           "enable_consumption_sync": "Habilitar para sincronizar datos de consumo por hora para el panel de energía. Requiere recargar la integración para tener efecto.",
-          "calendar_entity_id": "Entidad de calendario para eventos de pico (solo tarifas DPC/DCPC). Requerido para el funcionamiento de los sensores de pico."
+          "calendar_entity_id": "Entidad de calendario para eventos de pico (solo tarifas DPC/DCPC). Requerido para el funcionamiento de los sensores de pico.",
+          "billing_duration_entity": "Seleccione un sensor que registre la duración de su período de facturación en días. El historial del sensor se usará para re-dividir el consumo pasado en franjas de precio bajo y precio alto. Deje vacío para usar una aproximación de 60 días."
         },
         "sections": {
           "advanced": {
@@ -341,6 +343,15 @@
       },
       "wc_yesterday_evening_peak_saved_consumption": {
         "name": "Consumo ahor. ayer tarde"
+      },
+      "tarif_d_low_price_threshold_kwh": {
+        "name": "Umbral Precio Bajo"
+      },
+      "tarif_d_low_price_remaining_kwh": {
+        "name": "Precio Bajo Restante"
+      },
+      "tarif_d_daily_low_price_budget_kwh": {
+        "name": "Presupuesto Diario Precio Bajo"
       }
     },
     "binary_sensor": {

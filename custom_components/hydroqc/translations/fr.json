@@ -162,13 +162,15 @@
           "update_interval": "Intervalle de mise à jour (secondes)",
           "preheat_duration_minutes": "Durée de préchauffage (minutes)",
           "enable_consumption_sync": "Activer la synchronisation de consommation",
-          "calendar_entity_id": "Entité calendrier"
+          "calendar_entity_id": "Entité calendrier",
+          "billing_duration_entity": "Capteur de durée de période de facturation (optionnel)"
         },
         "data_description": {
           "update_interval": "Fréquence de récupération des données d'Hydro-Québec (30-600 secondes)",
           "preheat_duration_minutes": "Durée avant les événements de pointe critique pour déclencher le préchauffage (0-240 minutes)",
           "enable_consumption_sync": "Activer pour synchroniser les données de consommation horaire pour le tableau de bord énergétique. Nécessite un rechargement de l'intégration pour prendre effet.",
-          "calendar_entity_id": "Entité calendrier pour les événements de pointe (tarifs DPC/DCPC seulement). Requis pour le fonctionnement des capteurs de pointe."
+          "calendar_entity_id": "Entité calendrier pour les événements de pointe (tarifs DPC/DCPC seulement). Requis pour le fonctionnement des capteurs de pointe.",
+          "billing_duration_entity": "Sélectionnez un capteur qui suit la durée de votre période de facturation en jours. L'historique de ce capteur sera utilisé pour re-répartir précisément la consommation passée en tranches bas prix et haut prix. Laissez vide pour utiliser une approximation de 60 jours."
         },
         "sections": {
           "advanced": {
@@ -331,6 +333,15 @@
       },
       "wc_yesterday_evening_peak_saved_consumption": {
         "name": "Conso. éco. hier soir"
+      },
+      "tarif_d_low_price_threshold_kwh": {
+        "name": "Seuil Bas Prix"
+      },
+      "tarif_d_low_price_remaining_kwh": {
+        "name": "Bas Prix Restant"
+      },
+      "tarif_d_daily_low_price_budget_kwh": {
+        "name": "Budget Quotidien Bas Prix"
       }
     },
     "binary_sensor": {

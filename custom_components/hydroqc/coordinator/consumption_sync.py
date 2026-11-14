@@ -303,6 +303,9 @@ class ConsumptionSyncMixin:
                     _LOGGER.error("History importer not initialized")
                     return
                 await self._history_importer.import_csv_history(days_back)
+                # The import may have filled last year's windows: let the follow-up
+                # sync recompute the year-over-year values even if done for today
+                self.invalidate_yoy()
                 _LOGGER.info("CSV import completed, running initial sync to get recent data")
                 await self._async_initial_sync()
             except Exception as err:

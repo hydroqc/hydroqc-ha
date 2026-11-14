@@ -138,6 +138,15 @@ class YoYStatsMixin:
         if self._yoy_metrics != previous:
             self.async_update_listeners()
 
+    def invalidate_yoy(self) -> None:
+        """Forget that today's values are computed, so the next sync recomputes them.
+
+        Needed when past hours were added after today's computation, which a
+        history import does: it can fill last year's windows that were missing,
+        and those would otherwise stay unknown until the next day.
+        """
+        self._yoy_last_computed_date = None
+
     # ------------------------------------------------------------------
     # Internals
     # ------------------------------------------------------------------

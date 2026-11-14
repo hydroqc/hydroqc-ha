@@ -435,6 +435,63 @@ async def test_consumption_sync_refreshes_yoy_and_survives_its_failure(
         await coordinator.async_fetch_hourly_consumption(D(2026, 6, 9), D(2026, 6, 10))  # no raise
 
 
+@freeze_time(NOW)
+async def test_history_imported_later_the_same_day_fills_last_year(
+    recorder: FakeRecorder,
+) -> None:
+    """Regression: last year's values stayed unknown until the next day.
+
+    The first sync only brings the recent days, so the values are computed for
+    today with no last year. The history import then adds last year: without
+    invalidation, the once-per-day guard skipped the recomputation.
+    """
+    recorder.fill(D(2026, 5, 1), D(2026, 6, 9), 1.0)
+    h = Harness()
+    await h.async_maybe_recompute_yoy()
+    assert h.get_yoy_value("computed_yoy.same_7_days_last_year_kwh") is None
+
+    recorder.fill(D(2025, 5, 1), D(2025, 6, 9), 0.5)  # the history import
+    await h.async_maybe_recompute_yoy()
+    assert h.get_yoy_value("computed_yoy.same_7_days_last_year_kwh") is None  # guarded
+
+    h.invalidate_yoy()
+    await h.async_maybe_recompute_yoy()
+
+    assert h.get_yoy_value("computed_yoy.same_7_days_last_year_kwh") == 84.0
+    assert h.get_yoy_value("computed_yoy.yoy_7day_delta_kwh") == 84.0
+    assert h.get_yoy_value("computed_yoy.same_30_days_last_year_kwh") == 360.0
+    assert h._yoy_last_computed_date == D(2026, 6, 10)
+
+
+async def test_history_import_lets_the_follow_up_sync_recompute(
+    hass: HomeAssistant, mock_config_entry: MockConfigEntry
+) -> None:
+    """The sync run after a history import must not be skipped as already done today."""
+    mock_config_entry.add_to_hass(hass)
+    with patch("custom_components.hydroqc.coordinator.base.WebUser"):
+        coordinator = HydroQcDataCoordinator(hass, mock_config_entry)
+    coordinator._ensure_helper_modules = MagicMock()
+    coordinator._history_importer = MagicMock(import_csv_history=AsyncMock())
+    coordinator._yoy_last_computed_date = D(2026, 6, 10)  # computed earlier today
+
+    seen_at_follow_up: list[D | None] = []
+
+    async def follow_up() -> None:
+        seen_at_follow_up.append(coordinator._yoy_last_computed_date)
+
+    with (
+        patch.object(HydroQcDataCoordinator, "is_portal_mode", new_callable=PropertyMock) as portal,
+        patch.object(coordinator, "_async_initial_sync", new=follow_up),
+    ):
+        portal.return_value = True
+        coordinator.async_sync_consumption_history(800)
+        assert coordinator._csv_import_task is not None
+        await coordinator._csv_import_task
+
+    coordinator._history_importer.import_csv_history.assert_awaited_once_with(800)
+    assert seen_at_follow_up == [None]
+
+
 # ── Sensor definitions and translations ───────────────────────────────────────
 
 

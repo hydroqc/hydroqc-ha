@@ -3,9 +3,11 @@
 from __future__ import annotations
 
 import logging
+import socket
 from collections.abc import Mapping
 from typing import Any, cast
 
+import aiohttp
 import voluptuous as vol
 from homeassistant import config_entries
 from homeassistant.config_entries import ConfigFlowResult
@@ -48,6 +50,7 @@ from ..const import (
     CONF_CONTRACT_NAME,
     CONF_CUSTOMER_ID,
     CONF_ENABLE_CONSUMPTION_SYNC,
+    CONF_FORCE_IPV4,
     CONF_HISTORY_DAYS,
     CONF_MFA_CODE,
     CONF_PREHEAT_DURATION,
@@ -116,6 +119,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         # Session captured during the initial setup: the config entry does not
         # exist yet, so it is written once HA creates it.
         self._pending_session_state: dict[str, Any] | None = None
+        self._force_ipv4: bool = False
 
     async def async_step_user(self, user_input: dict[str, Any] | None = None) -> ConfigFlowResult:
         """Handle the initial step - choose auth mode."""
@@ -141,12 +145,14 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                                 ),
                                 mode=SelectSelectorMode.LIST,
                             )
-                        )
+                        ),
+                        vol.Optional(CONF_FORCE_IPV4, default=False): bool,
                     }
                 ),
             )
 
         self._auth_mode = user_input[CONF_AUTH_MODE]
+        self._force_ipv4 = user_input.get(CONF_FORCE_IPV4, False)
 
         if self._auth_mode == AUTH_MODE_PORTAL:
             return await self.async_step_account()
@@ -227,6 +233,15 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         self._mfa_pending = False
 
         try:
+            _LOGGER.debug("Creating temp WebUser for login (force_ipv4=%s)", self._force_ipv4)
+            portal_session: aiohttp.ClientSession | None = None
+            if self._force_ipv4:
+                portal_session = aiohttp.ClientSession(
+                    connector=aiohttp.TCPConnector(family=socket.AF_INET),
+                    cookie_jar=aiohttp.CookieJar(quote_cookie=False, unsafe=True),
+                    requote_redirect_url=False,
+                )
+                _LOGGER.debug("Force IPv4: created IPv4-only session for login")
             self._webuser = WebUser(
                 self._username,
                 self._password,
@@ -234,6 +249,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 log_level="INFO",
                 http_log_level="WARNING",
                 **webuser_auth_kwargs(self._login_entry_options()),
+                session=portal_session,
             )
 
             if not await self._webuser.check_hq_portal_status():
@@ -603,6 +619,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                 CONF_PREHEAT_DURATION: preheat_duration,
                 CONF_ENABLE_CONSUMPTION_SYNC: enable_consumption_sync,
                 CONF_HISTORY_DAYS: history_days if enable_consumption_sync else 0,
+                CONF_FORCE_IPV4: self._force_ipv4,
             }
 
             # Add calendar configuration if provided
@@ -658,7 +675,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             # Store selected sector and move to offer selection
             self._selected_sector = user_input["sector"]
-            return await self.async_step_opendata_rate()
+            return await self.async_step_opendata_offer()
 
         # Build sector selection dropdown
         sector_options = [
@@ -681,7 +698,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             errors=errors,
         )
 
-    async def async_step_opendata_rate(
+    async def async_step_opendata_offer(
         self, user_input: dict[str, Any] | None = None
     ) -> ConfigFlowResult:
         """Handle opendata mode setup - select offer for chosen sector."""
@@ -735,6 +752,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_RATE: rate,
                     CONF_RATE_OPTION: rate_option,
                     CONF_PREHEAT_DURATION: preheat_duration,
+                    CONF_FORCE_IPV4: self._force_ipv4,
                 },
             )
 
@@ -747,7 +765,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             else "Unknown"
         )
         return self.async_show_form(
-            step_id="opendata_rate",
+            step_id="opendata_offer",
             data_schema=vol.Schema(
                 {
                     vol.Required(CONF_CONTRACT_NAME, default="Home"): TextSelector(),
@@ -793,6 +811,7 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
                     CONF_RATE_OPTION: self._selected_contract["rate_option"],
                     CONF_PREHEAT_DURATION: DEFAULT_PREHEAT_DURATION,
                     CONF_CALENDAR_ENTITY_ID: calendar_entity_id,
+                    CONF_FORCE_IPV4: self._force_ipv4,
                 }
 
                 sector_label = (
@@ -835,6 +854,9 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
             self._username = user_input[CONF_USERNAME]
             # A blank password keeps the stored one
             self._password = user_input.get(CONF_PASSWORD) or entry.data[CONF_PASSWORD]
+            self._force_ipv4 = entry.options.get(
+                CONF_FORCE_IPV4, entry.data.get(CONF_FORCE_IPV4, False)
+            )
 
             errors = await self._async_fetch_contracts()
             if not errors:
@@ -872,6 +894,9 @@ class HydroQcConfigFlow(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             self._username = entry.data[CONF_USERNAME]
             self._password = user_input[CONF_PASSWORD]
+            self._force_ipv4 = entry.options.get(
+                CONF_FORCE_IPV4, entry.data.get(CONF_FORCE_IPV4, False)
+            )
 
             errors = await self._async_fetch_contracts()
             if not errors:

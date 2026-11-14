@@ -21,6 +21,7 @@ CONF_AUTH_CLIENT: Final = "auth_client"
 
 # Options form sections
 SECTION_ADVANCED: Final = "advanced"
+CONF_FORCE_IPV4: Final = "force_ipv4"
 
 # Auth modes
 AUTH_MODE_PORTAL: Final = "portal"

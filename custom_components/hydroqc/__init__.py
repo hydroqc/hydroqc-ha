@@ -20,7 +20,7 @@ from homeassistant.exceptions import (
 from homeassistant.helpers import device_registry as dr, entity_registry as er
 
 from . import calendar_manager
-from .const import CONF_AUTH_CLIENT, DEFAULT_AUTH_CLIENT, DOMAIN
+from .const import CONF_AUTH_CLIENT, CONF_FORCE_IPV4, DEFAULT_AUTH_CLIENT, DOMAIN
 from .coordinator import HydroQcDataCoordinator
 
 if TYPE_CHECKING:
@@ -100,8 +100,19 @@ async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
         """Handle options update - trigger immediate calendar sync if configured."""
         coord: HydroQcDataCoordinator = hass.data[DOMAIN][config_entry.entry_id]
 
-        # The login client is chosen when the coordinator builds its WebUser
-        if coord.auth_client != config_entry.options.get(CONF_AUTH_CLIENT, DEFAULT_AUTH_CLIENT):
+        # The login client and the HTTP sessions are chosen once at setup, so
+        # reload the entry when either the login client or Force IPv4 changed.
+        force_ipv4 = config_entry.options.get(
+            CONF_FORCE_IPV4, config_entry.data.get(CONF_FORCE_IPV4, False)
+        )
+        auth_client_changed = coord.auth_client != config_entry.options.get(
+            CONF_AUTH_CLIENT, DEFAULT_AUTH_CLIENT
+        )
+        force_ipv4_changed = force_ipv4 != coord._force_ipv4
+        if auth_client_changed or force_ipv4_changed:
+            _LOGGER.info(
+                "Login client or Force IPv4 changed for %s, reloading", coord.contract_name
+            )
             hass.config_entries.async_schedule_reload(config_entry.entry_id)
             return
 

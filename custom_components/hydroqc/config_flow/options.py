@@ -24,6 +24,7 @@ from ..const import (
     CONF_AUTH_CLIENT,
     CONF_CALENDAR_ENTITY_ID,
     CONF_ENABLE_CONSUMPTION_SYNC,
+    CONF_FORCE_IPV4,
     CONF_PREHEAT_DURATION,
     CONF_RATE,
     CONF_RATE_OPTION,
@@ -97,6 +98,17 @@ class HydroQcOptionsFlow(config_entries.OptionsFlow):
                     ),
                 )
             ] = bool
+
+        # Add Force IPv4 option (applies to both portal and opendata modes)
+        schema_dict[
+            vol.Optional(
+                CONF_FORCE_IPV4,
+                default=self.config_entry.options.get(
+                    CONF_FORCE_IPV4,
+                    self.config_entry.data.get(CONF_FORCE_IPV4, False),
+                ),
+            )
+        ] = bool
 
         # Add calendar options for DPC/DCPC rates (required)
         if supports_calendar:

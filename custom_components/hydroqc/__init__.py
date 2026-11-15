@@ -38,6 +38,7 @@ PLATFORMS: list[Platform] = [
 SERVICE_REFRESH_DATA = "refresh_data"
 SERVICE_SYNC_HISTORY = "sync_consumption_history"
 SERVICE_CREATE_PEAK_EVENT = "create_peak_event"
+SERVICE_RESPLIT_TARIF_D = "resplit_tarif_d_history"
 
 ATTR_DAYS_BACK = "days_back"
 ATTR_DATE = "date"
@@ -50,6 +51,8 @@ SERVICE_SYNC_HISTORY_SCHEMA = cv.make_entity_service_schema(
         vol.Optional(ATTR_DAYS_BACK, default=731): cv.positive_int,
     }
 )
+
+SERVICE_RESPLIT_TARIF_D_SCHEMA = cv.make_entity_service_schema({})
 
 SERVICE_CREATE_PEAK_EVENT_SCHEMA = vol.Schema(
     {
@@ -264,6 +267,42 @@ async def _async_register_services(hass: HomeAssistant) -> None:
                         device.name or device_id,
                     )
 
+    async def handle_resplit_tarif_d(call: ServiceCall) -> None:
+        """Handle resplit_tarif_d_history service call."""
+        device_ids = call.data.get("device_id", [])
+        entity_ids = call.data.get("entity_id", [])
+
+        coordinators_found: set[HydroQcDataCoordinator] = set()
+
+        if device_ids:
+            dev_reg = dr.async_get(hass)
+            for device_id in device_ids:
+                device = dev_reg.async_get(device_id)
+                if device:
+                    for config_entry_id in device.config_entries:
+                        coord = hass.data[DOMAIN].get(config_entry_id)
+                        if coord:
+                            coordinators_found.add(coord)
+
+        if entity_ids:
+            ent_reg = er.async_get(hass)
+            for entity_id in entity_ids:
+                entity = ent_reg.async_get(entity_id)
+                if entity and entity.config_entry_id:
+                    coord = hass.data[DOMAIN].get(entity.config_entry_id)
+                    if coord:
+                        coordinators_found.add(coord)
+
+        for coordinator in coordinators_found:
+            if coordinator.is_portal_mode and coordinator.rate == "D":
+                coordinator.async_resplit_tarif_d_history()
+                _LOGGER.info("Started Tarif D re-split for %s", coordinator.entry.title)
+            else:
+                _LOGGER.warning(
+                    "Skipping re-split for %s: not Tarif D portal mode",
+                    coordinator.entry.title,
+                )
+
     async def handle_create_peak_event(call: ServiceCall) -> None:
         """Handle create_peak_event service call.
 
@@ -411,6 +450,13 @@ async def _async_register_services(hass: HomeAssistant) -> None:
         SERVICE_SYNC_HISTORY,
         handle_sync_consumption_history,
         schema=SERVICE_SYNC_HISTORY_SCHEMA,
+    )
+
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE_RESPLIT_TARIF_D,
+        handle_resplit_tarif_d,
+        schema=SERVICE_RESPLIT_TARIF_D_SCHEMA,
     )
 
     hass.services.async_register(

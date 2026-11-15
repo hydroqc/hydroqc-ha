@@ -160,13 +160,15 @@
           "update_interval": "Update Interval (seconds)",
           "preheat_duration_minutes": "Pre-heat Duration (minutes)",
           "enable_consumption_sync": "Enable consumption synchronization",
-          "calendar_entity_id": "Calendar Entity (optional)"
+          "calendar_entity_id": "Calendar Entity (optional)",
+          "billing_duration_entity": "Billing period duration sensor (optional)"
         },
         "data_description": {
           "update_interval": "How often to fetch data from Hydro-Québec (30-600 seconds)",
           "preheat_duration_minutes": "Duration before critical peak events to trigger pre-heating (0-240 minutes)",
           "enable_consumption_sync": "Enable to sync hourly consumption data for the energy dashboard. Requires integration reload to take effect.",
-          "calendar_entity_id": "Calendar entity for peak events (DPC/DCPC rates only). Leave empty to disable."
+          "calendar_entity_id": "Calendar entity for peak events (DPC/DCPC rates only). Leave empty to disable.",
+          "billing_duration_entity": "Select a sensor that tracks your billing period duration in days. Its recorder history will be used to accurately re-split past consumption into low-price and high-price streams. Leave empty to use a 60-day approximation."
         },
         "sections": {
           "advanced": {
@@ -180,6 +182,37 @@
             }
           }
         }
+      }
+    }
+  },
+  "entity": {
+    "sensor": {
+      "tarif_d_low_price_threshold_kwh": {
+        "name": "Low Price Threshold"
+      },
+      "tarif_d_low_price_remaining_kwh": {
+        "name": "Low Price Remaining"
+      },
+      "tarif_d_daily_low_price_budget_kwh": {
+        "name": "Daily Low Price Budget"
+      },
+      "last_7_days_kwh": {
+        "name": "Last 7 Days Consumption"
+      },
+      "same_7_days_last_year_kwh": {
+        "name": "Same 7 Days Last Year"
+      },
+      "yoy_7day_delta_kwh": {
+        "name": "7-Day YoY Delta"
+      },
+      "last_30_days_kwh": {
+        "name": "Last 30 Days Consumption"
+      },
+      "same_30_days_last_year_kwh": {
+        "name": "Same 30 Days Last Year"
+      },
+      "yoy_30day_delta_kwh": {
+        "name": "30-Day YoY Delta"
       }
     }
   },

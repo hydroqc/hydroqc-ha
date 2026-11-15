@@ -14,6 +14,8 @@ from homeassistant.components.recorder import statistics
 from homeassistant.core import HomeAssistant
 from homeassistant.helpers.recorder import get_instance
 
+from .tarif_d_split import TarifDSplitter
+
 if TYPE_CHECKING:
     from hydroqc.contract.common import Contract
 
@@ -445,6 +447,54 @@ class ConsumptionHistoryImporter:
                 }
             )
 
+            # For Tarif D, also add reg/haut entries (split computed later in _import_statistics)
+            if self._rate == "D" and "reg" in stats_by_type and "haut" in stats_by_type:
+                stats_by_type["reg"].append(
+                    {"start": hour_datetime_tz, "state": total_kwh_value, "_raw": True}
+                )
+                stats_by_type["haut"].append(
+                    {"start": hour_datetime_tz, "state": total_kwh_value, "_raw": True}
+                )
+
+    async def _apply_tarif_d_split(
+        self,
+        raw_stats: list[dict[str, Any]],
+        consumption_type: str,
+    ) -> list[dict[str, Any]]:
+        """Apply Tarif D 40 kWh/day threshold split to raw total consumption records.
+
+        Args:
+            raw_stats: List of hourly records with total kWh as state
+            consumption_type: "reg" or "haut"
+
+        Returns:
+            New list with split values applied
+        """
+        if not raw_stats:
+            return raw_stats
+
+        manager = self._statistics_manager
+        lookup = manager.build_period_lookup({})
+
+        # The chunk may start in the middle of a billing period: count what was
+        # already consumed in that period before the first record.
+        first_date = raw_stats[0]["start"].date()
+        period_start, _ = lookup(first_date)
+        consumed_before = await manager._get_period_consumption_before_date(
+            self._get_statistic_id("total"), first_date, period_start
+        )
+
+        # The chunk may also span several billing periods; the splitter starts a
+        # fresh allowance at each boundary.
+        splitter = TarifDSplitter(lookup, consumed_before)
+        split_stats: list[dict[str, Any]] = []
+        for record in raw_stats:
+            reg, haut = splitter.split(record["start"].date(), record["state"])
+            split_stats.append(
+                {"start": record["start"], "state": reg if consumption_type == "reg" else haut}
+            )
+        return split_stats
+
     async def _import_statistics(
         self,
         stats_by_type: dict[str, list[dict[str, Any]]],
@@ -502,6 +552,10 @@ class ConsumptionHistoryImporter:
                     last_date,
                     start_date,
                 )
+
+            # For Tarif D reg/haut, compute the actual split from total values
+            if self._rate == "D" and consumption_type in {"reg", "haut"}:
+                stats_list = await self._apply_tarif_d_split(stats_list, consumption_type)
 
             # Query previous day's sum to maintain continuity
             statistic_id = self._get_statistic_id(consumption_type)

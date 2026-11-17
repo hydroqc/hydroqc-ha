@@ -124,7 +124,7 @@ class SensorDataMixin:
                         return False
                     return None
                 obj = getattr(obj, part)
-            except (AttributeError, TypeError, ValueError) as e:
+            except (AttributeError, TypeError, ValueError, KeyError, IndexError) as e:
                 # Handle various exceptions that can occur during attribute access:
                 # - AttributeError: Attribute doesn't exist or getattr fails
                 # - TypeError: Property getter receives None when expecting a number
@@ -200,7 +200,7 @@ class SensorDataMixin:
                         return False
                     return None
                 obj = getattr(obj, part)
-            except (AttributeError, TypeError, ValueError) as e:
+            except (AttributeError, TypeError, ValueError, KeyError, IndexError) as e:
                 _LOGGER.debug(
                     "Error accessing attribute %s on %s: %s",
                     part,

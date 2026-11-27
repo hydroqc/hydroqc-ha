@@ -335,6 +335,9 @@
       "wc_critical_peak_in_progress": {
         "name": "Critical Peak Active"
       },
+      "wc_peak_in_progress": {
+        "name": "Peak Active"
+      },
       "wc_pre_heat": {
         "name": "Preheat Active"
       },
@@ -363,7 +366,7 @@
         "name": "Preheat Active"
       },
       "dpc_peak_in_progress": {
-        "name": "Critical Peak Active"
+        "name": "Peak Active"
       },
       "dpc_critical_morning_peak_today": {
         "name": "Morning Peak Today"

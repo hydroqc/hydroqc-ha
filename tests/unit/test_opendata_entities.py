@@ -8,9 +8,10 @@ import pytest
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
+from custom_components.hydroqc.binary_sensor import HydroQcBinarySensor
 from custom_components.hydroqc.binary_sensor import async_setup_entry as setup_binary_sensors
 from custom_components.hydroqc.button import async_setup_entry as setup_buttons
-from custom_components.hydroqc.const import DOMAIN
+from custom_components.hydroqc.const import BINARY_SENSORS, DOMAIN
 from custom_components.hydroqc.sensor import async_setup_entry as setup_sensors
 
 
@@ -124,3 +125,23 @@ class TestOpenDataEntities:
 
         assert identifiers == {frozenset({(DOMAIN, entry.entry_id)})}
         assert len(unique_ids) == len(set(unique_ids))
+
+    async def test_out_of_season_peak_flag_is_off(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry_opendata_dcpc: MockConfigEntry,
+        mock_integration_version: MagicMock,
+    ) -> None:
+        """A winter credit flag reads off outside the season, not unknown."""
+        entry = mock_config_entry_opendata_dcpc
+        entry.add_to_hass(hass)
+        coordinator = _opendata_coordinator("DCPC")
+        coordinator.rate_option = "CPC"
+        coordinator.is_sensor_seasonal.return_value = False
+        coordinator.get_sensor_value.return_value = None
+
+        entity = HydroQcBinarySensor(
+            coordinator, entry, "wc_peak_in_progress", BINARY_SENSORS["wc_peak_in_progress"], "1.0"
+        )
+
+        assert entity.is_on is False

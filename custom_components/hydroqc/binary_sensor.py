@@ -163,13 +163,14 @@ class HydroQcBinarySensor(
     @property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
-        # Check if sensor is seasonal and out of season
+        # Out of season a peak flag is off, not unknown: automations should
+        # read "no peak now", like the Flex-D flags do all year
         if not self.coordinator.is_sensor_seasonal(self._data_source):
             _LOGGER.debug(
-                "Binary sensor %s is out of season, returning None",
+                "Binary sensor %s is out of season, returning False",
                 self.entity_id,
             )
-            return None
+            return False
 
         value = self.coordinator.get_sensor_value(self._data_source)
 

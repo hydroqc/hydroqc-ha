@@ -245,7 +245,6 @@ SENSORS: Final = {
         "icon": "mdi:clock-start",
         "rates": ["DPC"],
         "diagnostic": True,
-        "disabled_by_default": True,
     },
     "dpc_critical_hours_count": {
         "data_source": "contract.critical_called_hours",
@@ -273,7 +272,6 @@ SENSORS: Final = {
         "icon": None,
         "unit": None,
         "rates": ["DCPC"],
-        "diagnostic": True,
     },
     "wc_cumulated_credit": {
         "data_source": "contract.peak_handler.cumulated_credit",
@@ -316,7 +314,6 @@ SENSORS: Final = {
         "device_class": "timestamp",
         "icon": "mdi:clock-start",
         "rates": ["DCPC"],
-        "diagnostic": True,
         "attributes": {
             "critical": "calendar_peak_handler.next_peak.is_critical",
         },
@@ -326,7 +323,6 @@ SENSORS: Final = {
         "device_class": "timestamp",
         "icon": "mdi:clock-end",
         "rates": ["DCPC"],
-        "diagnostic": True,
         "attributes": {
             "critical": "calendar_peak_handler.next_peak.is_critical",
         },
@@ -440,6 +436,12 @@ BINARY_SENSORS: Final = {
     },
     "wc_critical_peak_in_progress": {
         "data_source": "calendar_peak_handler.current_peak_is_critical",
+        "icon": "mdi:flash-alert",
+        "rates": ["DCPC"],
+        "diagnostic": True,
+    },
+    "wc_peak_in_progress": {
+        "data_source": "calendar_peak_handler.peak_in_progress",
         "icon": "mdi:flash-alert",
         "rates": ["DCPC"],
         "diagnostic": True,

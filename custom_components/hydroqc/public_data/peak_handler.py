@@ -9,19 +9,11 @@ from typing import Any
 
 from ..utils import get_winter_season_bounds, is_winter_season
 from .models import AnchorPeriod, PeakEvent
+from .offers import RATE_CODE_MAPPING, offers_for_rate
 
 _LOGGER = logging.getLogger(__name__)
 
-# Rate mapping from HQ codes to internal codes
-RATE_CODE_MAPPING = {
-    "CPC-D": "DCPC",  # Rate D + Winter Credits
-    "TPC-DPC": "DPC",  # Flex-D (dynamic pricing)
-    "GDP-Affaires": "M-GDP",  # Commercial GDP
-    "CPC-G": "M-CPC",  # Commercial CPC
-    "TPC-GPC": "M-GPC",  # Commercial GPC
-    "ENG01": "M-ENG",  # Commercial ENG01
-    "OEA": "M-OEA",  # Commercial OEA
-}
+__all__ = ["RATE_CODE_MAPPING", "PeakHandler"]
 
 
 class PeakHandler:
@@ -192,12 +184,7 @@ class PeakHandler:
 
     def _get_hq_offers_for_rate(self) -> list[str]:
         """Get Hydro-Québec offer codes for current rate."""
-        # Map internal rate code to HQ offer codes
-        hq_offers = [
-            hq_code
-            for hq_code, internal_code in RATE_CODE_MAPPING.items()
-            if internal_code == self.rate_code
-        ]
+        hq_offers = offers_for_rate(self.rate_code)
         if hq_offers:
             _LOGGER.debug("Mapped rate '%s' to HQ offers: %s", self.rate_code, hq_offers)
             return hq_offers

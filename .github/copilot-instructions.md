@@ -94,16 +94,19 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
 7. **`public_data/`** package - Public API peak data handler
    - **`public_data/models.py`**: Data classes (PreHeatPeriod, AnchorPeriod, PeakEvent)
    - **`public_data/peak_handler.py`**: PeakHandler class with peak event logic and calculations
+   - **`public_data/offers.py`**: The peak offer catalog (`PEAK_OFFERS`) plus `normalize_offer()`
+   - **`public_data/normalize.py`**: Field-name and payload normalization (`get_field`, `extract_records`, `normalize_event`, `normalize_sector`)
    - **`public_data/client.py`**: PublicDataClient for OpenData API interactions
    - **`public_data_client.py`**: Root-level re-export for backward compatibility
    - **API endpoint**: `https://donnees.hydroquebec.com/api/explore/v2.1`
    - **Dataset**: `evenements-pointe` (production dataset for peak events)
-   - **Query syntax**: Uses `refine` parameter (e.g., `refine=offre:"TPC-DPC"`), not `where` clauses
-   - **Time window**: Fetches 7 days ahead with `where` clause filtering
+   - **Offer matching**: Never filter on the raw `offre` value. Hydro-Québec renames offers (`CPC-D` became `Credit hivernal Residentiel (CPC-D)`, `TPC-DPC` became `Flex Residentiel (TPC-DPC)`), so events are filtered locally by `normalize_offer()` and the fetch only sends a date `where` clause
    - **Date filtering**: Uses `where=datedebut>='YYYY-MM-DD'` to get only future events
+   - **Payload shapes**: Both feeds are accepted — `{"results": [...]}` with lowercase ids (Opendatasoft) and `{"evenements": [...]}` with camelCase keys (legacy JSON feed). Read fields with `get_field()`; never with `record["datedebut"]`
+   - **Unknown offers**: A value that does not resolve to `PEAK_OFFERS` logs one warning per client; add new codes to `offers.py` when Hydro-Québec introduces one
    - `PeakEvent`: Parses API dates (handles both simple `"YYYY-MM-DD HH:MM"` and ISO formats)
    - **Critical timezone requirement**: All datetimes MUST be `America/Toronto` timezone-aware
-   - API returns lowercase field names: `datedebut`, `datefin`, `plagehoraire`, `secteurclient`
+   - **Sectors**: `normalize_sector()` folds accents, so both `Résidentiel` and `Residentiel` are residential
    - Preheat duration: Configurable per integration (0-240 minutes, default 120)
    - **Logging prefix**: All logs use `[OpenData]` prefix for easy troubleshooting
 

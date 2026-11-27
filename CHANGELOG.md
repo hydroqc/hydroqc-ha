@@ -4,7 +4,13 @@
 
 ### Modifié
 
+- **Offres de pointe normalisées** : les offres de la source de données publique sont maintenant comparées sur un code canonique plutôt que sur la valeur brute. Hydro-Québec renomme ses offres (`CPC-D` devient `Credit hivernal Residentiel (CPC-D)`, `TPC-DPC` devient `Flex Residentiel (TPC-DPC)`); les anciennes et les nouvelles formes sont reconnues, donc aucune reconfiguration n'est nécessaire.
+
 ### Corrigé
+
+- **Pointes manquantes après un renommage d'offre** : une entrée DPC ou DCPC existante recevait zéro événement en silence quand Hydro-Québec renommait son offre, et une nouvelle configuration en mode OpenData affichait une liste de tarifs vide. Le filtrage se fait maintenant localement sur l'offre normalisée, la liste des tarifs retombe sur les valeurs par défaut plutôt que d'être vide, et une offre inconnue produit un avertissement dans les journaux.
+
+- **Secteur résidentiel** : la valeur `Residentiel` (sans accent) renvoyée par Hydro-Québec est reconnue comme résidentielle, comme l'ancienne valeur accentuée.
 
 ### Retiré
 

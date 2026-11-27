@@ -68,6 +68,7 @@ This is a **Home Assistant custom component** for monitoring Hydro-Québec elect
    - **Diagnostic sensors**: 31 entities marked with `EntityCategory.DIAGNOSTIC` flag (declutters main entity list)
    - **Disabled by default**: 14 non-essential sensors disabled by default (can be manually enabled)
    - **Attribution**: Sensors show data source ("Espace Client Hydro-Québec" or "Données ouvertes Hydro-Québec")
+   - **OpenData mode**: only entities fed by the public feed are created, i.e. data sources starting with `calendar_peak_handler.` (peaks synced from OpenData into the calendar) or `public_client.`. Portal-only sources (`contract.*`, `portal_available`) are skipped. Calendar-based sensors are created even when no peak is announced yet; they read as unknown until one is.
 
 4. **`calendar_peak_handler.py`** - `CalendarPeakHandler`: Calendar-based peak handler
    - **Source of truth for peak sensors**: Reads events from HA calendar entity instead of OpenData API directly

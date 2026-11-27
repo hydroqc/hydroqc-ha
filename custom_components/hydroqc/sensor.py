@@ -45,10 +45,13 @@ async def async_setup_entry(
             if coordinator.rate_with_option not in rates:
                 continue
 
-        # In opendata mode, only create sensors that use public_client data
+        # In opendata mode, only create sensors fed by the public feed or the
+        # calendar built from it; portal-only sensors need a login
         if coordinator.is_opendata_mode:
             data_source = sensor_config.get("data_source", "")
-            if isinstance(data_source, str) and not data_source.startswith("public_client."):
+            if isinstance(data_source, str) and not data_source.startswith(
+                ("public_client.", "calendar_peak_handler.")
+            ):
                 _LOGGER.debug(
                     "Skipping sensor %s in opendata mode (requires portal login)",
                     sensor_key,

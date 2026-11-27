@@ -12,6 +12,8 @@
 
 - **Secteur résidentiel** : la valeur `Residentiel` (sans accent) renvoyée par Hydro-Québec est reconnue comme résidentielle, comme l'ancienne valeur accentuée.
 
+- **Capteurs en mode OpenData** : un contrat DPC ou DCPC en mode OpenData crée maintenant ses capteurs de pointe (état, début et fin de la prochaine pointe, indicateurs critiques), comme en mode portail. Seuls les capteurs qui exigent une connexion au portail restent absents; ils apparaissent avant même qu'une pointe soit annoncée.
+
 ### Retiré
 
 ---

@@ -2,13 +2,14 @@
 
 from __future__ import annotations
 
-from unittest.mock import MagicMock
+from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
 from homeassistant.core import HomeAssistant
 from pytest_homeassistant_custom_component.common import MockConfigEntry
 
 from custom_components.hydroqc.binary_sensor import async_setup_entry as setup_binary_sensors
+from custom_components.hydroqc.button import async_setup_entry as setup_buttons
 from custom_components.hydroqc.const import DOMAIN
 from custom_components.hydroqc.sensor import async_setup_entry as setup_sensors
 
@@ -93,3 +94,33 @@ class TestOpenDataEntities:
         assert "wc_state" in sensor_keys
         assert "wc_next_peak_start" in sensor_keys
         assert "balance" not in sensor_keys
+
+    async def test_all_platforms_share_one_device(
+        self,
+        hass: HomeAssistant,
+        mock_config_entry_opendata: MockConfigEntry,
+        mock_integration_version: MagicMock,
+    ) -> None:
+        """Sensors, binary sensors and the button land on the same device."""
+        entry = mock_config_entry_opendata
+        entry.add_to_hass(hass)
+        coordinator = _opendata_coordinator("DPC")
+        coordinator.rate_option = ""
+        hass.data.setdefault(DOMAIN, {})[entry.entry_id] = coordinator
+
+        identifiers: set[frozenset[tuple[str, str]]] = set()
+        unique_ids: list[str] = []
+
+        for setup in (setup_sensors, setup_binary_sensors, setup_buttons):
+            async_add_entities = MagicMock()
+            with patch(
+                "custom_components.hydroqc.button.async_get_integration",
+                new=AsyncMock(return_value=mock_integration_version),
+            ):
+                await setup(hass, entry, async_add_entities)
+            for entity in async_add_entities.call_args[0][0]:
+                identifiers.add(frozenset(entity._attr_device_info["identifiers"]))
+                unique_ids.append(entity._attr_unique_id)
+
+        assert identifiers == {frozenset({(DOMAIN, entry.entry_id)})}
+        assert len(unique_ids) == len(set(unique_ids))

@@ -14,6 +14,8 @@
 
 - **Capteurs en mode OpenData** : un contrat DPC ou DCPC en mode OpenData crée maintenant ses capteurs de pointe (état, début et fin de la prochaine pointe, indicateurs critiques), comme en mode portail. Seuls les capteurs qui exigent une connexion au portail restent absents; ils apparaissent avant même qu'une pointe soit annoncée.
 
+- **Appareil en double en mode OpenData** : le bouton « Refresh Peak Data » créait un appareil « unknown » distinct de celui des capteurs. Il rejoint maintenant l'appareil du contrat, et l'entité orpheline de l'ancien appareil est retirée au chargement.
+
 ### Retiré
 
 ---

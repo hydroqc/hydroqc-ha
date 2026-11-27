@@ -9,6 +9,7 @@ from homeassistant.components.button import ButtonEntity
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.const import EntityCategory
 from homeassistant.core import HomeAssistant
+from homeassistant.helpers import entity_registry as er
 from homeassistant.helpers.device_registry import DeviceInfo
 from homeassistant.helpers.entity_platform import AddEntitiesCallback
 from homeassistant.helpers.update_coordinator import CoordinatorEntity
@@ -31,6 +32,17 @@ async def async_setup_entry(
     # Get integration version from manifest
     integration = await async_get_integration(hass, DOMAIN)
     version = str(integration.version) if integration.version else "unknown"
+
+    # OpenData entries used to live on a device keyed "unknown" because the
+    # button fell back to a placeholder contract id. Removing that stale entity
+    # lets Home Assistant drop the emptied device and the button lands on the
+    # contract device, like the sensors.
+    if CONF_CONTRACT_ID not in entry.data:
+        entity_registry = er.async_get(hass)
+        if legacy_entity := entity_registry.async_get_entity_id(
+            "button", DOMAIN, "unknown_refresh_peak_data"
+        ):
+            entity_registry.async_remove(legacy_entity)
 
     entities: list[ButtonEntity] = []
 
@@ -61,7 +73,7 @@ class HydroQcRefreshPeakDataButton(CoordinatorEntity[HydroQcDataCoordinator], Bu
         self._entry = entry
         self._version = version
 
-        contract_id = entry.data.get(CONF_CONTRACT_ID, "unknown")
+        contract_id = entry.data.get(CONF_CONTRACT_ID, entry.entry_id)
         contract_name = entry.data.get(CONF_CONTRACT_NAME, "Contract")
 
         self._attr_unique_id = f"{contract_id}_refresh_peak_data"
@@ -70,7 +82,7 @@ class HydroQcRefreshPeakDataButton(CoordinatorEntity[HydroQcDataCoordinator], Bu
             identifiers={(DOMAIN, str(contract_id))},
             name=f"Hydro-Québec - {contract_name}",
             manufacturer="Hydro-Québec",
-            model=coordinator.rate_with_option,
+            model=f"{coordinator.rate}{coordinator.rate_option}",
             sw_version=version,
         )
 

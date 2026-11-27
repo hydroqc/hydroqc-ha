@@ -42,10 +42,13 @@ async def async_setup_entry(
             if coordinator.rate_with_option not in rates:
                 continue
 
-        # In opendata mode, only create sensors that use public_client data
+        # In opendata mode, only create binary sensors fed by the public feed
+        # or the calendar built from it; portal-only sensors need a login
         if coordinator.is_opendata_mode:
             data_source = sensor_config["data_source"]
-            if isinstance(data_source, str) and not data_source.startswith("public_client."):
+            if isinstance(data_source, str) and not data_source.startswith(
+                ("public_client.", "calendar_peak_handler.")
+            ):
                 _LOGGER.debug(
                     "Skipping binary sensor %s in opendata mode (requires portal login)",
                     sensor_key,
@@ -160,13 +163,14 @@ class HydroQcBinarySensor(
     @property
     def is_on(self) -> bool | None:
         """Return true if the binary sensor is on."""
-        # Check if sensor is seasonal and out of season
+        # Out of season a peak flag is off, not unknown: automations should
+        # read "no peak now", like the Flex-D flags do all year
         if not self.coordinator.is_sensor_seasonal(self._data_source):
             _LOGGER.debug(
-                "Binary sensor %s is out of season, returning None",
+                "Binary sensor %s is out of season, returning False",
                 self.entity_id,
             )
-            return None
+            return False
 
         value = self.coordinator.get_sensor_value(self._data_source)
 

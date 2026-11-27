@@ -148,14 +148,18 @@ class CalendarSyncMixin:
         Winter credit sensors should only show data during the winter season.
         This applies ONLY to Portal mode sensors that fetch from contract data.
         OpenData mode sensors (public_client) are always available.
-        Calendar-based sensors follow winter season rules for DCPC rate.
+        Calendar-based sensors follow winter season rules for DCPC rate, except
+        the state sensor which reports "off_season" itself.
         """
         # OpenData mode sensors using public_client are never seasonal
         if data_source.startswith("public_client."):
             return True
 
-        # Calendar-based sensors for DCPC follow winter season
+        # Calendar-based sensors for DCPC follow winter season, except the state
+        # sensor: off season it reports "off_season" itself, like the DPC one
         if data_source.startswith("calendar_peak_handler."):
+            if data_source == "calendar_peak_handler.current_state":
+                return True
             if self.rate_option != "CPC":
                 return True  # DPC is not seasonal
             # For DCPC, check if we're in winter season

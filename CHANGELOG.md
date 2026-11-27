@@ -2,9 +2,27 @@
 
 ### Ajouté
 
+- **Capteur « Pointe active » pour les crédits hivernaux** : le tarif DCPC a maintenant `wc_peak_in_progress`, l'équivalent du capteur DPC qui indique si une pointe est en cours.
+
 ### Modifié
 
+- **Capteurs DPC et DCPC alignés** : l'état, le début et la fin de la prochaine pointe ne sont plus des entités de diagnostic pour les crédits hivernaux, comme ils ne le sont pas pour Flex-D; le début du préchauffage DPC est activé par défaut comme en DCPC; le capteur « Pointe active » porte le même nom pour les deux tarifs.
+
+- **Offres de pointe normalisées** : les offres de la source de données publique sont maintenant comparées sur un code canonique plutôt que sur la valeur brute. Hydro-Québec renomme ses offres (`CPC-D` devient `Credit hivernal Residentiel (CPC-D)`, `TPC-DPC` devient `Flex Residentiel (TPC-DPC)`); les anciennes et les nouvelles formes sont reconnues, donc aucune reconfiguration n'est nécessaire.
+
 ### Corrigé
+
+- **Pointes manquantes après un renommage d'offre** : une entrée DPC ou DCPC existante recevait zéro événement en silence quand Hydro-Québec renommait son offre, et une nouvelle configuration en mode OpenData affichait une liste de tarifs vide. Le filtrage se fait maintenant localement sur l'offre normalisée, la liste des tarifs retombe sur les valeurs par défaut plutôt que d'être vide, et une offre inconnue produit un avertissement dans les journaux.
+
+- **Secteur résidentiel** : la valeur `Residentiel` (sans accent) renvoyée par Hydro-Québec est reconnue comme résidentielle, comme l'ancienne valeur accentuée.
+
+- **Capteurs en mode OpenData** : un contrat DPC ou DCPC en mode OpenData crée maintenant ses capteurs de pointe (état, début et fin de la prochaine pointe, indicateurs critiques), comme en mode portail. Seuls les capteurs qui exigent une connexion au portail restent absents; ils apparaissent avant même qu'une pointe soit annoncée.
+
+- **Appareil en double en mode OpenData** : le bouton « Refresh Peak Data » créait un appareil « unknown » distinct de celui des capteurs. Il rejoint maintenant l'appareil du contrat, et l'entité orpheline de l'ancien appareil est retirée au chargement.
+
+- **État des crédits hivernaux hors saison** : le capteur d'état DCPC affiche maintenant `off_season` avant le 1er décembre, comme son équivalent DPC, au lieu de rester `unknown`. Les capteurs de dates restent indisponibles hors saison.
+
+- **Indicateurs de pointe hors saison** : les capteurs binaires DCPC affichent `off` hors saison au lieu de `unknown`, comme les capteurs DPC, pour que les automatisations lisent « aucune pointe en cours ».
 
 ### Retiré
 

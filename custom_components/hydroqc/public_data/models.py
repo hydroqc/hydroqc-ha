@@ -7,6 +7,9 @@ import logging
 import zoneinfo
 from typing import Any
 
+from .normalize import get_field, normalize_sector
+from .offers import normalize_offer
+
 _LOGGER = logging.getLogger(__name__)
 
 
@@ -59,14 +62,15 @@ class PeakEvent:
             force_critical: Explicitly set critical status (True=critical from API,
                           False=generated non-critical, None=auto-detect from offer)
         """
-        self.offer = data["offre"]
+        self.offer = normalize_offer(data.get("offre", "")) or str(data.get("offre", ""))
         self._force_critical = force_critical
         # Parse dates and make them timezone-aware (America/Toronto = EST/EDT)
         tz = zoneinfo.ZoneInfo("America/Toronto")
 
-        # API uses lowercase field names: datedebut, datefin, plagehoraire, secteurclient
-        start_str = data.get("datedebut") or data.get("dateDebut")
-        end_str = data.get("datefin") or data.get("dateFin")
+        # Feeds spell the fields differently: datedebut/dateDebut,
+        # plagehoraire/plageHoraire, secteurclient/secteurClient
+        start_str = get_field(data, "datedebut", "debut")
+        end_str = get_field(data, "datefin", "fin")
 
         if not start_str or not end_str:
             raise ValueError(f"Missing date fields in data: {data}")
@@ -104,11 +108,9 @@ class PeakEvent:
                 )
                 raise
 
-        self.time_slot = data.get("plagehoraire") or data.get("plageHoraire")  # AM or PM
+        self.time_slot = get_field(data, "plagehoraire")  # AM or PM
         self.duration = data.get("duree")
-        self.sector = data.get("secteurclient") or data.get(
-            "secteurClient"
-        )  # Résidentiel or Affaires
+        self.sector = normalize_sector(get_field(data, "secteurclient"))
         self._preheat_duration = preheat_duration
 
     @property
@@ -143,7 +145,7 @@ class PeakEvent:
     @property
     def is_residential(self) -> bool:
         """Check if this peak is for residential sector."""
-        return self.sector == "Résidentiel"
+        return self.sector == "Residentiel"
 
     @property
     def is_commercial(self) -> bool:

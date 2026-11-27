@@ -335,6 +335,9 @@
       "wc_critical_peak_in_progress": {
         "name": "Pico crítico activo"
       },
+      "wc_peak_in_progress": {
+        "name": "Pico activo"
+      },
       "wc_pre_heat": {
         "name": "Precalentamiento activo"
       },
@@ -363,7 +366,7 @@
         "name": "Precalentamiento activo"
       },
       "dpc_peak_in_progress": {
-        "name": "Pico crítico activo"
+        "name": "Pico activo"
       },
       "dpc_critical_morning_peak_today": {
         "name": "Pico mañana hoy"

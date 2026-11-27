@@ -8,6 +8,8 @@ import zoneinfo
 
 import aiohttp
 
+from .normalize import extract_records, normalize_event
+from .offers import is_known_offer, normalize_offer
 from .peak_handler import PeakHandler
 
 _LOGGER = logging.getLogger(__name__)
@@ -16,6 +18,13 @@ _LOGGER = logging.getLogger(__name__)
 WINTER_PEAKS_API_BASE = "https://donnees.hydroquebec.com/api/explore/v2.1"
 WINTER_PEAKS_DATASET = "evenements-pointe"
 WINTER_PEAKS_URL = f"{WINTER_PEAKS_API_BASE}/catalog/datasets/{WINTER_PEAKS_DATASET}/records"
+
+# Date field of the dataset, used in the server-side date filter.
+WINTER_PEAKS_DATE_FIELD = "datedebut"
+
+# Records requested per fetch. Hydro-Québec publishes a few dozen events per
+# season across every offer, so a full page covers every announced peak.
+WINTER_PEAKS_FETCH_LIMIT = 100
 
 
 class PublicDataClient:
@@ -32,6 +41,7 @@ class PublicDataClient:
         self.peak_handler = PeakHandler(rate_code, preheat_duration)
         self._session: aiohttp.ClientSession | None = None
         self._last_fetch: datetime.datetime | None = None
+        self._warned_unknown_offers = False
 
     async def _get_session(self) -> aiohttp.ClientSession:
         """Get or create aiohttp session."""
@@ -53,31 +63,24 @@ class PublicDataClient:
                 )
                 return
 
-            # Build refine filter to filter by rate (Opendatasoft API syntax)
-            # Use refine parameter: refine=offre:"TPC-DPC"
-            # Filter for events from today onwards (next 7 days)
+            # Filter for events from today onwards. Offers are matched locally
+            # after normalization: Hydro-Québec renamed the offer values on its
+            # feeds, so a server-side filter on the raw value would miss events.
             tz = zoneinfo.ZoneInfo("America/Toronto")
             today = datetime.datetime.now(tz).date()
             today_str = today.isoformat()
 
             params: dict[str, str | int] = {
-                "limit": 100,
+                "limit": WINTER_PEAKS_FETCH_LIMIT,
                 "timezone": "America/Toronto",
-                "refine": f'offre:"{hq_offers[0]}"',
-                "where": f"datedebut>='{today_str}'",
+                "where": f"{WINTER_PEAKS_DATE_FIELD}>='{today_str}'",
+                "order_by": f"{WINTER_PEAKS_DATE_FIELD} asc",
             }
 
-            if len(hq_offers) > 1:
-                _LOGGER.warning(
-                    "Multiple offers detected for rate %s, only filtering by first: %s",
-                    self.rate_code,
-                    hq_offers[0],
-                )
-
             _LOGGER.debug(
-                "[OpenData] Fetching peak events for rate %s with refine: offre=%s",
+                "[OpenData] Fetching peak events for rate %s (offers: %s)",
                 self.rate_code,
-                hq_offers[0],
+                ", ".join(hq_offers),
             )
 
             async with session.get(
@@ -86,28 +89,45 @@ class PublicDataClient:
                 response.raise_for_status()
                 data = await response.json()
 
-                # Extract records from Opendatasoft API response
-                results = data.get("results", [])
+                records = extract_records(data)
                 _LOGGER.debug(
-                    "[OpenData] Received %d results from API for rate %s",
-                    len(results),
+                    "[OpenData] Received %d records from API for rate %s",
+                    len(records),
                     self.rate_code,
                 )
 
-                # Field names are lowercase in the API, map to our expected camelCase format
-                events = [
-                    {
-                        "offre": record.get("offre", ""),
-                        "dateDebut": record.get("datedebut", ""),
-                        "dateFin": record.get("datefin", ""),
-                        "plageHoraire": record.get("plagehoraire", ""),
-                        "duree": record.get("duree", ""),
-                        "secteurClient": record.get("secteurclient", ""),
-                    }
-                    for record in results
-                ]
+                if len(records) >= WINTER_PEAKS_FETCH_LIMIT:
+                    _LOGGER.warning(
+                        "[OpenData] API returned %d records, the page limit; some peak events may be missing",
+                        len(records),
+                    )
 
-                # Load events into peak handler (no filtering needed, already filtered by API)
+                wanted = set(hq_offers)
+                events: list[dict[str, str]] = []
+                unknown_offers: set[str] = set()
+
+                for record in records:
+                    event = normalize_event(record)
+                    if event is None:
+                        _LOGGER.debug("[OpenData] Skipping record without dates: %s", record)
+                        continue
+
+                    offer_code = normalize_offer(event["offre"])
+                    if offer_code in wanted:
+                        event["offre"] = offer_code
+                        events.append(event)
+                    elif not is_known_offer(event["offre"]):
+                        unknown_offers.add(event["offre"])
+
+                if unknown_offers and not self._warned_unknown_offers:
+                    self._warned_unknown_offers = True
+                    _LOGGER.warning(
+                        "[OpenData] Public feed returned unknown offer value(s) %s; "
+                        "add them to public_data/offers.py if Hydro-Québec renamed an offer",
+                        sorted(unknown_offers),
+                    )
+
+                # Load events into peak handler (already filtered by offer)
                 self.peak_handler.load_events(events)
 
                 self._last_fetch = datetime.datetime.now(datetime.UTC)

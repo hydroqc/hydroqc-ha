@@ -59,7 +59,7 @@ class CalendarPeakEvent:
 
         # For compatibility with PeakEvent
         self.offer = "CPC-D" if rate == "DCPC" else "TPC-DPC"
-        self.sector = "Résidentiel"
+        self.sector = "Residentiel"
 
     @property
     def is_critical(self) -> bool:

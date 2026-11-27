@@ -16,6 +16,8 @@
 
 - **Appareil en double en mode OpenData** : le bouton « Refresh Peak Data » créait un appareil « unknown » distinct de celui des capteurs. Il rejoint maintenant l'appareil du contrat, et l'entité orpheline de l'ancien appareil est retirée au chargement.
 
+- **État des crédits hivernaux hors saison** : le capteur d'état DCPC affiche maintenant `off_season` avant le 1er décembre, comme son équivalent DPC, au lieu de rester `unknown`. Les capteurs de dates et les indicateurs de pointe restent indisponibles hors saison.
+
 ### Retiré
 
 ---
